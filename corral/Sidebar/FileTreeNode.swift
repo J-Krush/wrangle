@@ -183,6 +183,7 @@ struct FileTreeNodeView: View {
             } label: {
                 nodeLabel
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .dropDestination(for: URL.self) { urls, _ in

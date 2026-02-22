@@ -79,6 +79,11 @@ struct BookmarkListView: View {
                     Button {
                         appState.selectedBookmarkID = bookmarkID
                         appState.selectedFileTreeURL = nil
+                        if expandedBookmarks.contains(bookmarkID) {
+                            expandedBookmarks.remove(bookmarkID)
+                        } else {
+                            expandedBookmarks.insert(bookmarkID)
+                        }
                     } label: {
                         Label {
                             Text(bookmark.name)
@@ -89,6 +94,7 @@ struct BookmarkListView: View {
                                 .foregroundStyle(colorFromHex(bookmark.iconColorHex))
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
