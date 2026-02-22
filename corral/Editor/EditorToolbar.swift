@@ -45,13 +45,35 @@ struct EditorToolbar: View {
     }
 
     private var modeToggle: some View {
-        Picker("", selection: $editingMode) {
-            Text("Writing").tag(EditingMode.writing)
-            Text("Dev").tag(EditingMode.dev)
+        HStack(spacing: 0) {
+            modeButton("Writing", mode: .writing)
+            modeButton("Dev", mode: .dev)
         }
-        .pickerStyle(.segmented)
-        .frame(width: 120)
+        .background(Color.primary.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
         .help("Writing mode hides formatting syntax; Dev mode shows it")
+    }
+
+    private func modeButton(_ label: String, mode: EditingMode) -> some View {
+        let isSelected = editingMode == mode
+        return Button {
+            editingMode = mode
+        } label: {
+            Text(label)
+                .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 3)
+                .background(
+                    isSelected
+                        ? RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.primary.opacity(0.1))
+                            .shadow(color: .black.opacity(0.08), radius: 1, y: 0.5)
+                        : nil
+                )
+                .padding(2)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Button Groups

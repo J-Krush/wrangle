@@ -117,10 +117,10 @@ struct Theme {
     /// Shared sidebar selection background used by all sidebar rows.
     static func sidebarSelectionBackground(isSelected: Bool) -> some View {
         Rectangle()
-            .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.clear)
+            .fill(isSelected ? Color.white.opacity(0.10) : Color.clear)
             .overlay(
                 Rectangle()
-                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.6) : Color.clear, lineWidth: 1)
+                    .strokeBorder(isSelected ? Color.white.opacity(0.25) : Color.clear, lineWidth: 1)
             )
     }
 
