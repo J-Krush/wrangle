@@ -7,6 +7,10 @@ import Foundation
 /// as protected zones where no further parsing occurs. When `hideMarkdownSyntax` is true
 /// (writing mode), all syntax characters are hidden. When false (dev mode), all syntax
 /// characters remain visible.
+extension NSAttributedString.Key {
+    static let bulletMarker = NSAttributedString.Key("com.corral.bulletMarker")
+}
+
 class MarkdownParser {
 
     // MARK: - Cached Regex Patterns
@@ -406,6 +410,14 @@ class MarkdownParser {
             style.tabStops = [NSTextTab(textAlignment: .left, location: 28)]
 
             attrStr.addAttribute(.paragraphStyle, value: style, range: range)
+
+            // Mark - or * for bullet replacement in writing mode
+            if shouldHideMarkdownSyntax {
+                let leadingWhitespaceRange = match.range(at: 1)
+                let bulletCharLocation = leadingWhitespaceRange.location + leadingWhitespaceRange.length
+                let bulletCharRange = NSRange(location: bulletCharLocation, length: 1)
+                attrStr.addAttribute(.bulletMarker, value: true, range: bulletCharRange)
+            }
         }
     }
 

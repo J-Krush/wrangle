@@ -106,7 +106,12 @@ struct MarkdownTextView: NSViewRepresentable {
 
         // Only push changes if the source of truth (binding) differs from what the
         // text view currently holds AND the change originated externally (not from typing).
-        let currentPlain = textView.textStorage?.string ?? ""
+        let currentPlain: String
+        if let storage = textView.textStorage {
+            currentPlain = context.coordinator.rawText(from: storage)
+        } else {
+            currentPlain = ""
+        }
         if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
             context.coordinator.setTextViewContent(text)
         } else if modeChanged {
@@ -221,6 +226,11 @@ struct MarkdownTextView: NSViewRepresentable {
             if !isJSONDoc {
                 XMLTagRenderer.render(in: storage)
             }
+
+            // Replace bullet markers with • in the storage
+            if !isJSONDoc {
+                applyBulletMarkers(in: storage)
+            }
             storage.endEditing()
 
             restoreSelection(selectedRanges, in: textView)
@@ -264,6 +274,11 @@ struct MarkdownTextView: NSViewRepresentable {
             // Layer XML tag rendering on top (not for JSON)
             if !isJSON {
                 XMLTagRenderer.render(in: storage)
+            }
+
+            // Replace bullet markers with • in the storage
+            if !isJSON {
+                applyBulletMarkers(in: storage)
             }
 
             storage.endEditing()
@@ -368,13 +383,45 @@ struct MarkdownTextView: NSViewRepresentable {
             textView.insertText(block, replacementRange: selectedRange)
         }
 
+        // MARK: - Bullet Marker Helpers
+
+        /// Replaces `-`/`*` with `•` at positions marked with .bulletMarker
+        private func applyBulletMarkers(in storage: NSTextStorage) {
+            var ranges: [NSRange] = []
+            storage.enumerateAttribute(.bulletMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { ranges.append(range) }
+            }
+            for range in ranges.reversed() {
+                let attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: "•", attributes: attrs))
+            }
+        }
+
+        /// Reads raw text from storage, reversing any bullet marker replacements
+        func rawText(from storage: NSTextStorage) -> String {
+            let mutable = NSMutableString(string: storage.string)
+            var positions: [Int] = []
+            storage.enumerateAttribute(.bulletMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { positions.append(range.location) }
+            }
+            for pos in positions.reversed() {
+                mutable.replaceCharacters(in: NSRange(location: pos, length: 1), with: "-")
+            }
+            return mutable as String
+        }
+
         // MARK: - NSTextViewDelegate
 
         func textDidChange(_ notification: Notification) {
             guard let textView = notification.object as? NSTextView else { return }
             guard !isStyling else { return }
 
-            let newText = textView.textStorage?.string ?? ""
+            let newText: String
+            if let storage = textView.textStorage {
+                newText = rawText(from: storage)
+            } else {
+                newText = ""
+            }
 
             // Push plain text back to the binding
             isUpdatingFromTextView = true
