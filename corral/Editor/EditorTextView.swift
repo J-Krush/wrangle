@@ -5,11 +5,58 @@ extension NSAttributedString.Key {
     static let codeBlockBackground = NSAttributedString.Key("codeBlockBackground")
 }
 
+/// Delegate protocol for forwarding keyboard-driven formatting to the coordinator.
+protocol EditorTextViewFormattingDelegate: AnyObject {
+    func insertFormatting(prefix: String, suffix: String)
+    func insertLinePrefix(_ prefix: String)
+}
+
 /// Custom NSTextView subclass that draws rounded-rect card backgrounds behind
 /// fenced code blocks and manages "copy" button overlays.
 class EditorTextView: NSTextView {
 
+    weak var formattingDelegate: EditorTextViewFormattingDelegate?
     private var copyButtons: [NSButton] = []
+
+    // MARK: - Keyboard Shortcuts
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.contains(.command) else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        let shift = event.modifierFlags.contains(.shift)
+        let chars = event.charactersIgnoringModifiers ?? ""
+
+        switch (chars, shift) {
+        case ("b", false):
+            formattingDelegate?.insertFormatting(prefix: "**", suffix: "**")
+            return true
+        case ("i", false):
+            formattingDelegate?.insertFormatting(prefix: "*", suffix: "*")
+            return true
+        case ("e", false):
+            formattingDelegate?.insertFormatting(prefix: "`", suffix: "`")
+            return true
+        case ("k", false):
+            formattingDelegate?.insertFormatting(prefix: "[", suffix: "](url)")
+            return true
+        case ("x", true):
+            formattingDelegate?.insertFormatting(prefix: "~~", suffix: "~~")
+            return true
+        case ("1", false):
+            formattingDelegate?.insertLinePrefix("# ")
+            return true
+        case ("2", false):
+            formattingDelegate?.insertLinePrefix("## ")
+            return true
+        case ("3", false):
+            formattingDelegate?.insertLinePrefix("### ")
+            return true
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
+    }
 
     // MARK: - Background Drawing
 
@@ -43,9 +90,9 @@ class EditorTextView: NSTextView {
 
             // Make the card full-width with inset, offset by text container origin
             blockRect.origin.x = textContainerInset.width + 4
-            blockRect.origin.y += textContainerInset.height - 4
+            blockRect.origin.y += textContainerInset.height - 12
             blockRect.size.width = bounds.width - (textContainerInset.width + 4) * 2
-            blockRect.size.height += 8
+            blockRect.size.height += 24
 
             let path = NSBezierPath(roundedRect: blockRect, xRadius: 8, yRadius: 8)
             theme.codeBackground.setFill()
@@ -56,14 +103,18 @@ class EditorTextView: NSTextView {
     // MARK: - Copy Buttons
 
     func updateCopyButtons() {
+        // Defer to next run loop iteration so text appears first, then buttons are positioned
+        DispatchQueue.main.async { [weak self] in
+            self?.rebuildCopyButtons()
+        }
+    }
+
+    private func rebuildCopyButtons() {
         copyButtons.forEach { $0.removeFromSuperview() }
         copyButtons.removeAll()
 
         guard let layoutManager, let textContainer, let textStorage else { return }
         guard textStorage.length > 0 else { return }
-
-        // Force layout so glyph rects are accurate
-        layoutManager.ensureLayout(for: textContainer)
 
         var blockIndex = 0
         textStorage.enumerateAttribute(

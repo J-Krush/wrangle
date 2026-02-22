@@ -8,6 +8,8 @@ struct FileTreeContent: View {
     @State private var nodes: [FileNode] = []
     @State private var watcher: FileWatcher?
     @State private var resolvedURL: URL?
+    @State private var isLoading = false
+    @State private var loadGeneration = 0
     @State private var newFileName: String = ""
     @State private var showNewFileSheet = false
     @State private var showNewFolderSheet = false
@@ -21,29 +23,51 @@ struct FileTreeContent: View {
 
     var body: some View {
         Group {
-            if filteredNodes.isEmpty {
+            if isLoading && nodes.isEmpty {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading...")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .listRowBackground(Color.clear)
+            } else if filteredNodes.isEmpty {
                 if !filterText.isEmpty {
                     Text("No matches")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
                 } else {
                     Text("Empty directory")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .listRowBackground(Color.clear)
                 }
             } else {
                 ForEach(filteredNodes) { node in
-                    FileTreeNodeView(node: node) { url in
-                        appState.openFile(url: url)
-                    }
+                    FileTreeNodeView(
+                        node: node,
+                        onSelect: { url in
+                            appState.openFileAsPreview(url: url, scopedURL: resolvedURL)
+                        },
+                        onDoubleClick: { url in
+                            appState.openFile(url: url, scopedURL: resolvedURL)
+                            // Promote in case it was already the preview tab
+                            if let doc = appState.activeDocument {
+                                appState.promotePreviewTab(for: doc.id)
+                            }
+                        }
+                    )
+                    .listRowBackground(Color.clear)
                     .contextMenu {
                         contextMenu(for: node)
                     }
                 }
             }
         }
-        .onAppear { loadTree() }
-        .onChange(of: bookmark.bookmarkData) { loadTree() }
+        .onAppear { loadTree(refreshBookmark: true) }
+        .onChange(of: bookmark.bookmarkData) { loadTree(refreshBookmark: false) }
         .onDisappear {
             watcher?.stop()
             watcher = nil
@@ -76,7 +100,7 @@ struct FileTreeContent: View {
             }
         } else {
             Button("Open") {
-                appState.openFile(url: node.url)
+                appState.openFile(url: node.url, scopedURL: resolvedURL)
             }
             Divider()
             Button("Reveal in Finder") {
@@ -141,21 +165,46 @@ struct FileTreeContent: View {
 
     // MARK: - File Operations
 
-    private func loadTree() {
+    private func loadTree(refreshBookmark: Bool = true) {
         watcher?.stop()
         watcher = nil
 
-        guard let url = bookmark.resolveURL() else {
+        guard let url = bookmark.resolveURL(refreshIfStale: refreshBookmark) else {
+            resolvedURL?.stopAccessingSecurityScopedResource()
             resolvedURL = nil
             nodes = []
             return
         }
 
+        // Start security-scoped access so files within this directory can be read
+        if resolvedURL != url {
+            resolvedURL?.stopAccessingSecurityScopedResource()
+            _ = url.startAccessingSecurityScopedResource()
+        }
         resolvedURL = url
-        nodes = FileNode.buildTree(at: url)
+        loadGeneration += 1
+        let currentGeneration = loadGeneration
+        isLoading = true
+
+        Task.detached {
+            let tree = FileNode.buildTree(at: url)
+            await MainActor.run {
+                guard currentGeneration == loadGeneration else { return }
+                nodes = tree
+                isLoading = false
+            }
+        }
 
         let newWatcher = FileWatcher(url: url) { [url] in
-            nodes = FileNode.buildTree(at: url)
+            loadGeneration += 1
+            let gen = loadGeneration
+            Task.detached {
+                let tree = FileNode.buildTree(at: url)
+                await MainActor.run {
+                    guard gen == loadGeneration else { return }
+                    nodes = tree
+                }
+            }
         }
         newWatcher.start()
         watcher = newWatcher
@@ -170,7 +219,7 @@ struct FileTreeContent: View {
         let fileURL = folder.appendingPathComponent(name)
         FileManager.default.createFile(atPath: fileURL.path, contents: nil)
         loadTree()
-        appState.openFile(url: fileURL)
+        appState.openFile(url: fileURL, scopedURL: resolvedURL)
     }
 
     private func createNewFolder() {

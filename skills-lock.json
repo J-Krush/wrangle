@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "ios-design": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "cfb787f14c9f552cc63297a277c8bf31aac91954a85d87160287d42a48a22d37"
+    },
+    "ios-ui-refactor": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "991d7c84dc20ee2d4c9e487a5b004a3a1e1bb5941a569edb07c1fb176292d6db"
+    },
+    "swiftui-expert-skill": {
+      "source": "avdlee/swiftui-agent-skill",
+      "sourceType": "github",
+      "computedHash": "2266f713890104352fe8eca44fc546c096e3459cc25e7e21bc57514f57d2e5a4"
+    }
+  }
+}

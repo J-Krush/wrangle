@@ -26,22 +26,18 @@ enum ClaudeCodeLauncher {
         knownPaths.first { FileManager.default.fileExists(atPath: $0) }
     }
 
-    /// Launches Claude Code inside the given terminal emulator.
-    ///
-    /// If the emulator isn't running yet it will be started in `directory`.
-    /// A small delay lets the shell initialize before the command is sent.
-    static func launch(in emulator: TerminalEmulator, directory: URL? = nil) {
-        if !emulator.isRunning {
-            emulator.start(in: directory)
+    /// Returns the command string to launch Claude Code (including trailing newline).
+    static func launchCommand() -> String {
+        if let path = claudePath() {
+            return "\(path)\n"
+        } else {
+            return "echo 'Claude Code CLI not found. Install it from https://claude.ai/cli'\n"
         }
+    }
 
-        // Give the shell a moment to initialize before sending a command
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if let path = claudePath() {
-                emulator.send("\(path)\n")
-            } else {
-                emulator.send("echo 'Claude Code CLI not found. Install it from https://claude.ai/cli'\n")
-            }
-        }
+    /// Launches Claude Code in an already-running session by sending the command directly.
+    static func launch(in session: TerminalSession) {
+        session.emulator.title = "Claude Code"
+        session.emulator.send(launchCommand())
     }
 }

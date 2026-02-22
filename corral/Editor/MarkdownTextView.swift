@@ -6,8 +6,8 @@ import SwiftUI
 /// styled `NSAttributedString` produced by `MarkdownParser` and `XMLTagRenderer`.
 ///
 /// The coordinator exposes methods for toolbar-driven formatting (insert at cursor,
-/// wrap selection, insert line prefix). Cursor movement triggers restyle so that
-/// syntax characters are revealed only on the active line (Obsidian-style editing).
+/// wrap selection, insert line prefix). In writing mode, all syntax characters are
+/// hidden. In dev mode, all syntax characters are visible.
 struct MarkdownTextView: NSViewRepresentable {
 
     @Binding var text: String
@@ -49,7 +49,7 @@ struct MarkdownTextView: NSViewRepresentable {
         let theme = Theme.current
         textView.backgroundColor = theme.editorBackground
         textView.insertionPointColor = theme.editorForeground
-        textView.textContainerInset = NSSize(width: 20, height: 20)
+        textView.textContainerInset = NSSize(width: 40, height: 60)
         textView.font = theme.editorFont
         textView.textColor = theme.editorForeground
 
@@ -61,8 +61,8 @@ struct MarkdownTextView: NSViewRepresentable {
         textView.textContainer?.widthTracksTextView = true
         textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
 
-        // Continuous layout for smoother editing
-        textView.layoutManager?.allowsNonContiguousLayout = false
+        // Non-contiguous layout: skip off-screen text during initial layout
+        textView.layoutManager?.allowsNonContiguousLayout = true
 
         // Set delegates
         textView.delegate = context.coordinator
@@ -78,6 +78,10 @@ struct MarkdownTextView: NSViewRepresentable {
 
         // Publish coordinator to the editor context so toolbars can interact
         editorContext?.coordinator = context.coordinator
+        context.coordinator.editorContext = editorContext
+
+        // Wire formatting delegate for keyboard shortcuts
+        textView.formattingDelegate = context.coordinator
 
         return scrollView
     }
@@ -87,6 +91,14 @@ struct MarkdownTextView: NSViewRepresentable {
 
         // Keep editor context reference up to date
         editorContext?.coordinator = context.coordinator
+        context.coordinator.editorContext = editorContext
+
+        // Detect document switch (since we no longer use .id(doc.id))
+        let documentChanged = context.coordinator.documentID != document?.id
+        if documentChanged {
+            context.coordinator.document = document
+            context.coordinator.documentID = document?.id
+        }
 
         // Sync editing mode and restyle if it changed
         let modeChanged = context.coordinator.editingMode != editingMode
@@ -104,10 +116,12 @@ struct MarkdownTextView: NSViewRepresentable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, NSTextViewDelegate, NSTextStorageDelegate {
+    class Coordinator: NSObject, NSTextViewDelegate, NSTextStorageDelegate, EditorTextViewFormattingDelegate {
         var text: Binding<String>
         var document: EditorDocument?
+        var documentID: UUID?
         weak var textView: NSTextView?
+        weak var editorContext: EditorContext?
         var editingMode: EditingMode = .writing
 
         /// Guard against feedback loops: true while we are pushing changes from the
@@ -117,10 +131,10 @@ struct MarkdownTextView: NSViewRepresentable {
         /// Guard against re-entrant styling triggered by our own attribute changes.
         private var isStyling = false
 
-        private let parser = MarkdownParser()
+        /// Incremented on every `setTextViewContent` call so stale async results are discarded.
+        private var parseGeneration: Int = 0
 
-        /// Track which line the cursor was on last, so we only restyle when it changes lines.
-        private var lastCursorLineRange: NSRange?
+        private let parser = MarkdownParser()
 
         /// Whether this is a JSON document (uses different highlighter)
         var isJSON: Bool {
@@ -130,41 +144,85 @@ struct MarkdownTextView: NSViewRepresentable {
         init(text: Binding<String>, document: EditorDocument?, editingMode: EditingMode = .writing) {
             self.text = text
             self.document = document
+            self.documentID = document?.id
             self.editingMode = editingMode
         }
 
         // MARK: - Content Management
 
         /// Replaces the text view's content and re-applies styling.
+        ///
+        /// Phase 1 (immediate): set plain text with base styling so the user sees content instantly.
+        /// Phase 2 (async): parse on a background thread, then apply attributes on main thread.
         func setTextViewContent(_ plainText: String) {
-            guard let textView else { return }
+            guard let textView, let storage = textView.textStorage else { return }
+
+            // Bump generation so any in-flight async parse is discarded
+            parseGeneration += 1
+            let currentGeneration = parseGeneration
+
+            // --- Phase 1: Immediate plain-text display ---
+            isStyling = true
+            let theme = Theme.current
+            let baseAttributes: [NSAttributedString.Key: Any] = [
+                .font: theme.editorFont,
+                .foregroundColor: theme.editorForeground,
+            ]
+            let plain = NSAttributedString(string: plainText, attributes: baseAttributes)
+
+            let selectedRanges = textView.selectedRanges
+            storage.beginEditing()
+            storage.setAttributedString(plain)
+            storage.endEditing()
+            restoreSelection(selectedRanges, in: textView)
+            isStyling = false
+
+            // --- Phase 2: Async styled parse ---
+            let hidesSyntax = editingMode == .writing
+            let isJSONDoc = isJSON
+
+            Task.detached { [weak self] in
+                // Create a fresh parser instance (MarkdownParser has mutable state)
+                let styled: NSAttributedString
+                if isJSONDoc {
+                    styled = JsonSyntaxHighlighter().highlight(plainText, theme: theme)
+                } else {
+                    let bgParser = MarkdownParser()
+                    styled = bgParser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: theme)
+                }
+
+                await MainActor.run {
+                    self?.applyParsedStyling(styled, isJSON: isJSONDoc, generation: currentGeneration)
+                }
+            }
+        }
+
+        /// Applies the parsed attributed string's attributes to the text storage,
+        /// but only if the generation matches (i.e., user hasn't switched files since).
+        private func applyParsedStyling(_ styled: NSAttributedString, isJSON isJSONDoc: Bool, generation: Int) {
+            guard let textView, let storage = textView.textStorage else { return }
+            guard generation == parseGeneration else { return }
+            // Guard against content mismatch (e.g., user typed while parse was in flight)
+            guard storage.string == styled.string else { return }
 
             isStyling = true
             defer { isStyling = false }
 
-            let hidesSyntax = editingMode == .writing
-
-            let styled: NSAttributedString
-            if isJSON {
-                styled = JsonSyntaxHighlighter().highlight(plainText, theme: .current)
-            } else {
-                styled = parser.parse(plainText, cursorPosition: nil, hideMarkdownSyntax: hidesSyntax, theme: .current)
-            }
-
-            // Preserve selection
             let selectedRanges = textView.selectedRanges
 
-            textView.textStorage?.beginEditing()
-            textView.textStorage?.setAttributedString(styled)
-
-            // Apply XML tag rendering on top of markdown (not for JSON)
-            if !isJSON, let storage = textView.textStorage {
-                XMLTagRenderer.render(in: storage)
+            storage.beginEditing()
+            // Apply attributes only (same approach as restyleInPlace)
+            let fullRange = NSRange(location: 0, length: storage.length)
+            styled.enumerateAttributes(in: fullRange) { attrs, range, _ in
+                storage.setAttributes(attrs, range: range)
             }
 
-            textView.textStorage?.endEditing()
+            // Layer XML tag rendering on top (not for JSON)
+            if !isJSONDoc {
+                XMLTagRenderer.render(in: storage)
+            }
+            storage.endEditing()
 
-            // Restore selection if still valid
             restoreSelection(selectedRanges, in: textView)
 
             // Update code block copy buttons
@@ -185,14 +243,12 @@ struct MarkdownTextView: NSViewRepresentable {
 
             let plainText = storage.string
             let hidesSyntax = editingMode == .writing
-            // In dev mode, pass nil cursor so all lines get full styling without hiding
-            let cursorPos = hidesSyntax ? currentCursorPosition() : nil
 
             let styled: NSAttributedString
             if isJSON {
                 styled = JsonSyntaxHighlighter().highlight(plainText, theme: .current)
             } else {
-                styled = parser.parse(plainText, cursorPosition: cursorPos, hideMarkdownSyntax: hidesSyntax, theme: .current)
+                styled = parser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: .current)
             }
 
             let selectedRanges = textView.selectedRanges
@@ -234,18 +290,6 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        private func currentCursorPosition() -> Int? {
-            guard let textView else { return nil }
-            let range = textView.selectedRange()
-            return range.location
-        }
-
-        private func currentCursorLineRange() -> NSRange? {
-            guard let textView, let storage = textView.textStorage else { return nil }
-            let cursorPos = textView.selectedRange().location
-            guard cursorPos <= storage.length else { return nil }
-            return (storage.string as NSString).lineRange(for: NSRange(location: cursorPos, length: 0))
-        }
 
         // MARK: - Toolbar Interaction Methods
 
@@ -341,21 +385,87 @@ struct MarkdownTextView: NSViewRepresentable {
 
             // Re-apply styling after the user's edit
             restyleInPlace()
-
-            // Update cursor line tracking
-            lastCursorLineRange = currentCursorLineRange()
         }
 
         func textViewDidChangeSelection(_ notification: Notification) {
-            guard !isStyling else { return }
+            editorContext?.activeFormats = detectActiveFormats()
+        }
 
-            // Check if cursor moved to a different line — if so, restyle to
-            // reveal syntax on the new line and hide it on the old one.
-            let newLineRange = currentCursorLineRange()
-            if newLineRange != lastCursorLineRange {
-                lastCursorLineRange = newLineRange
-                restyleInPlace()
+        // MARK: - Active Format Detection
+
+        // Compiled regexes for format detection (static to avoid recompilation)
+        private static let headingRegex = try! NSRegularExpression(pattern: "^(#{1,6})\\s+", options: .anchorsMatchLines)
+        private static let blockquoteRegex = try! NSRegularExpression(pattern: "^>\\s?", options: .anchorsMatchLines)
+        private static let bulletRegex = try! NSRegularExpression(pattern: "^\\s*[-*]\\s+", options: .anchorsMatchLines)
+        private static let numberedRegex = try! NSRegularExpression(pattern: "^\\s*\\d+\\.\\s+", options: .anchorsMatchLines)
+        private static let boldRegex = try! NSRegularExpression(pattern: "\\*\\*(.+?)\\*\\*|__(.+?)__")
+        private static let italicStarRegex = try! NSRegularExpression(pattern: "(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")
+        private static let italicUnderRegex = try! NSRegularExpression(pattern: "(?<!_)_(?!_)(.+?)(?<!_)_(?!_)")
+        private static let strikethroughRegex = try! NSRegularExpression(pattern: "~~(.+?)~~")
+        private static let inlineCodeRegex = try! NSRegularExpression(pattern: "`([^`\\n]+)`")
+        private static let codeBlockRegex = try! NSRegularExpression(pattern: "^```[^\\n]*\\n[\\s\\S]*?^```", options: .anchorsMatchLines)
+
+        private func detectActiveFormats() -> ActiveFormats {
+            guard let textView, let storage = textView.textStorage else { return ActiveFormats() }
+
+            var formats = ActiveFormats()
+            let cursorPos = textView.selectedRange().location
+            let text = storage.string
+            let nsString = text as NSString
+            guard cursorPos <= nsString.length else { return formats }
+
+            let safePos = min(cursorPos, nsString.length)
+            let lineRange = nsString.lineRange(for: NSRange(location: safePos, length: 0))
+            let lineText = nsString.substring(with: lineRange)
+            let lineNS = lineText as NSString
+            let lineFullRange = NSRange(location: 0, length: lineNS.length)
+
+            // Line-level: heading
+            if let m = Self.headingRegex.firstMatch(in: lineText, range: lineFullRange) {
+                formats.heading = m.range(at: 1).length
             }
+            // Line-level: blockquote
+            if Self.blockquoteRegex.firstMatch(in: lineText, range: lineFullRange) != nil {
+                formats.blockquote = true
+            }
+            // Line-level: bullet list
+            if Self.bulletRegex.firstMatch(in: lineText, range: lineFullRange) != nil {
+                formats.bulletList = true
+            }
+            // Line-level: numbered list
+            if Self.numberedRegex.firstMatch(in: lineText, range: lineFullRange) != nil {
+                formats.numberedList = true
+            }
+
+            // Inline formats: check if cursor falls within any match on the current line
+            let cursorInLine = cursorPos - lineRange.location
+
+            func cursorInMatch(_ regex: NSRegularExpression) -> Bool {
+                for match in regex.matches(in: lineText, range: lineFullRange) {
+                    let r = match.range
+                    if cursorInLine >= r.location && cursorInLine <= r.location + r.length {
+                        return true
+                    }
+                }
+                return false
+            }
+
+            formats.bold = cursorInMatch(Self.boldRegex)
+            formats.italic = cursorInMatch(Self.italicStarRegex) || cursorInMatch(Self.italicUnderRegex)
+            formats.strikethrough = cursorInMatch(Self.strikethroughRegex)
+            formats.inlineCode = cursorInMatch(Self.inlineCodeRegex)
+
+            // Code block: check if cursor is inside a fenced code block
+            let fullRange = NSRange(location: 0, length: nsString.length)
+            for match in Self.codeBlockRegex.matches(in: text, range: fullRange) {
+                let r = match.range
+                if cursorPos >= r.location && cursorPos <= r.location + r.length {
+                    formats.codeBlock = true
+                    break
+                }
+            }
+
+            return formats
         }
 
         // MARK: - NSTextStorageDelegate

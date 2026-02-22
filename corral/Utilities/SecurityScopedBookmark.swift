@@ -21,6 +21,7 @@ enum SecurityScopedBookmark {
 
     /// Resolves bookmark data back to a URL.
     /// Returns a tuple of (resolved URL, whether the bookmark was stale).
+    /// Callers are responsible for managing security-scoped access (start/stop).
     static func resolve(_ data: Data) throws -> (URL, Bool) {
         var isStale = false
         if isSandboxed {
@@ -30,7 +31,6 @@ enum SecurityScopedBookmark {
                 relativeTo: nil,
                 bookmarkDataIsStale: &isStale
             )
-            _ = url.startAccessingSecurityScopedResource()
             return (url, isStale)
         } else {
             let url = try URL(

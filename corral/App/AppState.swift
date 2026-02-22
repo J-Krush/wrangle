@@ -9,46 +9,159 @@ enum EditingMode: String, CaseIterable {
 
 @Observable
 class AppState {
-    var openDocuments: [EditorDocument]
-    var activeDocumentIndex: Int
+    var tabs: [WorkspaceTab]
+    var activeTabIndex: Int
     var selectedBookmarkID: String?
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
-    var showTerminal: Bool = false
-    var terminalHeight: CGFloat = 200
     var searchQuery: String = ""
     var sidebarWidth: CGFloat = 240
     var editingMode: EditingMode = .writing
     var starredFileURLs: Set<String> = []
+    var selectedFileTreeURL: URL? = nil
+
+    // Preview tab tracking — only one preview tab at a time
+    var previewTabID: UUID? = nil
+
+    // Terminal close confirmation state
+    var pendingCloseTabIndex: Int?
+    var showTerminalCloseConfirmation: Bool = false
+
+    // Terminal session manager (retained for stopAll on quit)
+    var terminalSessionManager = TerminalSessionManager()
+
+    // Set by ContentView from the @Query bookmarks array
+    var activeProjectName: String?
+
+    // Cached resolved bookmark URLs for scoped-access fallback
+    var resolvedBookmarkURLs: [(directoryPath: String, resolvedURL: URL)] = []
+
+    // MARK: - Computed Properties
+
+    var activeTab: WorkspaceTab? {
+        guard activeTabIndex >= 0, activeTabIndex < tabs.count else { return nil }
+        return tabs[activeTabIndex]
+    }
 
     var activeDocument: EditorDocument? {
-        guard activeDocumentIndex >= 0, activeDocumentIndex < openDocuments.count else {
-            return nil
-        }
-        return openDocuments[activeDocumentIndex]
+        activeTab?.document
+    }
+
+    /// All open documents across tabs (for save-all, etc.)
+    var openDocuments: [EditorDocument] {
+        tabs.compactMap(\.document)
+    }
+
+    /// All open terminal sessions across tabs
+    var openTerminalSessions: [TerminalSession] {
+        tabs.compactMap(\.terminalSession)
     }
 
     init() {
         let blank = EditorDocument()
-        self.openDocuments = [blank]
-        self.activeDocumentIndex = 0
+        let tab = WorkspaceTab(content: .document(blank))
+        self.tabs = [tab]
+        self.activeTabIndex = 0
     }
 
-    func openFile(url: URL) {
-        // Check if this file is already open
-        if let existingIndex = openDocuments.firstIndex(where: { $0.fileURL == url }) {
-            activeDocumentIndex = existingIndex
+    // MARK: - Scoped URL Resolution
+
+    /// Finds a parent bookmark URL that covers the given file URL.
+    func findScopedURL(for url: URL) -> URL? {
+        let filePath = url.path(percentEncoded: false)
+        for entry in resolvedBookmarkURLs {
+            if filePath.hasPrefix(entry.directoryPath) {
+                return entry.resolvedURL
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Document Methods
+
+    func openFile(url: URL, scopedURL: URL? = nil) {
+        // Check if this file is already open in a tab
+        if let existingIndex = tabs.firstIndex(where: { $0.document?.fileURL == url }) {
+            activeTabIndex = existingIndex
             return
         }
 
         let document = EditorDocument(fileURL: url)
-        do {
-            try document.load()
-        } catch {
-            // Still add the document even if load fails — content will be empty
+        let effectiveScopedURL = scopedURL ?? findScopedURL(for: url)
+        if let effectiveScopedURL {
+            document.retainAccess(from: effectiveScopedURL)
         }
-        openDocuments.append(document)
-        activeDocumentIndex = openDocuments.count - 1
+        document.isLoading = true
+        let tab = WorkspaceTab(content: .document(document))
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
+
+        loadDocumentAsync(for: document, from: url)
+    }
+
+    func openFileAsPreview(url: URL, scopedURL: URL? = nil) {
+        // If already open, just select it
+        if let existingIndex = tabs.firstIndex(where: { $0.document?.fileURL == url }) {
+            activeTabIndex = existingIndex
+            return
+        }
+
+        let document = EditorDocument(fileURL: url)
+        let effectiveScopedURL = scopedURL ?? findScopedURL(for: url)
+        if let effectiveScopedURL {
+            document.retainAccess(from: effectiveScopedURL)
+        }
+        document.isLoading = true
+        let tab = WorkspaceTab(content: .document(document))
+
+        // Replace existing preview tab if one exists
+        if let previewID = previewTabID,
+           let previewIndex = tabs.firstIndex(where: { $0.id == previewID }) {
+            tabs[previewIndex] = tab
+            activeTabIndex = previewIndex
+        } else {
+            tabs.append(tab)
+            activeTabIndex = tabs.count - 1
+        }
+        previewTabID = tab.id
+
+        loadDocumentAsync(for: document, from: url)
+    }
+
+    private func loadDocumentAsync(for document: EditorDocument, from url: URL) {
+        Task.detached {
+            var fileContent: String?
+            var errorMessage: String?
+            do {
+                fileContent = try String(contentsOf: url, encoding: .utf8)
+            } catch {
+                do {
+                    fileContent = try String(contentsOf: url)
+                } catch let fallbackError {
+                    errorMessage = fallbackError.localizedDescription
+                }
+            }
+            await MainActor.run {
+                if let fileContent {
+                    document.content = fileContent
+                    document.lastSavedContent = fileContent
+                    document.isDirty = false
+                    document.loadError = nil
+                } else {
+                    document.loadError = errorMessage
+                }
+                document.isLoading = false
+                document.updateCachedStats()
+            }
+        }
+    }
+
+    func promotePreviewTab(for documentID: UUID) {
+        if let previewID = previewTabID,
+           let tab = tabs.first(where: { $0.id == previewID }),
+           tab.document?.id == documentID {
+            previewTabID = nil
+        }
     }
 
     func newDocument() {
@@ -65,28 +178,67 @@ class AppState {
         FileManager.default.createFile(atPath: url.path, contents: nil)
 
         let document = EditorDocument(fileURL: url)
-        openDocuments.append(document)
-        activeDocumentIndex = openDocuments.count - 1
+        let tab = WorkspaceTab(content: .document(document))
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
     }
 
-    func closeDocument(at index: Int) {
-        guard index >= 0, index < openDocuments.count else { return }
-        openDocuments.remove(at: index)
+    // MARK: - Tab Management
 
-        if openDocuments.isEmpty {
-            // Always keep at least one document open
-            newDocument()
-        } else if activeDocumentIndex >= openDocuments.count {
-            activeDocumentIndex = openDocuments.count - 1
-        } else if activeDocumentIndex > index {
-            activeDocumentIndex -= 1
+    func selectTab(at index: Int) {
+        guard index >= 0, index < tabs.count else { return }
+        activeTabIndex = index
+    }
+
+    func closeTab(at index: Int) {
+        guard index >= 0, index < tabs.count else { return }
+        let closedTab = tabs[index]
+
+        // Clear preview if this was the preview tab
+        if previewTabID == closedTab.id {
+            previewTabID = nil
         }
+
+        // Stop terminal if closing a terminal tab
+        if let session = closedTab.terminalSession {
+            session.stop()
+        }
+
+        tabs.remove(at: index)
+
+        if tabs.isEmpty {
+            // Always keep at least one tab open
+            let blank = EditorDocument()
+            let tab = WorkspaceTab(content: .document(blank))
+            tabs.append(tab)
+            activeTabIndex = 0
+        } else if activeTabIndex >= tabs.count {
+            activeTabIndex = tabs.count - 1
+        } else if activeTabIndex > index {
+            activeTabIndex -= 1
+        }
+    }
+
+    func closeTab(_ tab: WorkspaceTab) {
+        if let index = tabs.firstIndex(where: { $0.id == tab.id }) {
+            closeTab(at: index)
+        }
+    }
+
+    // Convenience aliases for backward compatibility
+    func closeDocument(at index: Int) {
+        // Find the index in tabs that corresponds to the nth document
+        closeTab(at: index)
     }
 
     func closeDocument(_ document: EditorDocument) {
-        if let index = openDocuments.firstIndex(where: { $0.id == document.id }) {
-            closeDocument(at: index)
+        if let index = tabs.firstIndex(where: { $0.document?.id == document.id }) {
+            closeTab(at: index)
         }
+    }
+
+    func selectDocument(at index: Int) {
+        selectTab(at: index)
     }
 
     func saveActiveDocument() throws {
@@ -94,8 +246,68 @@ class AppState {
         try document.save()
     }
 
-    func selectDocument(at index: Int) {
-        guard index >= 0, index < openDocuments.count else { return }
-        activeDocumentIndex = index
+    // MARK: - Terminal Methods
+
+    /// Requests closing a tab, showing a confirmation dialog if it's a running terminal.
+    func requestCloseTab(at index: Int) {
+        guard index >= 0, index < tabs.count else { return }
+        let tab = tabs[index]
+
+        // If it's a running terminal, show confirmation
+        if let session = tab.terminalSession, session.isRunning {
+            pendingCloseTabIndex = index
+            showTerminalCloseConfirmation = true
+        } else {
+            closeTab(at: index)
+        }
+    }
+
+    func confirmCloseTab() {
+        if let index = pendingCloseTabIndex {
+            closeTab(at: index)
+        }
+        pendingCloseTabIndex = nil
+        showTerminalCloseConfirmation = false
+    }
+
+    func cancelCloseTab() {
+        pendingCloseTabIndex = nil
+        showTerminalCloseConfirmation = false
+    }
+
+    func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false) {
+        // If a terminal for this bookmark already exists, switch to it
+        if let bid = bookmarkID,
+           let existingIndex = tabs.firstIndex(where: {
+               $0.terminalSession?.bookmarkID == bid && $0.terminalSession?.isClaude == launchClaude
+           }) {
+            activeTabIndex = existingIndex
+            return
+        }
+
+        let emulator = TerminalEmulator()
+        // Don't start the process here — SwiftTermView will start it when rendered
+
+        let session = TerminalSession(
+            emulator: emulator,
+            projectName: projectName,
+            workingDirectory: directory,
+            bookmarkID: bookmarkID,
+            isClaude: launchClaude
+        )
+
+        if launchClaude {
+            session.pendingCommand = ClaudeCodeLauncher.launchCommand()
+            emulator.title = "Claude Code"
+        }
+
+        let tab = WorkspaceTab(content: .terminal(session))
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
+    }
+
+    /// Find the tab index for a given terminal session
+    func tabIndex(for session: TerminalSession) -> Int? {
+        tabs.firstIndex(where: { $0.terminalSession?.id == session.id })
     }
 }

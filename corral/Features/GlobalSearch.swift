@@ -218,6 +218,7 @@ struct GlobalSearchView: View {
         var resolvedRoots: [(url: URL, rootPath: String)] = []
         for bookmark in currentBookmarks {
             if let url = bookmark.resolveURL() {
+                _ = url.startAccessingSecurityScopedResource()
                 resolvedRoots.append((url: url, rootPath: url.path))
             }
         }

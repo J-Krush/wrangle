@@ -43,6 +43,7 @@ struct corralApp: App {
                 .environment(appState)
         }
         .modelContainer(sharedModelContainer)
+        .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
             // File menu
             CommandGroup(replacing: .newItem) {
@@ -77,7 +78,7 @@ struct corralApp: App {
                         appState.sidebarWidth = appState.sidebarWidth > 0 ? 0 : 240
                     }
                 }
-                .keyboardShortcut("b", modifiers: [.command])
+                .keyboardShortcut("\\", modifiers: [.command])
             }
 
             // Edit menu additions
@@ -90,14 +91,28 @@ struct corralApp: App {
                 .keyboardShortcut("f", modifiers: [.command, .shift])
             }
 
-            // View menu
+            // View menu — terminal commands
             CommandGroup(after: .toolbar) {
-                Button("Toggle Terminal") {
-                    withAnimation {
-                        appState.showTerminal.toggle()
-                    }
+                Button("New Terminal") {
+                    appState.openTerminal(
+                        projectName: appState.activeProjectName ?? "Terminal",
+                        directory: activeProjectDirectory(),
+                        bookmarkID: appState.selectedBookmarkID
+                    )
                 }
                 .keyboardShortcut("`", modifiers: .command)
+
+                if ClaudeCodeLauncher.isInstalled() {
+                    Button("New Claude Code Session") {
+                        appState.openTerminal(
+                            projectName: appState.activeProjectName ?? "Claude Code",
+                            directory: activeProjectDirectory(),
+                            bookmarkID: appState.selectedBookmarkID,
+                            launchClaude: true
+                        )
+                    }
+                    .keyboardShortcut("`", modifiers: [.command, .shift])
+                }
 
                 Divider()
 
@@ -107,52 +122,83 @@ struct corralApp: App {
                 .keyboardShortcut("p", modifiers: .command)
             }
 
+            // Open in external editor
+            CommandGroup(after: .toolbar) {
+                Divider()
+                Menu("Open in External Editor") {
+                    ForEach(ExternalEditorLauncher.availableEditors()) { editor in
+                        Button("Open in \(editor.name)") {
+                            openInExternalEditor(bundleID: editor.bundleID)
+                        }
+                    }
+                    Divider()
+                    Button("Reveal in Finder") {
+                        revealInFinder()
+                    }
+                }
+            }
+
             // Tab navigation
             CommandGroup(after: .windowArrangement) {
                 Button("Next Tab") {
-                    if appState.activeDocumentIndex < appState.openDocuments.count - 1 {
-                        appState.selectDocument(at: appState.activeDocumentIndex + 1)
+                    if appState.activeTabIndex < appState.tabs.count - 1 {
+                        appState.selectTab(at: appState.activeTabIndex + 1)
                     }
                 }
                 .keyboardShortcut("]", modifiers: [.command, .shift])
 
                 Button("Previous Tab") {
-                    if appState.activeDocumentIndex > 0 {
-                        appState.selectDocument(at: appState.activeDocumentIndex - 1)
+                    if appState.activeTabIndex > 0 {
+                        appState.selectTab(at: appState.activeTabIndex - 1)
                     }
                 }
                 .keyboardShortcut("[", modifiers: [.command, .shift])
 
                 Button("Close Tab") {
-                    appState.closeDocument(at: appState.activeDocumentIndex)
+                    appState.requestCloseTab(at: appState.activeTabIndex)
                 }
                 .keyboardShortcut("w")
             }
         }
     }
 
+    private func activeProjectDirectory() -> URL? {
+        // Try to derive directory from the active document or selected bookmark
+        if let url = appState.activeDocument?.fileURL {
+            return url.deletingLastPathComponent()
+        }
+        return nil
+    }
+
     private func openFile() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [.plainText, .yaml, .json]
+        panel.allowedContentTypes = [
+            .plainText, .yaml, .json,
+            .xml, .html,
+            .sourceCode, .swiftSource,
+            .shellScript, .pythonScript, .perlScript, .rubyScript,
+            .cSource, .cPlusPlusSource, .cHeader, .cPlusPlusHeader,
+            .objectiveCSource, .objectiveCPlusPlusSource,
+        ]
+        panel.allowsOtherFileTypes = true
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
         panel.message = "Select files to open"
 
         if panel.runModal() == .OK {
             for url in panel.urls {
-                appState.openFile(url: url)
+                appState.openFile(url: url, scopedURL: url)
             }
         }
     }
 
     private func saveFile() {
         guard let doc = appState.activeDocument else { return }
+        appState.promotePreviewTab(for: doc.id)
 
         if doc.fileURL != nil {
-            // Already has a save location — save in place
             try? doc.save()
         } else {
-            // No save location yet — prompt for one
             showSavePanel(for: doc)
         }
     }
@@ -170,6 +216,18 @@ struct corralApp: App {
 
         if panel.runModal() == .OK, let url = panel.url {
             try? doc.saveAs(to: url)
+        }
+    }
+
+    private func openInExternalEditor(bundleID: String) {
+        if let url = appState.activeDocument?.fileURL?.deletingLastPathComponent() {
+            ExternalEditorLauncher.open(directory: url, withBundleID: bundleID)
+        }
+    }
+
+    private func revealInFinder() {
+        if let url = appState.activeDocument?.fileURL {
+            NSWorkspace.shared.activateFileViewerSelecting([url])
         }
     }
 }

@@ -14,6 +14,9 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var editorContext = EditorContext()
 
+    /// Cached map: directory path -> (bookmarkID, bookmarkName)
+    @State private var bookmarkPathCache: [(path: String, id: String, name: String)] = []
+
     var body: some View {
         @Bindable var appState = appState
 
@@ -22,59 +25,38 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 400)
         } detail: {
             VStack(spacing: 0) {
-                // Tab bar
-                TabBarView()
-
-                // Toolbar area — markdown or JSON depending on file type
-                if let doc = appState.activeDocument {
-                    if doc.fileURL?.pathExtension.lowercased() == "json" {
-                        JsonToolbar(
-                            text: Binding(
-                                get: { doc.content },
-                                set: { doc.content = $0; doc.markDirty() }
-                            ),
-                            onInsert: { block in
-                                editorContext.insertBlock(block)
-                            }
-                        )
-                        .background(Color(nsColor: .controlBackgroundColor))
-
-                        Divider()
-                    } else {
-                        EditorToolbar(context: editorContext, editingMode: $appState.editingMode)
-                            .background(Color(nsColor: .controlBackgroundColor))
-
-                        Divider()
+                // Content area — switches based on active tab type
+                if let tab = appState.activeTab {
+                    switch tab.content {
+                    case .document(let doc):
+                        documentContentView(doc)
+                    case .terminal(let session):
+                        TerminalTabContentView(session: session)
                     }
-                }
-
-                // Main editor area
-                if let doc = appState.activeDocument {
-                    MarkdownTextView(
-                        text: Binding(
-                            get: { doc.content },
-                            set: { doc.content = $0; doc.markDirty() }
-                        ),
-                        document: doc,
-                        editorContext: editorContext,
-                        editingMode: appState.editingMode
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .id(doc.id)
                 } else {
                     emptyEditorView
                 }
-
-                // Status bar
-                if let doc = appState.activeDocument {
-                    StatusBarView(document: doc)
+            }
+            .alert(
+                "Close Terminal?",
+                isPresented: Binding(
+                    get: { appState.showTerminalCloseConfirmation },
+                    set: { if !$0 { appState.cancelCloseTab() } }
+                )
+            ) {
+                Button("Cancel", role: .cancel) {
+                    appState.cancelCloseTab()
                 }
-
-                // Terminal panel
-                if appState.showTerminal {
-                    Divider()
-                    TerminalView(workingDirectory: resolveActiveBookmarkURL())
-                        .frame(height: appState.terminalHeight)
+                Button("Close", role: .destructive) {
+                    appState.confirmCloseTab()
+                }
+            } message: {
+                if let index = appState.pendingCloseTabIndex,
+                   index < appState.tabs.count,
+                   let session = appState.tabs[index].terminalSession {
+                    Text("The terminal session '\(session.displayTitle)' is still running. Are you sure?")
+                } else {
+                    Text("A terminal session is still running. Are you sure?")
                 }
             }
         }
@@ -86,16 +68,91 @@ struct ContentView: View {
                 GlobalSearchView()
             }
         }
+        .navigationTitle(appState.activeTab?.displayName ?? "Corral")
+        .background { TitleBarAccessoryInstaller(appState: appState) }
         .frame(minWidth: 800, minHeight: 500)
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             handleFileDrop(providers)
         }
-        .onChange(of: appState.activeDocumentIndex) { _, _ in
-            // Record recently opened file when switching documents
+        .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
                 recordRecentFile(url: url, in: modelContext)
+                updateSelectedBookmarkCached(for: url)
             }
         }
+        .onChange(of: bookmarks.count) { _, _ in
+            rebuildBookmarkPathCache()
+        }
+        .onAppear {
+            rebuildBookmarkPathCache()
+        }
+    }
+
+    // MARK: - Document Content View
+
+    @ViewBuilder
+    private func documentContentView(_ doc: EditorDocument) -> some View {
+        // Toolbar area — markdown or JSON depending on file type
+        if doc.fileURL?.pathExtension.lowercased() == "json" {
+            JsonToolbar(
+                text: Binding(
+                    get: { doc.content },
+                    set: { doc.content = $0; doc.markDirty(); appState.promotePreviewTab(for: doc.id) }
+                ),
+                onInsert: { block in
+                    editorContext.insertBlock(block)
+                }
+            )
+            .background(Theme.current.editorBackgroundColor)
+
+            Divider()
+        } else {
+            EditorToolbar(context: editorContext, editingMode: Binding(
+                get: { appState.editingMode },
+                set: { appState.editingMode = $0 }
+            ))
+            .background(Theme.current.editorBackgroundColor)
+
+            Divider()
+        }
+
+        // Main editor area
+        if let error = doc.loadError {
+            VStack(spacing: 12) {
+                Spacer()
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.orange)
+                Text("Could not load file")
+                    .font(.headline)
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                if let url = doc.fileURL {
+                    Text(url.path)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .textSelection(.enabled)
+                }
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            MarkdownTextView(
+                text: Binding(
+                    get: { doc.content },
+                    set: { doc.content = $0; doc.markDirty(); appState.promotePreviewTab(for: doc.id) }
+                ),
+                document: doc,
+                editorContext: editorContext,
+                editingMode: appState.editingMode
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+
+        // Status bar
+        StatusBarView(document: doc)
     }
 
     private var emptyEditorView: some View {
@@ -115,9 +172,31 @@ struct ContentView: View {
 
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
 
-    private func resolveActiveBookmarkURL() -> URL? {
-        guard let selectedID = appState.selectedBookmarkID else { return nil }
-        return bookmarks.first { "\($0.persistentModelID)" == selectedID }?.resolveURL()
+    private func rebuildBookmarkPathCache() {
+        bookmarkPathCache = bookmarks.compactMap { bookmark in
+            guard !bookmark.isFile, let dirURL = bookmark.resolveURL() else { return nil }
+            let dirPath = dirURL.path(percentEncoded: false)
+            let id = bookmark.persistentModelID.hashValue.description
+            return (path: dirPath, id: id, name: bookmark.name)
+        }
+
+        // Also populate the scoped URL cache on AppState for fallback resolution
+        appState.resolvedBookmarkURLs = bookmarks.compactMap { bookmark in
+            guard let url = bookmark.resolveURL() else { return nil }
+            let path = url.path(percentEncoded: false)
+            return (directoryPath: path, resolvedURL: url)
+        }
+    }
+
+    private func updateSelectedBookmarkCached(for fileURL: URL) {
+        let filePath = fileURL.path(percentEncoded: false)
+        for entry in bookmarkPathCache {
+            if filePath.hasPrefix(entry.path) {
+                appState.selectedBookmarkID = entry.id
+                appState.activeProjectName = entry.name
+                return
+            }
+        }
     }
 
     private func handleFileDrop(_ providers: [NSItemProvider]) -> Bool {
@@ -127,91 +206,13 @@ struct ContentView: View {
                 guard let data = data as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
                 DispatchQueue.main.async {
-                    appState.openFile(url: url)
+                    appState.openFile(url: url, scopedURL: url)
                     recordRecentFile(url: url, in: modelContext)
                     handled = true
                 }
             }
         }
         return handled
-    }
-}
-
-// MARK: - Tab Bar
-
-struct TabBarView: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                ForEach(Array(appState.openDocuments.enumerated()), id: \.element.id) { index, doc in
-                    TabItemView(
-                        document: doc,
-                        isActive: index == appState.activeDocumentIndex,
-                        onSelect: { appState.selectDocument(at: index) },
-                        onClose: { appState.closeDocument(at: index) }
-                    )
-                }
-            }
-        }
-        .frame(height: 32)
-        .background(Color(nsColor: .controlBackgroundColor))
-    }
-}
-
-struct TabItemView: View {
-    let document: EditorDocument
-    let isActive: Bool
-    let onSelect: () -> Void
-    let onClose: () -> Void
-
-    @State private var isHovering = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: document.fileType.iconName)
-                .font(.caption2)
-                .foregroundColor(document.fileType.iconColor)
-
-            Text(document.fileName)
-                .font(.caption)
-                .lineLimit(1)
-
-            if document.isDirty {
-                Circle()
-                    .fill(.orange)
-                    .frame(width: 6, height: 6)
-            }
-
-            if isHovering || isActive {
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.borderless)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(isActive ? Color(nsColor: .controlAccentColor).opacity(0.15) : Color.clear)
-        .overlay(alignment: .bottom) {
-            if isActive {
-                Rectangle()
-                    .fill(Color.accentColor)
-                    .frame(height: 2)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
-        .onHover { isHovering = $0 }
-        .contextMenu {
-            Button("Close") { onClose() }
-            Button("Close Others") {
-                // Close all tabs except this one
-            }
-        }
     }
 }
 
@@ -234,27 +235,25 @@ struct StatusBarView: View {
             Divider()
                 .frame(height: 12)
 
-            // Token count
-            let tokenCount = TokenCounter.count(document.content)
+            // Token count (cached)
             HStack(spacing: 4) {
                 Image(systemName: "number")
                     .font(.caption2)
-                Text("\(TokenCounter.formattedCount(tokenCount)) tokens")
+                Text("\(TokenCounter.formattedCount(document.cachedTokenCount)) tokens")
                     .font(.caption2)
             }
-            .foregroundColor(TokenCounter.colorForCount(tokenCount))
+            .foregroundColor(TokenCounter.colorForCount(document.cachedTokenCount))
 
             Divider()
                 .frame(height: 12)
 
-            // Character count
-            Text("\(document.content.count) chars")
+            // Character count (cached)
+            Text("\(document.cachedCharCount) chars")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
-            // Line count
-            let lineCount = document.content.components(separatedBy: "\n").count
-            Text("\(lineCount) lines")
+            // Line count (cached)
+            Text("\(document.cachedLineCount) lines")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
@@ -271,6 +270,6 @@ struct StatusBarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background(Theme.current.editorBackgroundColor)
     }
 }

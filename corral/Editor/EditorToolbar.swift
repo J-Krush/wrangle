@@ -8,6 +8,8 @@ struct EditorToolbar: View {
     var context: EditorContext?
     @Binding var editingMode: EditingMode
 
+    private var formats: ActiveFormats { context?.activeFormats ?? ActiveFormats() }
+
     var body: some View {
         HStack(spacing: 4) {
             // --- Headings ---
@@ -56,13 +58,13 @@ struct EditorToolbar: View {
 
     private var headingGroup: some View {
         HStack(spacing: 2) {
-            toolbarButton(label: "H1", icon: nil, tooltip: "Heading 1 (Cmd+1)") {
+            toolbarButton(label: "H1", icon: nil, tooltip: "Heading 1 (Cmd+1)", isActive: formats.heading == 1) {
                 context?.insertLinePrefix("# ")
             }
-            toolbarButton(label: "H2", icon: nil, tooltip: "Heading 2 (Cmd+2)") {
+            toolbarButton(label: "H2", icon: nil, tooltip: "Heading 2 (Cmd+2)", isActive: formats.heading == 2) {
                 context?.insertLinePrefix("## ")
             }
-            toolbarButton(label: "H3", icon: nil, tooltip: "Heading 3 (Cmd+3)") {
+            toolbarButton(label: "H3", icon: nil, tooltip: "Heading 3 (Cmd+3)", isActive: formats.heading == 3) {
                 context?.insertLinePrefix("### ")
             }
         }
@@ -70,30 +72,33 @@ struct EditorToolbar: View {
 
     private var formattingGroup: some View {
         HStack(spacing: 2) {
-            toolbarButton(label: nil, icon: "bold", tooltip: "Bold (Cmd+B)") {
+            toolbarButton(label: nil, icon: "bold", tooltip: "Bold (Cmd+B)", isActive: formats.bold) {
                 context?.insertFormatting(prefix: "**", suffix: "**")
             }
-            toolbarButton(label: nil, icon: "italic", tooltip: "Italic (Cmd+I)") {
+            toolbarButton(label: nil, icon: "italic", tooltip: "Italic (Cmd+I)", isActive: formats.italic) {
                 context?.insertFormatting(prefix: "*", suffix: "*")
             }
-            toolbarButton(label: nil, icon: "strikethrough", tooltip: "Strikethrough (Cmd+Shift+X)") {
+            toolbarButton(label: nil, icon: "strikethrough", tooltip: "Strikethrough (Cmd+Shift+X)", isActive: formats.strikethrough) {
                 context?.insertFormatting(prefix: "~~", suffix: "~~")
             }
-            toolbarButton(label: nil, icon: "chevron.left.forwardslash.chevron.right", tooltip: "Inline Code (Cmd+E)") {
+            toolbarButton(label: nil, icon: "chevron.left.forwardslash.chevron.right", tooltip: "Inline Code (Cmd+E)", isActive: formats.inlineCode) {
                 context?.insertFormatting(prefix: "`", suffix: "`")
+            }
+            toolbarButton(label: nil, icon: "curlybraces", tooltip: "Code Block", isActive: formats.codeBlock) {
+                context?.insertFormatting(prefix: "```\n", suffix: "\n```")
             }
         }
     }
 
     private var blockGroup: some View {
         HStack(spacing: 2) {
-            toolbarButton(label: nil, icon: "list.bullet", tooltip: "Bullet List") {
+            toolbarButton(label: nil, icon: "list.bullet", tooltip: "Bullet List", isActive: formats.bulletList) {
                 context?.insertLinePrefix("- ")
             }
-            toolbarButton(label: nil, icon: "list.number", tooltip: "Numbered List") {
+            toolbarButton(label: nil, icon: "list.number", tooltip: "Numbered List", isActive: formats.numberedList) {
                 context?.insertLinePrefix("1. ")
             }
-            toolbarButton(label: nil, icon: "text.quote", tooltip: "Blockquote") {
+            toolbarButton(label: nil, icon: "text.quote", tooltip: "Blockquote", isActive: formats.blockquote) {
                 context?.insertLinePrefix("> ")
             }
         }
@@ -107,9 +112,6 @@ struct EditorToolbar: View {
             toolbarButton(label: nil, icon: "minus", tooltip: "Horizontal Rule") {
                 context?.insertBlock("\n---\n")
             }
-            toolbarButton(label: nil, icon: "curlybraces", tooltip: "Code Block") {
-                context?.insertFormatting(prefix: "```\n", suffix: "\n```")
-            }
         }
     }
 
@@ -120,6 +122,7 @@ struct EditorToolbar: View {
         label: String?,
         icon: String?,
         tooltip: String,
+        isActive: Bool = false,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -133,6 +136,12 @@ struct EditorToolbar: View {
                     .frame(minWidth: 24, minHeight: 20)
             }
         }
+        .foregroundStyle(isActive ? Color.accentColor : .primary)
+        .background(
+            isActive
+                ? RoundedRectangle(cornerRadius: 4).fill(Color.accentColor.opacity(0.2))
+                : RoundedRectangle(cornerRadius: 4).fill(Color.clear)
+        )
         .help(tooltip)
     }
 }

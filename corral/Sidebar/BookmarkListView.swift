@@ -3,6 +3,7 @@ import SwiftData
 
 struct BookmarkListView: View {
     let filterText: String
+    let isFinderDragActive: Bool
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
@@ -14,6 +15,9 @@ struct BookmarkListView: View {
     @State private var showColorPicker = false
     @State private var colorPickerBookmark: BookmarkedDirectory?
     @State private var selectedColor: Color = .blue
+    @State private var draggingBookmarkID: String?
+    @State private var lastFileBookmarkClickTime: Date = .distantPast
+    @State private var lastFileBookmarkClickID: String?
 
     private let availableColors: [(String, Color)] = [
         ("#007AFF", .blue),
@@ -28,83 +32,173 @@ struct BookmarkListView: View {
 
     var body: some View {
         ForEach(bookmarks) { bookmark in
-            bookmarkRow(bookmark)
-        }
-        .onMove(perform: reorderBookmarks)
+            let bookmarkID = bookmark.persistentModelID.hashValue.description
+            let isSelected = appState.selectedBookmarkID == bookmarkID
 
-        addBookmarkButton
-            .sheet(isPresented: $showRenameSheet) {
-                renameSheet
-            }
-            .sheet(isPresented: $showColorPicker) {
-                colorPickerSheet
-            }
-    }
-
-    // MARK: - Bookmark Row
-
-    @ViewBuilder
-    private func bookmarkRow(_ bookmark: BookmarkedDirectory) -> some View {
-        if bookmark.isFile {
-            fileBookmarkRow(bookmark)
-        } else {
-            directoryBookmarkRow(bookmark)
-        }
-    }
-
-    private func directoryBookmarkRow(_ bookmark: BookmarkedDirectory) -> some View {
-        let bookmarkID = bookmark.persistentModelID.hashValue.description
-
-        return DisclosureGroup(
-            isExpanded: Binding(
-                get: { expandedBookmarks.contains(bookmarkID) },
-                set: { isExpanded in
-                    if isExpanded {
-                        expandedBookmarks.insert(bookmarkID)
-                        appState.selectedBookmarkID = bookmarkID
-                    } else {
-                        expandedBookmarks.remove(bookmarkID)
+            if bookmark.isFile {
+                fileBookmarkRow(bookmark)
+                    .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+                    .draggable(bookmarkID) { dragPreview(bookmark: bookmark) }
+                    .dropDestination(for: String.self) { droppedIDs, _ in
+                        guard let sourceID = droppedIDs.first else { return false }
+                        reorderBookmark(sourceID: sourceID, beforeTargetID: bookmarkID)
+                        draggingBookmarkID = nil
+                        return true
                     }
+            } else {
+                DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
+                    FileTreeContent(bookmark: bookmark, filterText: filterText)
+                } label: {
+                    Label {
+                        Text(bookmark.name)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } icon: {
+                        Image(systemName: "folder.fill")
+                            .foregroundStyle(colorFromHex(bookmark.iconColorHex))
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        let binding = expansionBinding(for: bookmarkID)
+                        binding.wrappedValue.toggle()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            )
-        ) {
-            FileTreeContent(bookmark: bookmark, filterText: filterText)
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "folder.fill")
-                    .foregroundStyle(colorFromHex(bookmark.iconColorHex))
-                Text(bookmark.name)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+                .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
+                .opacity(isFinderDragActive ? 0.3 : 1.0)
+                .draggable(bookmarkID) { dragPreview(bookmark: bookmark) }
+                .dropDestination(for: String.self) { droppedIDs, _ in
+                    guard let sourceID = droppedIDs.first else { return false }
+                    reorderBookmark(sourceID: sourceID, beforeTargetID: bookmarkID)
+                    draggingBookmarkID = nil
+                    return true
+                }
+                .contextMenu { bookmarkContextMenu(bookmark) }
             }
         }
-        .contextMenu {
-            bookmarkContextMenu(bookmark)
+        .sheet(isPresented: $showRenameSheet) { renameSheet }
+        .sheet(isPresented: $showColorPicker) { colorPickerSheet }
+    }
+
+    // MARK: - Bindings
+
+    private func expansionBinding(for bookmarkID: String) -> Binding<Bool> {
+        Binding(
+            get: { expandedBookmarks.contains(bookmarkID) },
+            set: { newValue in
+                if newValue {
+                    expandedBookmarks.insert(bookmarkID)
+                    appState.selectedBookmarkID = bookmarkID
+                    appState.selectedFileTreeURL = nil
+                } else {
+                    expandedBookmarks.remove(bookmarkID)
+                }
+            }
+        )
+    }
+
+    // MARK: - Drag Preview
+
+    private func dragPreview(bookmark: BookmarkedDirectory) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: bookmark.isFile ? "doc.fill" : "folder.fill")
+            Text(bookmark.name)
+        }
+        .padding(8)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .onAppear {
+            draggingBookmarkID = bookmark.persistentModelID.hashValue.description
+            expandedBookmarks.removeAll()
         }
     }
+
+    // MARK: - Bookmark Rows
 
     private func fileBookmarkRow(_ bookmark: BookmarkedDirectory) -> some View {
         Button {
-            if let url = bookmark.resolveURL() {
-                appState.openFile(url: url)
-            }
+            handleFileBookmarkClick(bookmark)
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "doc.fill")
-                    .foregroundStyle(colorFromHex(bookmark.iconColorHex))
+            Label {
                 Text(bookmark.name)
                     .lineLimit(1)
                     .truncationMode(.tail)
+            } icon: {
+                Image(systemName: "doc.fill")
+                    .foregroundStyle(colorFromHex(bookmark.iconColorHex))
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .contextMenu {
-            bookmarkContextMenu(bookmark)
-        }
+        .opacity(isFinderDragActive ? 0.3 : 1.0)
+        .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
+        .contextMenu { bookmarkContextMenu(bookmark) }
     }
+
+    private func handleFileBookmarkClick(_ bookmark: BookmarkedDirectory) {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let now = Date()
+        let isDoubleClick = lastFileBookmarkClickID == bookmarkID
+            && now.timeIntervalSince(lastFileBookmarkClickTime) < 0.3
+
+        appState.selectedBookmarkID = bookmarkID
+
+        if isDoubleClick {
+            if let url = bookmark.resolveURL() {
+                appState.openFile(url: url, scopedURL: url)
+                if let doc = appState.activeDocument {
+                    appState.promotePreviewTab(for: doc.id)
+                }
+            }
+        } else {
+            if let url = bookmark.resolveURL() {
+                appState.openFileAsPreview(url: url, scopedURL: url)
+            }
+        }
+
+        lastFileBookmarkClickTime = now
+        lastFileBookmarkClickID = bookmarkID
+    }
+
+    // MARK: - Context Menu
 
     @ViewBuilder
     private func bookmarkContextMenu(_ bookmark: BookmarkedDirectory) -> some View {
+        if !bookmark.isFile {
+            Button("Open Terminal") {
+                openTerminal(for: bookmark)
+            }
+
+            if ClaudeCodeLauncher.isInstalled() {
+                Button("Launch Claude Code") {
+                    launchClaude(for: bookmark)
+                }
+            }
+
+            let editors = ExternalEditorLauncher.availableEditors()
+            if !editors.isEmpty {
+                Menu("Open in...") {
+                    ForEach(editors, id: \.bundleID) { editor in
+                        Button(editor.name) {
+                            if let url = bookmark.resolveURL() {
+                                ExternalEditorLauncher.open(directory: url, withBundleID: editor.bundleID)
+                            }
+                        }
+                    }
+                    Divider()
+                    Button("Finder") {
+                        if let url = bookmark.resolveURL() {
+                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+                        }
+                    }
+                }
+            }
+
+            Divider()
+        }
+
         Button("Rename...") {
             renamingBookmark = bookmark
             renameText = bookmark.name
@@ -123,26 +217,33 @@ struct BookmarkListView: View {
         }
     }
 
-    // MARK: - Add Bookmark
+    private func openTerminal(for bookmark: BookmarkedDirectory) {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID,
+            launchClaude: false
+        )
+    }
 
-    private var addBookmarkButton: some View {
-        Button {
-            addBookmark()
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "plus.circle")
-                Text("Add Bookmark")
-            }
-            .foregroundStyle(.secondary)
-        }
-        .buttonStyle(.plain)
+    private func launchClaude(for bookmark: BookmarkedDirectory) {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID,
+            launchClaude: true
+        )
     }
 
     // MARK: - Rename Sheet
 
     private var renameSheet: some View {
         VStack(spacing: 16) {
-            Text("Rename Bookmark")
+            Text("Rename Location")
                 .font(.headline)
             TextField("Name", text: $renameText)
                 .textFieldStyle(.roundedBorder)
@@ -196,41 +297,6 @@ struct BookmarkListView: View {
 
     // MARK: - Actions
 
-    private func addBookmark() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.message = "Select a file or directory to bookmark"
-
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-
-        do {
-            let data = try SecurityScopedBookmark.create(for: url)
-            let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
-            let bookmark = BookmarkedDirectory(
-                name: url.lastPathComponent,
-                bookmarkData: data,
-                displayOrder: maxOrder + 1,
-                isFile: !isDir
-            )
-            modelContext.insert(bookmark)
-            try? modelContext.save()
-
-            let id = bookmark.persistentModelID.hashValue.description
-            if isDir {
-                expandedBookmarks.insert(id)
-                appState.selectedBookmarkID = id
-            } else {
-                appState.openFile(url: url)
-            }
-        } catch {
-            // Bookmark creation failed
-        }
-    }
-
     private func removeBookmark(_ bookmark: BookmarkedDirectory) {
         let id = bookmark.persistentModelID.hashValue.description
         if appState.selectedBookmarkID == id {
@@ -241,9 +307,16 @@ struct BookmarkListView: View {
         try? modelContext.save()
     }
 
-    private func reorderBookmarks(from source: IndexSet, to destination: Int) {
+    private func reorderBookmark(sourceID: String, beforeTargetID: String) {
+        guard sourceID != beforeTargetID else { return }
         var ordered = bookmarks
-        ordered.move(fromOffsets: source, toOffset: destination)
+        guard let sourceIndex = ordered.firstIndex(where: { $0.persistentModelID.hashValue.description == sourceID }),
+              let targetIndex = ordered.firstIndex(where: { $0.persistentModelID.hashValue.description == beforeTargetID }) else {
+            return
+        }
+        let item = ordered.remove(at: sourceIndex)
+        let insertIndex = sourceIndex < targetIndex ? targetIndex : targetIndex
+        ordered.insert(item, at: insertIndex)
         for (index, bookmark) in ordered.enumerated() {
             bookmark.displayOrder = index
         }

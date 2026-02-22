@@ -4,10 +4,9 @@ import Foundation
 /// Converts raw markdown text into a styled NSAttributedString for display in the editor.
 ///
 /// The parser applies styling for common markdown elements while respecting code blocks
-/// as protected zones where no further parsing occurs. When a cursor position is provided,
-/// the line containing the cursor reveals raw syntax (Obsidian-style editing). On all other
-/// lines, markdown syntax characters (# for headings, ** for bold, etc.) are hidden by
-/// making them transparent.
+/// as protected zones where no further parsing occurs. When `hideMarkdownSyntax` is true
+/// (writing mode), all syntax characters are hidden. When false (dev mode), all syntax
+/// characters remain visible.
 class MarkdownParser {
 
     // MARK: - Protected Ranges
@@ -20,7 +19,7 @@ class MarkdownParser {
 
     // MARK: - Public API
 
-    func parse(_ text: String, cursorPosition: Int? = nil, hideMarkdownSyntax: Bool = true, theme: Theme = .current) -> NSAttributedString {
+    func parse(_ text: String, hideMarkdownSyntax: Bool = true, theme: Theme = .current) -> NSAttributedString {
         protectedRanges = []
         shouldHideMarkdownSyntax = hideMarkdownSyntax
 
@@ -34,46 +33,38 @@ class MarkdownParser {
         let result = NSMutableAttributedString(string: text, attributes: baseAttributes)
         let fullRange = NSRange(location: 0, length: result.length)
 
-        // Determine the cursor line range so we can skip hiding syntax on that line
-        let cursorLineRange: NSRange? = cursorPosition.flatMap { pos in
-            guard pos >= 0, pos <= text.count else { return nil }
-            let nsString = text as NSString
-            let clamped = min(pos, nsString.length)
-            return nsString.lineRange(for: NSRange(location: clamped, length: 0))
-        }
-
         // 1. Code blocks (fenced) — must be first so content inside is protected
-        applyCodeBlocks(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyCodeBlocks(in: result, fullRange: fullRange, theme: theme)
 
         // 2. Inline code
-        applyInlineCode(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyInlineCode(in: result, fullRange: fullRange, theme: theme)
 
         // 3. Headings
-        applyHeadings(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyHeadings(in: result, fullRange: fullRange, theme: theme)
 
         // 4. Bold
-        applyBold(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyBold(in: result, fullRange: fullRange, theme: theme)
 
         // 5. Italic
-        applyItalic(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyItalic(in: result, fullRange: fullRange, theme: theme)
 
         // 6. Strikethrough
-        applyStrikethrough(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyStrikethrough(in: result, fullRange: fullRange, theme: theme)
 
         // 7. Blockquotes
-        applyBlockquotes(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyBlockquotes(in: result, fullRange: fullRange, theme: theme)
 
         // 8. Bullet lists
-        applyBulletLists(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyBulletLists(in: result, fullRange: fullRange, theme: theme)
 
         // 9. Numbered lists
-        applyNumberedLists(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyNumberedLists(in: result, fullRange: fullRange, theme: theme)
 
         // 10. Horizontal rules
-        applyHorizontalRules(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyHorizontalRules(in: result, fullRange: fullRange, theme: theme)
 
         // 11. Links
-        applyLinks(in: result, fullRange: fullRange, cursorLineRange: cursorLineRange, theme: theme)
+        applyLinks(in: result, fullRange: fullRange, theme: theme)
 
         return result
     }
@@ -87,20 +78,12 @@ class MarkdownParser {
         return style
     }
 
-    /// Whether a given range overlaps with any protected range (code blocks / inline code).
+    /// Whether a given range is fully contained within any protected range (code blocks / inline code).
     private func isProtected(_ range: NSRange) -> Bool {
-        protectedRanges.contains { NSIntersectionRange($0, range).length > 0 }
-    }
-
-    /// Whether a given range falls on the cursor's line (should reveal raw syntax).
-    private func isOnCursorLine(_ range: NSRange, cursorLineRange: NSRange?) -> Bool {
-        guard let cursorLine = cursorLineRange else { return false }
-        return NSIntersectionRange(cursorLine, range).length > 0
-    }
-
-    /// Returns true when the match should be skipped entirely.
-    private func shouldSkip(_ range: NSRange, cursorLineRange: NSRange?) -> Bool {
-        isProtected(range) || isOnCursorLine(range, cursorLineRange: cursorLineRange)
+        protectedRanges.contains { protectedRange in
+            range.location >= protectedRange.location
+                && (range.location + range.length) <= (protectedRange.location + protectedRange.length)
+        }
     }
 
     private func regex(_ pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression? {
@@ -125,7 +108,6 @@ class MarkdownParser {
     private func applyCodeBlocks(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("^```[^\\n]*\\n[\\s\\S]*?^```", options: [.anchorsMatchLines]) else { return }
@@ -134,11 +116,6 @@ class MarkdownParser {
 
         for match in matches.reversed() {
             let range = match.range
-
-            // Check if cursor is anywhere inside this code block
-            let cursorInBlock = cursorLineRange.map {
-                NSIntersectionRange($0, range).length > 0
-            } ?? false
 
             // Always apply code styling to the entire block
             attrStr.addAttributes([
@@ -165,8 +142,8 @@ class MarkdownParser {
                 for: NSRange(location: max(range.location, range.location + range.length - 1), length: 0)
             )
 
-            // Hide fence lines when cursor is not in the block
-            if !cursorInBlock && shouldHideMarkdownSyntax {
+            // Hide fence lines in writing mode
+            if shouldHideMarkdownSyntax {
                 hideFenceLine(in: attrStr, range: openLineRange)
                 hideFenceLine(in: attrStr, range: closeLineRange)
             }
@@ -195,7 +172,6 @@ class MarkdownParser {
     private func applyInlineCode(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("`([^`\\n]+)`") else { return }
@@ -205,21 +181,17 @@ class MarkdownParser {
             let range = match.range
             if isProtected(range) { continue }
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
-
             attrStr.addAttributes([
                 .font: theme.codeFont,
                 .foregroundColor: theme.codeForeground,
                 .backgroundColor: theme.codeBackground,
             ], range: range)
 
-            // Hide backticks when not on cursor line
-            if !onCursor {
-                let openTick = NSRange(location: range.location, length: 1)
-                let closeTick = NSRange(location: range.location + range.length - 1, length: 1)
-                hideSyntax(in: attrStr, range: openTick)
-                hideSyntax(in: attrStr, range: closeTick)
-            }
+            // Hide backticks in writing mode
+            let openTick = NSRange(location: range.location, length: 1)
+            let closeTick = NSRange(location: range.location + range.length - 1, length: 1)
+            hideSyntax(in: attrStr, range: openTick)
+            hideSyntax(in: attrStr, range: closeTick)
 
             protectedRanges.append(range)
         }
@@ -229,7 +201,6 @@ class MarkdownParser {
     private func applyHeadings(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("^(#{1,6})( +)(.+)$", options: .anchorsMatchLines) else { return }
@@ -239,7 +210,6 @@ class MarkdownParser {
             let range = match.range
             if isProtected(range) { continue }
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
             let hashRange = match.range(at: 1)
             let spaceRange = match.range(at: 2)
             let level = hashRange.length
@@ -250,11 +220,9 @@ class MarkdownParser {
                 .foregroundColor: theme.headingColor,
             ], range: range)
 
-            // Hide the "# " prefix when not on cursor line
-            if !onCursor {
-                hideSyntax(in: attrStr, range: hashRange)
-                hideSyntax(in: attrStr, range: spaceRange)
-            }
+            // Hide the "# " prefix in writing mode
+            hideSyntax(in: attrStr, range: hashRange)
+            hideSyntax(in: attrStr, range: spaceRange)
         }
     }
 
@@ -262,7 +230,6 @@ class MarkdownParser {
     private func applyBold(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("(\\*\\*|__)(.+?)(\\1)") else { return }
@@ -272,50 +239,59 @@ class MarkdownParser {
             let range = match.range
             if isProtected(range) { continue }
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
             let openRange = match.range(at: 1)
+            let contentRange = match.range(at: 2)
             let closeRange = match.range(at: 3)
 
-            // Apply bold to full match
-            let existingFont = attrStr.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont ?? theme.editorFont
-            let boldFont = NSFontManager.shared.convert(existingFont, toHaveTrait: .boldFontMask)
-            attrStr.addAttribute(.font, value: boldFont, range: range)
-
-            // Hide ** markers when not on cursor line
-            if !onCursor {
-                hideSyntax(in: attrStr, range: openRange)
-                hideSyntax(in: attrStr, range: closeRange)
+            // Apply bold by enumerating font runs so inline code fonts are preserved
+            attrStr.enumerateAttribute(.font, in: contentRange, options: []) { value, subRange, _ in
+                let existingFont = value as? NSFont ?? theme.editorFont
+                let boldFont = NSFontManager.shared.convert(existingFont, toHaveTrait: .boldFontMask)
+                attrStr.addAttribute(.font, value: boldFont, range: subRange)
             }
+
+            // Hide ** markers in writing mode
+            hideSyntax(in: attrStr, range: openRange)
+            hideSyntax(in: attrStr, range: closeRange)
         }
     }
 
-    // 5. Italic
+    // 5. Italic — uses two separate patterns to avoid unreliable backreferences
     private func applyItalic(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
-        guard let pattern = regex("(?<![\\*_])(\\*|_)(?!\\1)(.+?)(?<!\\1)\\1(?!\\1)") else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        // *italic* — not preceded/followed by another *
+        let patterns: [(NSRegularExpression?, Int)] = [
+            (regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)"), 1),
+            (regex("(?<!_)_(?!_)(.+?)(?<!_)_(?!_)"), 1),
+        ]
 
-        for match in matches.reversed() {
-            let range = match.range
-            if isProtected(range) { continue }
+        for (pattern, _) in patterns {
+            guard let pattern else { continue }
+            let matches = pattern.matches(in: attrStr.string, range: fullRange)
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
-            let markerRange = match.range(at: 1)
-            let markerLen = markerRange.length
+            for match in matches.reversed() {
+                let range = match.range
+                if isProtected(range) { continue }
 
-            // Apply italic
-            let existingFont = attrStr.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont ?? theme.editorFont
-            let italicFont = NSFontManager.shared.convert(existingFont, toHaveTrait: .italicFontMask)
-            attrStr.addAttribute(.font, value: italicFont, range: range)
+                let contentRange = match.range(at: 1)
 
-            // Hide * or _ markers when not on cursor line
-            if !onCursor {
-                let openMarker = NSRange(location: range.location, length: markerLen)
-                let closeMarker = NSRange(location: range.location + range.length - markerLen, length: markerLen)
+                // Apply italic by enumerating font runs so inline code/bold fonts are preserved
+                attrStr.enumerateAttribute(.font, in: contentRange, options: []) { value, subRange, _ in
+                    let existingFont = value as? NSFont ?? theme.editorFont
+                    var italicFont = NSFontManager.shared.convert(existingFont, toHaveTrait: .italicFontMask)
+                    if italicFont == existingFont {
+                        let desc = existingFont.fontDescriptor.withSymbolicTraits(.italic)
+                        italicFont = NSFont(descriptor: desc, size: existingFont.pointSize) ?? italicFont
+                    }
+                    attrStr.addAttribute(.font, value: italicFont, range: subRange)
+                }
+
+                // Hide * or _ markers in writing mode
+                let openMarker = NSRange(location: range.location, length: 1)
+                let closeMarker = NSRange(location: range.location + range.length - 1, length: 1)
                 hideSyntax(in: attrStr, range: openMarker)
                 hideSyntax(in: attrStr, range: closeMarker)
             }
@@ -326,7 +302,6 @@ class MarkdownParser {
     private func applyStrikethrough(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("(~~)(.+?)(~~)") else { return }
@@ -336,17 +311,14 @@ class MarkdownParser {
             let range = match.range
             if isProtected(range) { continue }
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
             let openRange = match.range(at: 1)
             let closeRange = match.range(at: 3)
 
             attrStr.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: range)
 
-            // Hide ~~ markers when not on cursor line
-            if !onCursor {
-                hideSyntax(in: attrStr, range: openRange)
-                hideSyntax(in: attrStr, range: closeRange)
-            }
+            // Hide ~~ markers in writing mode
+            hideSyntax(in: attrStr, range: openRange)
+            hideSyntax(in: attrStr, range: closeRange)
         }
     }
 
@@ -354,7 +326,6 @@ class MarkdownParser {
     private func applyBlockquotes(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("^(>\\s?)(.*)$", options: .anchorsMatchLines) else { return }
@@ -364,7 +335,6 @@ class MarkdownParser {
             let range = match.range
             if isProtected(range) { continue }
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
             let prefixRange = match.range(at: 1)
 
             let style = NSMutableParagraphStyle()
@@ -378,10 +348,8 @@ class MarkdownParser {
                 .paragraphStyle: style,
             ], range: range)
 
-            // Hide "> " prefix when not on cursor line
-            if !onCursor {
-                hideSyntax(in: attrStr, range: prefixRange)
-            }
+            // Hide "> " prefix in writing mode
+            hideSyntax(in: attrStr, range: prefixRange)
         }
     }
 
@@ -389,7 +357,6 @@ class MarkdownParser {
     private func applyBulletLists(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("^(\\s*)[\\-\\*]\\s+(.+)$", options: .anchorsMatchLines) else { return }
@@ -397,7 +364,7 @@ class MarkdownParser {
 
         for match in matches.reversed() {
             let range = match.range
-            if shouldSkip(range, cursorLineRange: cursorLineRange) { continue }
+            if isProtected(range) { continue }
 
             let style = NSMutableParagraphStyle()
             style.lineSpacing = theme.lineSpacing
@@ -414,7 +381,6 @@ class MarkdownParser {
     private func applyNumberedLists(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("^(\\s*)\\d+\\.\\s+(.+)$", options: .anchorsMatchLines) else { return }
@@ -422,7 +388,7 @@ class MarkdownParser {
 
         for match in matches.reversed() {
             let range = match.range
-            if shouldSkip(range, cursorLineRange: cursorLineRange) { continue }
+            if isProtected(range) { continue }
 
             let style = NSMutableParagraphStyle()
             style.lineSpacing = theme.lineSpacing
@@ -439,7 +405,6 @@ class MarkdownParser {
     private func applyHorizontalRules(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         guard let pattern = regex("^(---+|\\*\\*\\*+|___+)\\s*$", options: .anchorsMatchLines) else { return }
@@ -447,7 +412,7 @@ class MarkdownParser {
 
         for match in matches.reversed() {
             let range = match.range
-            if shouldSkip(range, cursorLineRange: cursorLineRange) { continue }
+            if isProtected(range) { continue }
 
             let style = NSMutableParagraphStyle()
             style.lineSpacing = theme.lineSpacing
@@ -467,7 +432,6 @@ class MarkdownParser {
     private func applyLinks(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
-        cursorLineRange: NSRange?,
         theme: Theme
     ) {
         // Pattern: [text](url) with capture groups: 1=[ 2=text 3=]( 4=url 5=)
@@ -478,7 +442,6 @@ class MarkdownParser {
             let range = match.range
             if isProtected(range) { continue }
 
-            let onCursor = isOnCursorLine(range, cursorLineRange: cursorLineRange)
             let urlRange = match.range(at: 4)
             let urlString = (attrStr.string as NSString).substring(with: urlRange)
 
@@ -494,17 +457,15 @@ class MarkdownParser {
             // Also color the full range for consistent look
             attrStr.addAttribute(.foregroundColor, value: theme.linkColor, range: range)
 
-            // Hide [, ](, url, ) when not on cursor line — show only the link text
-            if !onCursor {
-                let openBracket = match.range(at: 1)
-                let closeBracketParen = match.range(at: 3)
-                let closeParenRange = match.range(at: 5)
+            // Hide [, ](, url, ) in writing mode — show only the link text
+            let openBracket = match.range(at: 1)
+            let closeBracketParen = match.range(at: 3)
+            let closeParenRange = match.range(at: 5)
 
-                hideSyntax(in: attrStr, range: openBracket)
-                hideSyntax(in: attrStr, range: closeBracketParen)
-                hideSyntax(in: attrStr, range: urlRange)
-                hideSyntax(in: attrStr, range: closeParenRange)
-            }
+            hideSyntax(in: attrStr, range: openBracket)
+            hideSyntax(in: attrStr, range: closeBracketParen)
+            hideSyntax(in: attrStr, range: urlRange)
+            hideSyntax(in: attrStr, range: closeParenRange)
         }
     }
 }

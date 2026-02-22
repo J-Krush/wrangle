@@ -27,11 +27,12 @@ final class BookmarkedDirectory {
     }
 
     /// Resolves bookmark data back to a URL.
-    /// If the bookmark is stale, attempts to recreate it.
-    func resolveURL() -> URL? {
+    /// If the bookmark is stale and `refreshIfStale` is true, attempts to recreate it.
+    /// Pass `refreshIfStale: false` when calling from an `onChange` of `bookmarkData` to avoid an infinite loop.
+    func resolveURL(refreshIfStale: Bool = true) -> URL? {
         do {
             let (url, isStale) = try SecurityScopedBookmark.resolve(bookmarkData)
-            if isStale {
+            if isStale && refreshIfStale {
                 if let newData = try? SecurityScopedBookmark.create(for: url) {
                     bookmarkData = newData
                 }

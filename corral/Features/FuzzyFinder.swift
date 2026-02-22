@@ -176,6 +176,7 @@ struct FuzzyFinderView: View {
 
         for bookmark in bookmarks {
             guard let rootURL = bookmark.resolveURL() else { continue }
+            _ = rootURL.startAccessingSecurityScopedResource()
             let rootPath = rootURL.path
             walkDirectory(at: rootURL, rootPath: rootPath, into: &files)
             rootURL.stopAccessingSecurityScopedResource()
