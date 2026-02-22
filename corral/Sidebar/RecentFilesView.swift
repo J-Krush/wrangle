@@ -147,14 +147,8 @@ struct RecentFileSidebarRow: View {
     let date: Date
     let onOpen: () -> Void
     @Environment(AppState.self) private var appState
-    @State private var isHovering = false
-
     private var fileType: FileType {
         FileType.detect(from: url)
-    }
-
-    private var isStarred: Bool {
-        appState.starredFileURLs.contains(url.absoluteString)
     }
 
     var body: some View {
@@ -167,27 +161,9 @@ struct RecentFileSidebarRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer()
-                if isHovering || isStarred {
-                    Image(systemName: isStarred ? "star.fill" : "star")
-                        .font(.system(size: 10))
-                        .foregroundStyle(isStarred ? .yellow : .secondary)
-                        .onTapGesture {
-                            toggleStar()
-                        }
-                }
             }
         }
         .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-    }
-
-    private func toggleStar() {
-        let urlString = url.absoluteString
-        if appState.starredFileURLs.contains(urlString) {
-            appState.starredFileURLs.remove(urlString)
-        } else {
-            appState.starredFileURLs.insert(urlString)
-        }
     }
 }
 

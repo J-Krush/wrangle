@@ -7,6 +7,7 @@ struct FuzzyFinderView: View {
     @State private var searchText: String = ""
     @State private var allFiles: [IndexedFile] = []
     @State private var selectedIndex: Int = 0
+    @State private var indexTask: Task<Void, Never>?
     @FocusState private var isSearchFieldFocused: Bool
 
     /// Lightweight model for an indexed file used only within the fuzzy finder.
@@ -95,12 +96,14 @@ struct FuzzyFinderView: View {
                 } else {
                     ScrollViewReader { scrollProxy in
                         List(Array(results.enumerated()), id: \.element.id) { index, file in
-                            resultRow(file: file, isSelected: index == selectedIndex)
-                                .id(file.id)
-                                .onTapGesture {
-                                    appState.openFile(url: file.url)
-                                    dismiss()
-                                }
+                            Button {
+                                appState.openFile(url: file.url)
+                                dismiss()
+                            } label: {
+                                resultRow(file: file, isSelected: index == selectedIndex)
+                            }
+                            .buttonStyle(.plain)
+                            .id(file.id)
                         }
                         .listStyle(.plain)
                         .onChange(of: selectedIndex) { _, newIndex in
@@ -120,6 +123,9 @@ struct FuzzyFinderView: View {
         .onAppear {
             indexAllFiles()
             isSearchFieldFocused = true
+        }
+        .onDisappear {
+            indexTask?.cancel()
         }
         .onKeyPress(.escape) {
             dismiss()
@@ -172,20 +178,37 @@ struct FuzzyFinderView: View {
     // MARK: - Indexing
 
     private func indexAllFiles() {
-        var files: [IndexedFile] = []
+        indexTask?.cancel()
+        let currentBookmarks = bookmarks
+        indexTask = Task {
+            // Resolve bookmark URLs on the main actor
+            var roots: [(url: URL, rootPath: String)] = []
+            for bookmark in currentBookmarks {
+                guard let rootURL = bookmark.resolveURL() else { continue }
+                _ = rootURL.startAccessingSecurityScopedResource()
+                roots.append((url: rootURL, rootPath: rootURL.path))
+            }
 
-        for bookmark in bookmarks {
-            guard let rootURL = bookmark.resolveURL() else { continue }
-            _ = rootURL.startAccessingSecurityScopedResource()
-            let rootPath = rootURL.path
-            walkDirectory(at: rootURL, rootPath: rootPath, into: &files)
-            rootURL.stopAccessingSecurityScopedResource()
+            // Walk directories in background
+            let files = await Task.detached {
+                var files: [IndexedFile] = []
+                for root in roots {
+                    Self.walkDirectory(at: root.url, rootPath: root.rootPath, into: &files)
+                }
+                return files
+            }.value
+
+            // Stop security-scoped access (always, even if cancelled)
+            for root in roots {
+                root.url.stopAccessingSecurityScopedResource()
+            }
+
+            guard !Task.isCancelled else { return }
+            allFiles = files
         }
-
-        allFiles = files
     }
 
-    private func walkDirectory(at url: URL, rootPath: String, into files: inout [IndexedFile]) {
+    private static func walkDirectory(at url: URL, rootPath: String, into files: inout [IndexedFile]) {
         let fm = FileManager.default
         guard let contents = try? fm.contentsOfDirectory(
             at: url,

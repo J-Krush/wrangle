@@ -10,6 +10,7 @@ struct FileTreeContent: View {
     @State private var resolvedURL: URL?
     @State private var isLoading = false
     @State private var loadGeneration = 0
+    @State private var loadTask: Task<Void, Never>?
     @State private var newFileName: String = ""
     @State private var showNewFileSheet = false
     @State private var showNewFolderSheet = false
@@ -59,7 +60,6 @@ struct FileTreeContent: View {
                             }
                         }
                     )
-                    .listRowBackground(Color.clear)
                     .contextMenu {
                         contextMenu(for: node)
                     }
@@ -69,6 +69,7 @@ struct FileTreeContent: View {
         .onAppear { loadTree(refreshBookmark: true) }
         .onChange(of: bookmark.bookmarkData) { loadTree(refreshBookmark: false) }
         .onDisappear {
+            loadTask?.cancel()
             watcher?.stop()
             watcher = nil
             if let url = resolvedURL {
@@ -166,6 +167,7 @@ struct FileTreeContent: View {
     // MARK: - File Operations
 
     private func loadTree(refreshBookmark: Bool = true) {
+        loadTask?.cancel()
         watcher?.stop()
         watcher = nil
 
@@ -186,24 +188,25 @@ struct FileTreeContent: View {
         let currentGeneration = loadGeneration
         isLoading = true
 
-        Task.detached {
-            let tree = FileNode.buildTree(at: url)
-            await MainActor.run {
-                guard currentGeneration == loadGeneration else { return }
-                nodes = tree
-                isLoading = false
-            }
+        loadTask = Task {
+            let tree = await Task.detached {
+                FileNode.buildTree(at: url)
+            }.value
+            guard !Task.isCancelled, currentGeneration == loadGeneration else { return }
+            nodes = tree
+            isLoading = false
         }
 
         let newWatcher = FileWatcher(url: url) { [url] in
             loadGeneration += 1
             let gen = loadGeneration
-            Task.detached {
-                let tree = FileNode.buildTree(at: url)
-                await MainActor.run {
-                    guard gen == loadGeneration else { return }
-                    nodes = tree
-                }
+            loadTask?.cancel()
+            loadTask = Task {
+                let tree = await Task.detached {
+                    FileNode.buildTree(at: url)
+                }.value
+                guard !Task.isCancelled, gen == loadGeneration else { return }
+                nodes = tree
             }
         }
         newWatcher.start()

@@ -7,6 +7,7 @@ enum EditingMode: String, CaseIterable {
     case dev
 }
 
+@MainActor
 @Observable
 class AppState {
     var tabs: [WorkspaceTab]
@@ -17,7 +18,6 @@ class AppState {
     var searchQuery: String = ""
     var sidebarWidth: CGFloat = 240
     var editingMode: EditingMode = .writing
-    var starredFileURLs: Set<String> = []
     var selectedFileTreeURL: URL? = nil
 
     // Preview tab tracking — only one preview tab at a time
@@ -100,8 +100,11 @@ class AppState {
     }
 
     func openFileAsPreview(url: URL, scopedURL: URL? = nil) {
+        print("[AppState] openFileAsPreview: \(url.lastPathComponent), scopedURL: \(scopedURL?.path ?? "nil")")
+
         // If already open, just select it
         if let existingIndex = tabs.firstIndex(where: { $0.document?.fileURL == url }) {
+            print("[AppState]   → already open at index \(existingIndex), selecting")
             activeTabIndex = existingIndex
             return
         }
@@ -117,18 +120,22 @@ class AppState {
         // Replace existing preview tab if one exists
         if let previewID = previewTabID,
            let previewIndex = tabs.firstIndex(where: { $0.id == previewID }) {
+            print("[AppState]   → replacing preview tab at index \(previewIndex)")
             tabs[previewIndex] = tab
             activeTabIndex = previewIndex
         } else {
+            print("[AppState]   → appending new tab, index will be \(tabs.count)")
             tabs.append(tab)
             activeTabIndex = tabs.count - 1
         }
+        print("[AppState]   → activeTabIndex=\(activeTabIndex), tabs.count=\(tabs.count), previewTabID=\(tab.id)")
         previewTabID = tab.id
 
         loadDocumentAsync(for: document, from: url)
     }
 
     private func loadDocumentAsync(for document: EditorDocument, from url: URL) {
+        print("[AppState] loadDocumentAsync: reading \(url.lastPathComponent)")
         Task.detached {
             var fileContent: String?
             var errorMessage: String?
@@ -142,6 +149,7 @@ class AppState {
                 }
             }
             await MainActor.run {
+                print("[AppState]   → load result: \(fileContent != nil ? "success (\(fileContent!.count) chars)" : "FAILED: \(errorMessage ?? "unknown")")")
                 if let fileContent {
                     document.content = fileContent
                     document.lastSavedContent = fileContent

@@ -130,11 +130,13 @@ struct GlobalSearchView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List(results) { result in
-                        resultRow(result)
-                            .onTapGesture {
-                                appState.openFile(url: result.fileURL)
-                                dismiss()
-                            }
+                        Button {
+                            appState.openFile(url: result.fileURL)
+                            dismiss()
+                        } label: {
+                            resultRow(result)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .listStyle(.plain)
                 }
@@ -214,40 +216,42 @@ struct GlobalSearchView: View {
         let currentFilter = selectedFilter
         let currentBookmarks = bookmarks
 
-        // Capture resolved URLs on the main actor, then search in background
-        var resolvedRoots: [(url: URL, rootPath: String)] = []
-        for bookmark in currentBookmarks {
-            if let url = bookmark.resolveURL() {
-                _ = url.startAccessingSecurityScopedResource()
-                resolvedRoots.append((url: url, rootPath: url.path))
-            }
-        }
-
-        Task.detached {
-            var found: [SearchResult] = []
-            let fm = FileManager.default
-
-            for root in resolvedRoots {
-                searchDirectory(
-                    at: root.url,
-                    rootPath: root.rootPath,
-                    query: query,
-                    filter: currentFilter,
-                    fileManager: fm,
-                    into: &found
-                )
-            }
-
-            // Cap results to prevent performance issues
-            let capped = Array(found.prefix(200))
-
-            await MainActor.run {
-                self.results = capped
-                self.isSearching = false
-                for root in resolvedRoots {
-                    root.url.stopAccessingSecurityScopedResource()
+        searchTask?.cancel()
+        searchTask = Task {
+            // Resolve bookmark URLs on the main actor
+            var resolvedRoots: [(url: URL, rootPath: String)] = []
+            for bookmark in currentBookmarks {
+                if let url = bookmark.resolveURL() {
+                    _ = url.startAccessingSecurityScopedResource()
+                    resolvedRoots.append((url: url, rootPath: url.path))
                 }
             }
+
+            // Search in background
+            let found = await Task.detached {
+                var found: [SearchResult] = []
+                let fm = FileManager.default
+                for root in resolvedRoots {
+                    searchDirectory(
+                        at: root.url,
+                        rootPath: root.rootPath,
+                        query: query,
+                        filter: currentFilter,
+                        fileManager: fm,
+                        into: &found
+                    )
+                }
+                return Array(found.prefix(200))
+            }.value
+
+            // Always stop security-scoped access, even if cancelled
+            for root in resolvedRoots {
+                root.url.stopAccessingSecurityScopedResource()
+            }
+
+            guard !Task.isCancelled else { return }
+            results = found
+            isSearching = false
         }
     }
 

@@ -5,6 +5,7 @@
 
 import Foundation
 
+@MainActor
 @Observable
 class TerminalSessionManager {
     var sessions: [String: TerminalEmulator] = [:]

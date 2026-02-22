@@ -11,6 +11,7 @@ enum TabContent {
     case terminal(TerminalSession)
 }
 
+@MainActor
 @Observable
 class WorkspaceTab: Identifiable {
     let id = UUID()

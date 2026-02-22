@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct FileNode: Identifiable, Comparable {
-    let id = UUID()
+    var id: URL { url }
     let url: URL
     let name: String
     let isDirectory: Bool
@@ -151,13 +151,6 @@ struct FileTreeNodeView: View {
     var onDoubleClick: ((URL) -> Void)? = nil
     @Environment(AppState.self) private var appState
     @State private var isExpanded = false
-    @State private var isHovering = false
-    @State private var lastClickTime: Date = .distantPast
-    @State private var lastClickedURL: URL?
-
-    private var isStarred: Bool {
-        appState.starredFileURLs.contains(node.url.absoluteString)
-    }
 
     private var isSelected: Bool {
         appState.selectedFileTreeURL == node.url
@@ -165,51 +158,69 @@ struct FileTreeNodeView: View {
 
     var body: some View {
         if node.isDirectory {
-            DisclosureGroup(isExpanded: $isExpanded) {
-                if let children = node.children {
-                    ForEach(children) { child in
-                        FileTreeNodeView(node: child, onSelect: onSelect, onDoubleClick: onDoubleClick)
-                    }
-                }
-            } label: {
-                styledNodeLabel
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        isExpanded.toggle()
-                        appState.selectedFileTreeURL = node.url
-                    }
-                    .dropDestination(for: URL.self) { urls, _ in
-                        copyFiles(urls, to: node.url)
-                    } isTargeted: { isTargeted in
-                        if isTargeted { isExpanded = true }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
-            .onHover { isHovering = $0 }
+            directoryView
         } else if node.isOpenable {
-            Button {
-                handleFileClick()
-            } label: {
-                styledNodeLabel
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
-            .onHover { isHovering = $0 }
+            openableFileView
         } else {
-            nodeLabel
-                .foregroundStyle(.secondary)
-                .opacity(0.4)
-                .listRowBackground(Color.clear)
-                .help("This file type cannot be opened in the editor")
+            unopenableFileView
         }
     }
 
-    private var styledNodeLabel: some View {
-        nodeLabel
+    // MARK: - Directory View
+
+    private var directoryView: some View {
+        // M-2: Use Button inside DisclosureGroup label instead of onTapGesture
+        DisclosureGroup(isExpanded: $isExpanded) {
+            if let children = node.children {
+                ForEach(children) { child in
+                    FileTreeNodeView(node: child, onSelect: onSelect, onDoubleClick: onDoubleClick)
+                }
+            }
+        } label: {
+            Button {
+                appState.selectedFileTreeURL = node.url
+                isExpanded.toggle()
+            } label: {
+                nodeLabel
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .dropDestination(for: URL.self) { urls, _ in
+                copyFiles(urls, to: node.url)
+            } isTargeted: { isTargeted in
+                if isTargeted { isExpanded = true }
+            }
+        }
+        .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
     }
+
+    // MARK: - Openable File View
+
+    private var openableFileView: some View {
+        Button {
+            print("[FileTree] Clicked file: \(node.name) at \(node.url.path)")
+            appState.selectedFileTreeURL = node.url
+            onSelect(node.url)
+        } label: {
+            nodeLabel
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+    }
+
+    // MARK: - Unopenable File View
+
+    private var unopenableFileView: some View {
+        nodeLabel
+            .foregroundStyle(.secondary)
+            .opacity(0.4)
+            .listRowBackground(Color.clear)
+            .help("This file type cannot be opened in the editor")
+    }
+
+    // MARK: - Node Label
 
     private var nodeLabel: some View {
         HStack(spacing: 6) {
@@ -219,48 +230,10 @@ struct FileTreeNodeView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()
-            if isHovering || isStarred {
-                Image(systemName: isStarred ? "star.fill" : "star")
-                    .font(.system(size: 10))
-                    .foregroundStyle(isStarred ? .yellow : .secondary)
-                    .frame(width: 20, height: 20)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        toggleStar()
-                    }
-            }
         }
     }
 
-    private func handleFileClick() {
-        let now = Date()
-        let isDoubleClick = lastClickedURL == node.url
-            && now.timeIntervalSince(lastClickTime) < 0.3
-
-        appState.selectedFileTreeURL = node.url
-
-        if isDoubleClick {
-            if let onDoubleClick {
-                onDoubleClick(node.url)
-            } else {
-                onSelect(node.url)
-            }
-        } else {
-            onSelect(node.url)
-        }
-
-        lastClickTime = now
-        lastClickedURL = node.url
-    }
-
-    private func toggleStar() {
-        let urlString = node.url.absoluteString
-        if appState.starredFileURLs.contains(urlString) {
-            appState.starredFileURLs.remove(urlString)
-        } else {
-            appState.starredFileURLs.insert(urlString)
-        }
-    }
+    // MARK: - Actions
 
     private func copyFiles(_ urls: [URL], to targetDir: URL) -> Bool {
         var success = false

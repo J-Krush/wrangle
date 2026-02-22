@@ -6,6 +6,7 @@
 import Foundation
 import SwiftUI
 
+@MainActor
 @Observable
 class TerminalSession: Identifiable {
     let id = UUID()
@@ -32,6 +33,7 @@ class TerminalSession: Identifiable {
         self.workingDirectory = workingDirectory
         self.bookmarkID = bookmarkID
         self.isClaude = isClaude
+        updateDetectedClaudeFile()
     }
 
     var displayTitle: String {
@@ -56,17 +58,25 @@ class TerminalSession: Identifiable {
         emulator.isRunning
     }
 
-    /// Scans the working directory for a CLAUDE.md file.
-    var detectedClaudeFile: URL? {
-        guard let dir = workingDirectory ?? emulator.workingDirectory else { return nil }
+    /// Detected CLAUDE.md file in the working directory (updated asynchronously).
+    var detectedClaudeFile: URL?
+
+    /// Asynchronously scans the working directory for a CLAUDE.md file.
+    func updateDetectedClaudeFile() {
+        let dir = workingDirectory ?? emulator.workingDirectory
+        guard let dir else {
+            detectedClaudeFile = nil
+            return
+        }
         let candidates = ["CLAUDE.md", ".claude.md", ".claude/claude.md"]
-        for name in candidates {
-            let url = dir.appendingPathComponent(name)
-            if FileManager.default.fileExists(atPath: url.path) {
-                return url
+        Task.detached { [weak self] in
+            let found = candidates.lazy
+                .map { dir.appendingPathComponent($0) }
+                .first { FileManager.default.fileExists(atPath: $0.path) }
+            await MainActor.run {
+                self?.detectedClaudeFile = found
             }
         }
-        return nil
     }
 
     func stop() {

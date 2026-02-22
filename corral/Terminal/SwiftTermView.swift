@@ -9,6 +9,7 @@ import AppKit
 
 /// Protocol allowing TerminalEmulator (state model) to delegate actions
 /// to the SwiftTermView.Coordinator which owns the actual process.
+@MainActor
 protocol TerminalProcessController: AnyObject {
     func terminateProcess()
     func restartProcess(in directory: URL?)
@@ -77,7 +78,8 @@ struct SwiftTermView: NSViewRepresentable {
             // Send pending command (e.g., Claude Code launch) after shell initializes
             if let command = session.pendingCommand {
                 session.pendingCommand = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak terminalView] in
+                Task { @MainActor [weak terminalView] in
+                    try? await Task.sleep(for: .milliseconds(500))
                     guard let data = command.data(using: .utf8) else { return }
                     terminalView?.process.send(data: ArraySlice(data))
                 }
@@ -111,18 +113,24 @@ struct SwiftTermView: NSViewRepresentable {
         func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
 
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
-            session.emulator.title = title
+            Task { @MainActor in
+                session.emulator.title = title
+            }
         }
 
         func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {
-            if let dir = directory {
+            guard let dir = directory else { return }
+            Task { @MainActor in
                 session.emulator.workingDirectory = URL(fileURLWithPath: dir)
+                session.updateDetectedClaudeFile()
             }
         }
 
         func processTerminated(source: TerminalView, exitCode: Int32?) {
-            session.emulator.isRunning = false
-            session.handleProcessExit()
+            Task { @MainActor in
+                session.emulator.isRunning = false
+                session.handleProcessExit()
+            }
         }
 
         // MARK: - TerminalProcessController

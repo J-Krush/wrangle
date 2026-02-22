@@ -16,6 +16,7 @@ struct ActiveFormats: Equatable {
 /// Shared context that bridges the EditorToolbar (SwiftUI) with the
 /// MarkdownTextView coordinator (AppKit). The toolbar calls methods on
 /// this object, which forwards them to the coordinator's NSTextView.
+@MainActor
 @Observable
 class EditorContext {
     /// Set by MarkdownTextView when it creates / updates the coordinator.

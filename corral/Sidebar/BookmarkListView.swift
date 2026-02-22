@@ -8,16 +8,28 @@ struct BookmarkListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
 
+    // H-2: Consolidated sheet state
+    enum SheetState: Equatable {
+        case none
+        case renaming(BookmarkedDirectory, text: String)
+        case pickingColor(BookmarkedDirectory)
+
+        static func == (lhs: SheetState, rhs: SheetState) -> Bool {
+            switch (lhs, rhs) {
+            case (.none, .none): return true
+            case (.renaming(let a, _), .renaming(let b, _)):
+                return a.persistentModelID == b.persistentModelID
+            case (.pickingColor(let a), .pickingColor(let b)):
+                return a.persistentModelID == b.persistentModelID
+            default: return false
+            }
+        }
+    }
+
+    @State private var activeSheet: SheetState = .none
     @State private var expandedBookmarks: Set<String> = []
-    @State private var renamingBookmark: BookmarkedDirectory?
-    @State private var renameText: String = ""
-    @State private var showRenameSheet = false
-    @State private var showColorPicker = false
-    @State private var colorPickerBookmark: BookmarkedDirectory?
-    @State private var selectedColor: Color = .blue
     @State private var draggingBookmarkID: String?
-    @State private var lastFileBookmarkClickTime: Date = .distantPast
-    @State private var lastFileBookmarkClickID: String?
+    @State private var renameText: String = ""
 
     private let availableColors: [(String, Color)] = [
         ("#007AFF", .blue),
@@ -29,6 +41,20 @@ struct BookmarkListView: View {
         ("#FF2D55", .pink),
         ("#8E8E93", .gray),
     ]
+
+    private var showRenameSheet: Binding<Bool> {
+        Binding(
+            get: { if case .renaming = activeSheet { return true }; return false },
+            set: { if !$0 { activeSheet = .none } }
+        )
+    }
+
+    private var showColorPicker: Binding<Bool> {
+        Binding(
+            get: { if case .pickingColor = activeSheet { return true }; return false },
+            set: { if !$0 { activeSheet = .none } }
+        )
+    }
 
     var body: some View {
         ForEach(bookmarks) { bookmark in
@@ -46,23 +72,25 @@ struct BookmarkListView: View {
                         return true
                     }
             } else {
+                // M-2: Use Button inside DisclosureGroup label instead of onTapGesture
                 DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
                     FileTreeContent(bookmark: bookmark, filterText: filterText)
                 } label: {
-                    Label {
-                        Text(bookmark.name)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    } icon: {
-                        Image(systemName: "folder.fill")
-                            .foregroundStyle(colorFromHex(bookmark.iconColorHex))
+                    Button {
+                        appState.selectedBookmarkID = bookmarkID
+                        appState.selectedFileTreeURL = nil
+                    } label: {
+                        Label {
+                            Text(bookmark.name)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        } icon: {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(colorFromHex(bookmark.iconColorHex))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        let binding = expansionBinding(for: bookmarkID)
-                        binding.wrappedValue.toggle()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .buttonStyle(.plain)
                 }
                 .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
                 .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
@@ -77,8 +105,8 @@ struct BookmarkListView: View {
                 .contextMenu { bookmarkContextMenu(bookmark) }
             }
         }
-        .sheet(isPresented: $showRenameSheet) { renameSheet }
-        .sheet(isPresented: $showColorPicker) { colorPickerSheet }
+        .sheet(isPresented: showRenameSheet) { renameSheet }
+        .sheet(isPresented: showColorPicker) { colorPickerSheet }
     }
 
     // MARK: - Bindings
@@ -117,8 +145,21 @@ struct BookmarkListView: View {
     // MARK: - Bookmark Rows
 
     private func fileBookmarkRow(_ bookmark: BookmarkedDirectory) -> some View {
-        Button {
-            handleFileBookmarkClick(bookmark)
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        return Button {
+            appState.selectedBookmarkID = bookmarkID
+            if let url = bookmark.resolveURL() {
+                // If already open as preview, promote to full tab
+                if let existingIndex = appState.tabs.firstIndex(where: { $0.document?.fileURL == url }),
+                   appState.previewTabID == appState.tabs[existingIndex].id {
+                    appState.openFile(url: url, scopedURL: url)
+                    if let doc = appState.activeDocument {
+                        appState.promotePreviewTab(for: doc.id)
+                    }
+                } else {
+                    appState.openFileAsPreview(url: url, scopedURL: url)
+                }
+            }
         } label: {
             Label {
                 Text(bookmark.name)
@@ -135,31 +176,6 @@ struct BookmarkListView: View {
         .opacity(isFinderDragActive ? 0.3 : 1.0)
         .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
         .contextMenu { bookmarkContextMenu(bookmark) }
-    }
-
-    private func handleFileBookmarkClick(_ bookmark: BookmarkedDirectory) {
-        let bookmarkID = bookmark.persistentModelID.hashValue.description
-        let now = Date()
-        let isDoubleClick = lastFileBookmarkClickID == bookmarkID
-            && now.timeIntervalSince(lastFileBookmarkClickTime) < 0.3
-
-        appState.selectedBookmarkID = bookmarkID
-
-        if isDoubleClick {
-            if let url = bookmark.resolveURL() {
-                appState.openFile(url: url, scopedURL: url)
-                if let doc = appState.activeDocument {
-                    appState.promotePreviewTab(for: doc.id)
-                }
-            }
-        } else {
-            if let url = bookmark.resolveURL() {
-                appState.openFileAsPreview(url: url, scopedURL: url)
-            }
-        }
-
-        lastFileBookmarkClickTime = now
-        lastFileBookmarkClickID = bookmarkID
     }
 
     // MARK: - Context Menu
@@ -200,15 +216,12 @@ struct BookmarkListView: View {
         }
 
         Button("Rename...") {
-            renamingBookmark = bookmark
             renameText = bookmark.name
-            showRenameSheet = true
+            activeSheet = .renaming(bookmark, text: bookmark.name)
         }
         if !bookmark.isFile {
             Button("Change Color...") {
-                colorPickerBookmark = bookmark
-                selectedColor = colorFromHex(bookmark.iconColorHex)
-                showColorPicker = true
+                activeSheet = .pickingColor(bookmark)
             }
         }
         Divider()
@@ -249,13 +262,15 @@ struct BookmarkListView: View {
                 .textFieldStyle(.roundedBorder)
             HStack {
                 Button("Cancel") {
-                    showRenameSheet = false
+                    activeSheet = .none
                 }
                 .keyboardShortcut(.cancelAction)
 
                 Button("Rename") {
-                    renamingBookmark?.name = renameText
-                    showRenameSheet = false
+                    if case .renaming(let bookmark, _) = activeSheet {
+                        bookmark.name = renameText
+                    }
+                    activeSheet = .none
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -273,21 +288,31 @@ struct BookmarkListView: View {
                 .font(.headline)
             LazyVGrid(columns: Array(repeating: GridItem(.fixed(36)), count: 4), spacing: 12) {
                 ForEach(availableColors, id: \.0) { hex, color in
-                    Circle()
-                        .fill(color)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.primary, lineWidth: colorPickerBookmark?.iconColorHex == hex ? 2 : 0)
-                        )
-                        .onTapGesture {
-                            colorPickerBookmark?.iconColorHex = hex
-                            showColorPicker = false
+                    // M-1: Use Button instead of onTapGesture for color circles
+                    Button {
+                        if case .pickingColor(let bookmark) = activeSheet {
+                            bookmark.iconColorHex = hex
                         }
+                        activeSheet = .none
+                    } label: {
+                        Circle()
+                            .fill(color)
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.primary, lineWidth: {
+                                        if case .pickingColor(let bookmark) = activeSheet {
+                                            return bookmark.iconColorHex == hex ? 2 : 0
+                                        }
+                                        return 0
+                                    }())
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             Button("Cancel") {
-                showColorPicker = false
+                activeSheet = .none
             }
             .keyboardShortcut(.cancelAction)
         }

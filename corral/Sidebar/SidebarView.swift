@@ -8,15 +8,20 @@ struct SidebarView: View {
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
     @State private var filterText: String = ""
     @State private var rawDropTargeted = false
-    @State private var isDropTargeted = false
-    @State private var hideOverlayTask: Task<Void, Never>?
+    @State private var dropState: DropState = .idle
+    @State private var dropDebounceTask: Task<Void, Never>?
+
+    enum DropState {
+        case idle
+        case hovering
+    }
 
     var body: some View {
         List {
             ActiveTerminalsView()
 
             Section {
-                BookmarkListView(filterText: filterText, isFinderDragActive: isDropTargeted)
+                BookmarkListView(filterText: filterText, isFinderDragActive: dropState == .hovering)
             } header: {
                 HStack {
                     Text("Locations")
@@ -47,25 +52,25 @@ struct SidebarView: View {
         .searchable(text: $filterText, placement: .sidebar, prompt: "Filter files")
         .frame(minWidth: 200, idealWidth: 240)
         .overlay {
-            if isDropTargeted {
+            if dropState == .hovering {
                 dropOverlay
                     .transition(.opacity)
             }
         }
-        .animation(.smooth(duration: 0.2), value: isDropTargeted)
+        .animation(.smooth(duration: 0.2), value: dropState == .hovering)
         .onDrop(of: [.fileURL], isTargeted: $rawDropTargeted) { providers in
             handleFinderDrop(providers)
         }
         .onChange(of: rawDropTargeted) { _, newValue in
-            hideOverlayTask?.cancel()
+            dropDebounceTask?.cancel()
             if newValue {
-                isDropTargeted = true
+                dropState = .hovering
             } else {
-                hideOverlayTask = Task { @MainActor in
+                dropDebounceTask = Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(150))
                     guard !Task.isCancelled else { return }
                     if !rawDropTargeted {
-                        isDropTargeted = false
+                        dropState = .idle
                     }
                 }
             }
@@ -153,7 +158,7 @@ struct SidebarView: View {
                     }
                 }
 
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     do {
                         let bookmarkData = try SecurityScopedBookmark.create(for: url)
                         let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1

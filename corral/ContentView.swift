@@ -78,6 +78,9 @@ struct ContentView: View {
             if let url = appState.activeDocument?.fileURL {
                 recordRecentFile(url: url, in: modelContext)
                 updateSelectedBookmarkCached(for: url)
+                appState.selectedFileTreeURL = url
+            } else {
+                appState.selectedFileTreeURL = nil
             }
         }
         .onChange(of: bookmarks.count) { _, _ in
@@ -205,7 +208,7 @@ struct ContentView: View {
             provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
                 guard let data = data as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil) else { return }
-                DispatchQueue.main.async {
+                Task { @MainActor in
                     appState.openFile(url: url, scopedURL: url)
                     recordRecentFile(url: url, in: modelContext)
                     handled = true

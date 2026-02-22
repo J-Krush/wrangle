@@ -84,9 +84,9 @@ private struct ActiveTerminalRow: View {
             }
 
             Button("Close") {
-                appState.closeTab(
-                    appState.tabs.first(where: { $0.terminalSession?.id == session.id })!
-                )
+                if let tab = appState.tabs.first(where: { $0.terminalSession?.id == session.id }) {
+                    appState.closeTab(tab)
+                }
             }
         }
         .sheet(isPresented: $showRenameSheet) {

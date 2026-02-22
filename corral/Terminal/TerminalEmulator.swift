@@ -10,6 +10,7 @@ import Foundation
 /// Lightweight state model for a terminal session.
 /// The actual PTY process is managed by SwiftTermView.Coordinator
 /// which conforms to TerminalProcessController.
+@MainActor
 @Observable
 class TerminalEmulator {
     var isRunning: Bool = false

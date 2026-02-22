@@ -9,6 +9,51 @@ import Foundation
 /// characters remain visible.
 class MarkdownParser {
 
+    // MARK: - Cached Regex Patterns
+
+    private static let codeBlockRegex = try! NSRegularExpression(
+        pattern: "^```[^\\n]*\\n[\\s\\S]*?^```",
+        options: [.anchorsMatchLines]
+    )
+    private static let inlineCodeRegex = try! NSRegularExpression(
+        pattern: "`([^`\\n]+)`"
+    )
+    private static let headingRegex = try! NSRegularExpression(
+        pattern: "^(#{1,6})( +)(.+)$",
+        options: .anchorsMatchLines
+    )
+    private static let boldRegex = try! NSRegularExpression(
+        pattern: "(\\*\\*|__)(.+?)(\\1)"
+    )
+    private static let italicStarRegex = try! NSRegularExpression(
+        pattern: "(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)"
+    )
+    private static let italicUnderRegex = try! NSRegularExpression(
+        pattern: "(?<!_)_(?!_)(.+?)(?<!_)_(?!_)"
+    )
+    private static let strikethroughRegex = try! NSRegularExpression(
+        pattern: "(~~)(.+?)(~~)"
+    )
+    private static let blockquoteRegex = try! NSRegularExpression(
+        pattern: "^(>\\s?)(.*)$",
+        options: .anchorsMatchLines
+    )
+    private static let bulletListRegex = try! NSRegularExpression(
+        pattern: "^(\\s*)[\\-\\*]\\s+(.+)$",
+        options: .anchorsMatchLines
+    )
+    private static let numberedListRegex = try! NSRegularExpression(
+        pattern: "^(\\s*)\\d+\\.\\s+(.+)$",
+        options: .anchorsMatchLines
+    )
+    private static let horizontalRuleRegex = try! NSRegularExpression(
+        pattern: "^(---+|\\*\\*\\*+|___+)\\s*$",
+        options: .anchorsMatchLines
+    )
+    private static let linkRegex = try! NSRegularExpression(
+        pattern: "(\\[)([^\\]]+)(\\]\\()([^)]+)(\\))"
+    )
+
     // MARK: - Protected Ranges
 
     /// Ranges that should not be processed for markdown (e.g., fenced code blocks).
@@ -86,10 +131,6 @@ class MarkdownParser {
         }
     }
 
-    private func regex(_ pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression? {
-        try? NSRegularExpression(pattern: pattern, options: options)
-    }
-
     /// Makes syntax characters invisible and collapses their width.
     /// Sets both transparent color and a near-zero font size so hidden
     /// characters take up virtually no space in the layout.
@@ -110,8 +151,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("^```[^\\n]*\\n[\\s\\S]*?^```", options: [.anchorsMatchLines]) else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.codeBlockRegex.matches(in: attrStr.string, range: fullRange)
         let nsString = attrStr.string as NSString
 
         for match in matches.reversed() {
@@ -174,8 +214,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("`([^`\\n]+)`") else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.inlineCodeRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -203,8 +242,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("^(#{1,6})( +)(.+)$", options: .anchorsMatchLines) else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.headingRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -232,8 +270,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("(\\*\\*|__)(.+?)(\\1)") else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.boldRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -262,14 +299,12 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        // *italic* — not preceded/followed by another *
-        let patterns: [(NSRegularExpression?, Int)] = [
-            (regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)"), 1),
-            (regex("(?<!_)_(?!_)(.+?)(?<!_)_(?!_)"), 1),
+        let patterns: [(NSRegularExpression, Int)] = [
+            (Self.italicStarRegex, 1),
+            (Self.italicUnderRegex, 1),
         ]
 
         for (pattern, _) in patterns {
-            guard let pattern else { continue }
             let matches = pattern.matches(in: attrStr.string, range: fullRange)
 
             for match in matches.reversed() {
@@ -304,8 +339,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("(~~)(.+?)(~~)") else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.strikethroughRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -328,8 +362,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("^(>\\s?)(.*)$", options: .anchorsMatchLines) else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.blockquoteRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -359,8 +392,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("^(\\s*)[\\-\\*]\\s+(.+)$", options: .anchorsMatchLines) else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.bulletListRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -383,8 +415,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("^(\\s*)\\d+\\.\\s+(.+)$", options: .anchorsMatchLines) else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.numberedListRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -407,8 +438,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        guard let pattern = regex("^(---+|\\*\\*\\*+|___+)\\s*$", options: .anchorsMatchLines) else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.horizontalRuleRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range
@@ -434,9 +464,7 @@ class MarkdownParser {
         fullRange: NSRange,
         theme: Theme
     ) {
-        // Pattern: [text](url) with capture groups: 1=[ 2=text 3=]( 4=url 5=)
-        guard let pattern = regex("(\\[)([^\\]]+)(\\]\\()([^)]+)(\\))") else { return }
-        let matches = pattern.matches(in: attrStr.string, range: fullRange)
+        let matches = Self.linkRegex.matches(in: attrStr.string, range: fullRange)
 
         for match in matches.reversed() {
             let range = match.range

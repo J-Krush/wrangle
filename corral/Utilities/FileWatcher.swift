@@ -5,10 +5,11 @@ import Foundation
 final class FileWatcher {
     private let url: URL
     private let onChange: () -> Void
-    private var fileDescriptor: Int32 = -1
-    private nonisolated(unsafe) var dispatchSource: DispatchSourceFileSystemObject?
-    private nonisolated(unsafe) var debounceWorkItem: DispatchWorkItem?
     private let debounceInterval: TimeInterval
+    private let queue = DispatchQueue(label: "dev.corral.FileWatcher", qos: .utility)
+    private var fileDescriptor: Int32 = -1
+    private var dispatchSource: DispatchSourceFileSystemObject?
+    private var debounceWorkItem: DispatchWorkItem?
 
     init(url: URL, debounceInterval: TimeInterval = 0.3, onChange: @escaping () -> Void) {
         self.url = url
@@ -17,6 +18,7 @@ final class FileWatcher {
     }
 
     deinit {
+        // deinit is single-threaded by definition — safe to access directly
         debounceWorkItem?.cancel()
         dispatchSource?.cancel()
         if fileDescriptor >= 0 {
@@ -27,6 +29,17 @@ final class FileWatcher {
 
     /// Begins watching the directory for write events.
     func start() {
+        queue.async { self._start() }
+    }
+
+    /// Stops watching and releases the file descriptor.
+    func stop() {
+        queue.sync { self._stop() }
+    }
+
+    // MARK: - Private (always called on self.queue)
+
+    private func _start() {
         // Avoid double-starting
         guard dispatchSource == nil else { return }
 
@@ -36,7 +49,7 @@ final class FileWatcher {
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fileDescriptor,
             eventMask: .write,
-            queue: DispatchQueue.global(qos: .utility)
+            queue: queue
         )
 
         source.setEventHandler { [weak self] in
@@ -49,7 +62,7 @@ final class FileWatcher {
                 }
             }
             self.debounceWorkItem = work
-            DispatchQueue.global(qos: .utility).asyncAfter(
+            self.queue.asyncAfter(
                 deadline: .now() + self.debounceInterval,
                 execute: work
             )
@@ -67,8 +80,7 @@ final class FileWatcher {
         source.resume()
     }
 
-    /// Stops watching and releases the file descriptor.
-    func stop() {
+    private func _stop() {
         debounceWorkItem?.cancel()
         debounceWorkItem = nil
         dispatchSource?.cancel()

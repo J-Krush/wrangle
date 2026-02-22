@@ -8,6 +8,12 @@ import AppKit
 
 // MARK: - Title Bar Accessory Installer
 
+/// Installs a custom tab strip in the window's titlebar using `NSTitlebarAccessoryViewController`.
+///
+/// Note: `appState` is captured by value when creating the `TitleBarTabStrip` SwiftUI view
+/// inside the `onWindow` closure. This works because `AppState` is a reference type injected
+/// via `.environment()`, so the captured reference stays current. The `dismantleNSView` method
+/// properly removes the accessory view controller when this view is torn down.
 struct TitleBarAccessoryInstaller: NSViewRepresentable {
     let appState: AppState
 
@@ -192,7 +198,7 @@ struct TitleBarTabItem: View {
             }
             .padding(6)
             .background(.ultraThinMaterial)
-            .cornerRadius(6)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
         }
         .contextMenu {
             if isPreview {

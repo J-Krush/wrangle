@@ -131,6 +131,7 @@ enum FileType: String, CaseIterable {
     }
 }
 
+@MainActor
 @Observable
 class EditorDocument: Identifiable {
     let id = UUID()
@@ -141,13 +142,15 @@ class EditorDocument: Identifiable {
     var loadError: String?
     var lastSavedContent: String
     /// The security-scoped directory URL granting access to this file, if any.
-    private var accessURL: URL?
+    /// nonisolated(unsafe) because deinit (always nonisolated) needs to stop access.
+    /// The warning is expected — this is safe because deinit is single-threaded.
+    private nonisolated(unsafe) var accessURL: URL?
 
     // Cached stats — updated via debounced `updateCachedStats()`
     var cachedTokenCount: Int = 0
     var cachedLineCount: Int = 1
     var cachedCharCount: Int = 0
-    private var statsWorkItem: DispatchWorkItem?
+    private var statsTask: Task<Void, Never>?
 
     var fileName: String {
         fileURL?.lastPathComponent ?? "Untitled"
@@ -226,12 +229,11 @@ class EditorDocument: Identifiable {
     }
 
     private func scheduleCachedStatsUpdate() {
-        statsWorkItem?.cancel()
-        let item = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.updateCachedStats()
+        statsTask?.cancel()
+        statsTask = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            updateCachedStats()
         }
-        statsWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: item)
     }
 }
