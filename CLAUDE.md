@@ -1,13 +1,13 @@
-# CLAUDE.md — Corral
+# CLAUDE.md — Wrangle
 
 ## Project Overview
 
-Corral is a native macOS (Apple Silicon) markdown editor purpose-built for developers working with AI agents, skills, system prompts, and configuration files. Built with Swift and SwiftUI.
+Wrangle is a native macOS (Apple Silicon) markdown editor purpose-built for developers working with AI agents, skills, system prompts, and configuration files. Built with Swift and SwiftUI.
 
 Think "Typora meets AI development" — rich rendered editing by default, with deep awareness of the unique file patterns in AI/agent workflows (XML-in-markdown, token counting, `.claude.md` files, SKILL.md files, MCP configs).
 
-**Xcode project name:** `corral`
-**Bundle identifier:** Corral
+**Xcode project name:** `wrangle`
+**Bundle identifier:** Wrangle
 
 ## Tech Stack
 
@@ -47,11 +47,11 @@ The rendering pipeline:
 ## Project Structure
 
 ```
-corral/
-├── corral.xcodeproj
-├── corral/
+wrangle/
+├── wrangle.xcodeproj
+├── wrangle/
 │   ├── App/
-│   │   ├── corralApp.swift                # App entry point, WindowGroup
+│   │   ├── wrangleApp.swift               # App entry point, WindowGroup
 │   │   ├── AppState.swift                 # Global app state (@Observable)
 │   │   └── ContentView.swift              # Main NavigationSplitView layout
 │   ├── Models/

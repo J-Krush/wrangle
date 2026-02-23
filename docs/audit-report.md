@@ -1,7 +1,7 @@
-# Corral — SwiftUI Codebase Audit Report
+# Wrangle — SwiftUI Codebase Audit Report
 
 **Date:** 2026-02-22
-**Scope:** Full audit of all 36 Swift source files in the Corral macOS app
+**Scope:** Full audit of all 36 Swift source files in the Wrangle macOS app
 **Target:** macOS 14+ (Sonoma), Swift 5.9+, SwiftUI + AppKit interop
 
 ---
@@ -25,13 +25,13 @@ Fix before next feature work. These are correctness issues that can cause crashe
 
 | Class | File | Line |
 |-------|------|------|
-| `AppState` | `corral/App/AppState.swift` | 10–11 |
-| `EditorDocument` | `corral/Models/EditorDocument.swift` | 134–135 |
-| `WorkspaceTab` | `corral/Models/WorkspaceTab.swift` | 14–15 |
-| `TerminalEmulator` | `corral/Terminal/TerminalEmulator.swift` | 13–14 |
-| `TerminalSession` | `corral/Terminal/TerminalSession.swift` | 9–10 |
-| `TerminalSessionManager` | `corral/Terminal/TerminalSessionManager.swift` | 8–9 |
-| `EditorContext` | `corral/Editor/EditorContext.swift` | 19–20 |
+| `AppState` | `wrangle/App/AppState.swift` | 10–11 |
+| `EditorDocument` | `wrangle/Models/EditorDocument.swift` | 134–135 |
+| `WorkspaceTab` | `wrangle/Models/WorkspaceTab.swift` | 14–15 |
+| `TerminalEmulator` | `wrangle/Terminal/TerminalEmulator.swift` | 13–14 |
+| `TerminalSession` | `wrangle/Terminal/TerminalSession.swift` | 9–10 |
+| `TerminalSessionManager` | `wrangle/Terminal/TerminalSessionManager.swift` | 8–9 |
+| `EditorContext` | `wrangle/Editor/EditorContext.swift` | 19–20 |
 
 **Current code:**
 ```swift
@@ -56,7 +56,7 @@ Apply `@MainActor` to all 7 `@Observable` classes. This will surface compiler er
 ### C-2: `FileWatcher` Data Race — `nonisolated(unsafe)` Properties
 
 **Severity:** Critical
-**File:** `corral/Utilities/FileWatcher.swift`
+**File:** `wrangle/Utilities/FileWatcher.swift`
 **Lines:** 9–10 (declarations), 42–55 (mutations)
 
 **Current code:**
@@ -105,7 +105,7 @@ Alternatively, make `FileWatcher` an actor and use its built-in isolation.
 ### C-3: `SwiftTermView` Delegate Callbacks Mutate `@Observable` on Background Thread
 
 **Severity:** Critical
-**File:** `corral/Terminal/SwiftTermView.swift`
+**File:** `wrangle/Terminal/SwiftTermView.swift`
 **Lines:** 113–126
 
 **Current code:**
@@ -159,7 +159,7 @@ func processTerminated(source: TerminalView, exitCode: Int32?) {
 ### C-4: `FuzzyFinder` Synchronous Directory Walk on Main Thread
 
 **Severity:** Critical
-**File:** `corral/Features/FuzzyFinder.swift`
+**File:** `wrangle/Features/FuzzyFinder.swift`
 **Lines:** 121 (call site), 174–186 (implementation)
 
 **Current code:**
@@ -211,7 +211,7 @@ private func indexAllFiles() {
 ### C-5: `GlobalSearch` Cross-Thread Security-Scoped Bookmark Access
 
 **Severity:** Critical
-**File:** `corral/Features/GlobalSearch.swift`
+**File:** `wrangle/Features/GlobalSearch.swift`
 **Lines:** 218–251
 
 **Current code:**
@@ -273,7 +273,7 @@ Should be addressed in the next cleanup pass. These affect performance, maintain
 ### H-1: `MarkdownParser` Recreates Regex on Every Parse Call
 
 **Severity:** High
-**File:** `corral/Editor/MarkdownParser.swift`
+**File:** `wrangle/Editor/MarkdownParser.swift`
 **Lines:** 89–91 (helper), 113–438 (13 call sites)
 
 **Current code:**
@@ -318,7 +318,7 @@ class MarkdownParser {
 ### H-2: `BookmarkListView` State Explosion — 10 `@State` Properties
 
 **Severity:** High
-**File:** `corral/Sidebar/BookmarkListView.swift`
+**File:** `wrangle/Sidebar/BookmarkListView.swift`
 **Lines:** 11–20
 
 **Current code:**
@@ -357,8 +357,8 @@ enum SheetState: Equatable {
 
 **Severity:** High
 **Files:**
-- `corral/Sidebar/BookmarkListView.swift` lines 148–171
-- `corral/Sidebar/FileTreeNode.swift` lines 239–258
+- `wrangle/Sidebar/BookmarkListView.swift` lines 148–171
+- `wrangle/Sidebar/FileTreeNode.swift` lines 239–258
 
 **Current code (BookmarkListView):**
 ```swift
@@ -397,7 +397,7 @@ Or use `NSEvent.doubleClickInterval` if manual detection is truly needed.
 ### H-4: `FileTreeView` Uncancelled `Task.detached` with Manual Generation Tracking
 
 **Severity:** High
-**File:** `corral/Sidebar/FileTreeView.swift`
+**File:** `wrangle/Sidebar/FileTreeView.swift`
 **Lines:** 12 (generation state), 185–203 (detached tasks)
 
 **Current code:**
@@ -444,7 +444,7 @@ private func loadTree() {
 ### H-5: `TerminalSession.detectedClaudeFile` — Synchronous File System Walk in Computed Property
 
 **Severity:** High
-**File:** `corral/Terminal/TerminalSession.swift`
+**File:** `wrangle/Terminal/TerminalSession.swift`
 **Lines:** 60–70
 
 **Current code:**
@@ -496,10 +496,10 @@ Should be addressed as part of normal development. These are style issues, depre
 
 **Severity:** Medium
 **Files & Lines:**
-- `corral/Sidebar/BookmarkListView.swift:291-293` — color picker circles
-- `corral/Sidebar/FileTreeNode.swift:232-234` — star toggle
-- `corral/Features/FuzzyFinder.swift:100-103` — result rows inside List
-- `corral/Features/GlobalSearch.swift:134` — result rows inside List
+- `wrangle/Sidebar/BookmarkListView.swift:291-293` — color picker circles
+- `wrangle/Sidebar/FileTreeNode.swift:232-234` — star toggle
+- `wrangle/Features/FuzzyFinder.swift:100-103` — result rows inside List
+- `wrangle/Features/GlobalSearch.swift:134` — result rows inside List
 
 **Current code (BookmarkListView):**
 ```swift
@@ -539,8 +539,8 @@ Button {
 
 **Severity:** Medium
 **Files & Lines:**
-- `corral/Sidebar/BookmarkListView.swift:54` + `66-69`
-- `corral/Sidebar/FileTreeNode.swift:173` + `182-185`
+- `wrangle/Sidebar/BookmarkListView.swift:54` + `66-69`
+- `wrangle/Sidebar/FileTreeNode.swift:173` + `182-185`
 
 **Current code (FileTreeNode):**
 ```swift
@@ -578,7 +578,7 @@ DisclosureGroup(isExpanded: $isExpanded) {
 ### M-3: Deprecated `.cornerRadius()` Modifier
 
 **Severity:** Medium
-**File:** `corral/Editor/TitleBarTabStrip.swift`
+**File:** `wrangle/Editor/TitleBarTabStrip.swift`
 **Line:** 194
 
 **Current code:**
@@ -601,7 +601,7 @@ Note: The rest of the codebase already uses `.clipShape(RoundedRectangle(...))` 
 ### M-4: Force Unwrap in `ActiveTerminalsView`
 
 **Severity:** Medium
-**File:** `corral/Sidebar/ActiveTerminalsView.swift`
+**File:** `wrangle/Sidebar/ActiveTerminalsView.swift`
 **Line:** 88
 
 **Current code:**
@@ -631,10 +631,10 @@ Button("Close") {
 
 **Severity:** Medium
 **Files & Lines:**
-- `corral/ContentView.swift:208` — `DispatchQueue.main.async`
-- `corral/Sidebar/SidebarView.swift:156` — `DispatchQueue.main.async`
-- `corral/Terminal/SwiftTermView.swift:80` — `DispatchQueue.main.asyncAfter`
-- `corral/Utilities/FileWatcher.swift:47` — `DispatchQueue.main.async`
+- `wrangle/ContentView.swift:208` — `DispatchQueue.main.async`
+- `wrangle/Sidebar/SidebarView.swift:156` — `DispatchQueue.main.async`
+- `wrangle/Terminal/SwiftTermView.swift:80` — `DispatchQueue.main.asyncAfter`
+- `wrangle/Utilities/FileWatcher.swift:47` — `DispatchQueue.main.async`
 
 **Current code (ContentView):**
 ```swift
@@ -666,7 +666,7 @@ provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ 
 ### M-6: `EditorDocument` Uses `DispatchWorkItem` for Debouncing
 
 **Severity:** Medium
-**File:** `corral/Models/EditorDocument.swift`
+**File:** `wrangle/Models/EditorDocument.swift`
 **Lines:** 150 (property), 228–236 (implementation)
 
 **Current code:**
@@ -718,7 +718,7 @@ private func scheduleCachedStatsUpdate() {
 ### M-7: `TitleBarAccessoryInstaller` Creates `NSHostingView` Without Coordinator Lifecycle Awareness
 
 **Severity:** Medium
-**File:** `corral/Editor/TitleBarTabStrip.swift`
+**File:** `wrangle/Editor/TitleBarTabStrip.swift`
 **Lines:** 14–36 (makeNSView), 41–48 (dismantleNSView)
 
 **Current code:**
@@ -752,7 +752,7 @@ Address opportunistically. These are style preferences and minor code organizati
 ### L-1: `FileTreeNodeView` Is ~294 Lines — Should Extract Subviews
 
 **Severity:** Low
-**File:** `corral/Sidebar/FileTreeNode.swift`
+**File:** `wrangle/Sidebar/FileTreeNode.swift`
 **Lines:** 148–293
 
 **Problem:** The view struct spans 146 lines with the body at 42 lines (171–212), plus helper methods. The CLAUDE.md convention states views exceeding ~80 lines should be split.
@@ -764,7 +764,7 @@ Address opportunistically. These are style preferences and minor code organizati
 ### L-2: `SidebarView` Drop State Could Be Consolidated
 
 **Severity:** Low
-**File:** `corral/Sidebar/SidebarView.swift`
+**File:** `wrangle/Sidebar/SidebarView.swift`
 **Lines:** 10–12
 
 **Current code:**
@@ -791,7 +791,7 @@ enum DropState {
 ### L-3: Computed Properties Doing Synchronous File System Checks
 
 **Severity:** Low
-**File:** `corral/Sidebar/FileTreeNode.swift`
+**File:** `wrangle/Sidebar/FileTreeNode.swift`
 **Lines:** 54–62 (`isOpenable`)
 
 **Current code:**
