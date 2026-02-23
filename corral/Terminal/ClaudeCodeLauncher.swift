@@ -37,7 +37,6 @@ enum ClaudeCodeLauncher {
 
     /// Launches Claude Code in an already-running session by sending the command directly.
     static func launch(in session: TerminalSession) {
-        session.emulator.title = "Claude Code"
         session.emulator.send(launchCommand())
     }
 }

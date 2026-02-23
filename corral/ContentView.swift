@@ -25,16 +25,30 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 400)
         } detail: {
             VStack(spacing: 0) {
-                // Content area — switches based on active tab type
-                if let tab = appState.activeTab {
-                    switch tab.content {
-                    case .document(let doc):
-                        documentContentView(doc)
-                    case .terminal(let session):
-                        TerminalTabContentView(session: session)
+                ZStack {
+                    // Keep all terminal NSViews alive to preserve process state and scrollback
+                    ForEach(appState.tabs) { tab in
+                        if let session = tab.terminalSession {
+                            TerminalTabContentView(session: session)
+                                .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
+                                .allowsHitTesting(appState.activeTab?.id == tab.id)
+                        }
                     }
-                } else {
-                    emptyEditorView
+
+                    // Document or empty view (renders on top when active tab is not a terminal)
+                    if let tab = appState.activeTab {
+                        switch tab.content {
+                        case .document(let doc):
+                            VStack(spacing: 0) {
+                                documentContentView(doc)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        case .terminal:
+                            EmptyView()
+                        }
+                    } else {
+                        emptyEditorView
+                    }
                 }
             }
             .alert(

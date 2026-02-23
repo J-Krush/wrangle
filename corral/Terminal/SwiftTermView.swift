@@ -89,23 +89,9 @@ struct SwiftTermView: NSViewRepresentable {
         func configureAppearance(_ terminalView: LocalProcessTerminalView) {
             let theme = Theme.current
             terminalView.nativeBackgroundColor = theme.terminalBackground
-            terminalView.nativeForegroundColor = theme.terminalForeground
             terminalView.selectedTextBackgroundColor = theme.terminalSelection
             terminalView.caretColor = theme.terminalCursor
             terminalView.font = theme.terminalFont
-
-            // Install 16 ANSI colors
-            let stColors = theme.terminalAnsiColors.map { nsColor -> SwiftTerm.Color in
-                let c = nsColor.usingColorSpace(.sRGB) ?? nsColor
-                return SwiftTerm.Color(
-                    red: UInt16(c.redComponent * 65535),
-                    green: UInt16(c.greenComponent * 65535),
-                    blue: UInt16(c.blueComponent * 65535)
-                )
-            }
-            if stColors.count == 16 {
-                terminalView.installColors(stColors)
-            }
         }
 
         // MARK: - LocalProcessTerminalViewDelegate

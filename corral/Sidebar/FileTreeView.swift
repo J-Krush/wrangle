@@ -4,6 +4,7 @@ import SwiftData
 struct FileTreeContent: View {
     let bookmark: BookmarkedDirectory
     let filterText: String
+    let activeFileTypeFilters: Set<FileTypeFilter>
     @Environment(AppState.self) private var appState
     @State private var nodes: [FileNode] = []
     @State private var watcher: FileWatcher?
@@ -18,8 +19,8 @@ struct FileTreeContent: View {
     @State private var targetFolderURL: URL?
 
     private var filteredNodes: [FileNode] {
-        if filterText.isEmpty { return nodes }
-        return nodes.compactMap { $0.filtered(by: filterText) }
+        if filterText.isEmpty && activeFileTypeFilters.isEmpty { return nodes }
+        return nodes.compactMap { $0.filtered(by: filterText, fileTypes: activeFileTypeFilters) }
     }
 
     var body: some View {
@@ -34,7 +35,7 @@ struct FileTreeContent: View {
                 }
                 .listRowBackground(Color.clear)
             } else if filteredNodes.isEmpty {
-                if !filterText.isEmpty {
+                if !filterText.isEmpty || !activeFileTypeFilters.isEmpty {
                     Text("No matches")
                         .font(.caption)
                         .foregroundStyle(.secondary)

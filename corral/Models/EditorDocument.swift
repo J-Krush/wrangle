@@ -131,6 +131,64 @@ enum FileType: String, CaseIterable {
     }
 }
 
+enum FileTypeFilter: String, CaseIterable, Identifiable {
+    case markdown, json, yaml, swift, shell, config, code, plainText
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .markdown: "Markdown"
+        case .json: "JSON"
+        case .yaml: "YAML"
+        case .swift: "Swift"
+        case .shell: "Shell"
+        case .config: "Config"
+        case .code: "Code"
+        case .plainText: "Plain Text"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .markdown: "doc.text"
+        case .json: "curlybraces"
+        case .yaml: "list.bullet.indent"
+        case .swift: "swift"
+        case .shell: "apple.terminal"
+        case .config: "gearshape"
+        case .code: "chevron.left.forwardslash.chevron.right"
+        case .plainText: "doc.plaintext"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .markdown: .secondary
+        case .json: .yellow
+        case .yaml: .pink
+        case .swift: .orange
+        case .shell: .mint
+        case .config: .gray
+        case .code: .cyan
+        case .plainText: .secondary
+        }
+    }
+
+    var matchingFileTypes: Set<FileType> {
+        switch self {
+        case .markdown: [.claudeMD, .skillMD, .agentsMD, .systemPrompt, .markdown]
+        case .json: [.json, .mcpConfig]
+        case .yaml: [.yaml]
+        case .swift: [.swift]
+        case .shell: [.shell]
+        case .config: [.config]
+        case .code: [.code]
+        case .plainText: [.plainText]
+        }
+    }
+}
+
 @MainActor
 @Observable
 class EditorDocument: Identifiable {

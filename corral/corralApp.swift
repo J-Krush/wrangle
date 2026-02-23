@@ -52,12 +52,46 @@ struct corralApp: App {
                 }
                 .keyboardShortcut("n")
 
+                Button("New Terminal") {
+                    appState.openTerminal(
+                        projectName: appState.activeProjectName ?? "Terminal",
+                        directory: activeProjectDirectory(),
+                        bookmarkID: appState.selectedBookmarkID
+                    )
+                }
+                .keyboardShortcut("`", modifiers: .command)
+
                 Divider()
 
                 Button("Open...") {
                     openFile()
                 }
                 .keyboardShortcut("o")
+
+                Menu("Open Recent") {
+                    let context = sharedModelContainer.mainContext
+                    let descriptor = FetchDescriptor<RecentFile>(
+                        sortBy: [SortDescriptor(\.lastOpened, order: .reverse)]
+                    )
+                    if let recents = try? context.fetch(descriptor) {
+                        ForEach(Array(recents.prefix(20)), id: \.urlString) { recentFile in
+                            if let url = recentFile.url {
+                                Button(url.lastPathComponent) {
+                                    appState.openFile(url: url)
+                                }
+                            }
+                        }
+                        if !recents.isEmpty {
+                            Divider()
+                            Button("Clear Menu") {
+                                for file in recents {
+                                    context.delete(file)
+                                }
+                                try? context.save()
+                            }
+                        }
+                    }
+                }
 
                 Divider()
 
@@ -93,15 +127,6 @@ struct corralApp: App {
 
             // View menu — terminal commands
             CommandGroup(after: .toolbar) {
-                Button("New Terminal") {
-                    appState.openTerminal(
-                        projectName: appState.activeProjectName ?? "Terminal",
-                        directory: activeProjectDirectory(),
-                        bookmarkID: appState.selectedBookmarkID
-                    )
-                }
-                .keyboardShortcut("`", modifiers: .command)
-
                 if ClaudeCodeLauncher.isInstalled() {
                     Button("New Claude Code Session") {
                         appState.openTerminal(

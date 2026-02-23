@@ -7,6 +7,8 @@ struct SidebarView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
     @State private var filterText: String = ""
+    @State private var activeFileTypeFilters: Set<FileTypeFilter> = []
+    @State private var showFilterPopover = false
     @State private var rawDropTargeted = false
     @State private var dropState: DropState = .idle
     @State private var dropDebounceTask: Task<Void, Never>?
@@ -21,22 +23,11 @@ struct SidebarView: View {
             ActiveTerminalsView()
 
             Section {
-                BookmarkListView(filterText: filterText, isFinderDragActive: dropState == .hovering)
+                BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering)
             } header: {
                 HStack {
                     Text("Locations")
                     Spacer()
-                    Button {
-                        appState.newDocument()
-                    } label: {
-                        Image(systemName: "doc.badge.plus")
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("New File (Cmd+N)")
-
-                    RecentFilesButton()
-
                     Button {
                         addLocation()
                     } label: {
@@ -46,10 +37,13 @@ struct SidebarView: View {
                     .buttonStyle(.plain)
                     .help("Add Location")
                 }
+                .padding(.trailing, 4)
             }
         }
         .listStyle(.sidebar)
-        .searchable(text: $filterText, placement: .sidebar, prompt: "Filter files")
+        .safeAreaInset(edge: .top, spacing: 0) {
+            sidebarSearchBar
+        }
         .frame(minWidth: 200, idealWidth: 240)
         .overlay {
             if dropState == .hovering {
@@ -75,6 +69,52 @@ struct SidebarView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Search Bar
+
+    private var sidebarSearchBar: some View {
+        HStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                TextField("Filter files", text: $filterText)
+                    .textFieldStyle(.plain)
+                    .font(.caption)
+                if !filterText.isEmpty {
+                    Button {
+                        filterText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            Button {
+                showFilterPopover.toggle()
+            } label: {
+                Image(systemName: activeFileTypeFilters.isEmpty
+                      ? "line.3.horizontal.decrease.circle"
+                      : "line.3.horizontal.decrease.circle.fill")
+                    .foregroundStyle(activeFileTypeFilters.isEmpty ? Color.secondary : Color.accentColor)
+                    .font(.system(size: 14))
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
+                FileTypeFilterPopover(activeFilters: $activeFileTypeFilters)
+            }
+            .help("Filter by file type")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Drop Overlay
@@ -179,5 +219,66 @@ struct SidebarView: View {
             }
         }
         return handled
+    }
+}
+
+// MARK: - File Type Filter Popover
+
+struct FileTypeFilterPopover: View {
+    @Binding var activeFilters: Set<FileTypeFilter>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("File Types")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !activeFilters.isEmpty {
+                    Button("Clear") {
+                        activeFilters.removeAll()
+                    }
+                    .font(.caption)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.accentColor)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+
+            ForEach(FileTypeFilter.allCases) { filter in
+                Button {
+                    if activeFilters.contains(filter) {
+                        activeFilters.remove(filter)
+                    } else {
+                        activeFilters.insert(filter)
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: filter.iconName)
+                            .foregroundStyle(filter.iconColor)
+                            .frame(width: 16)
+                        Text(filter.displayName)
+                            .font(.caption)
+                        Spacer()
+                        if activeFilters.contains(filter) {
+                            Image(systemName: "checkmark")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(activeFilters.contains(filter) ? Color.accentColor.opacity(0.1) : Color.clear)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.bottom, 6)
+        .frame(width: 180)
     }
 }

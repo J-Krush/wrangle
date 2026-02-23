@@ -3,6 +3,7 @@ import SwiftData
 
 struct BookmarkListView: View {
     let filterText: String
+    let activeFileTypeFilters: Set<FileTypeFilter>
     let isFinderDragActive: Bool
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
@@ -56,25 +57,33 @@ struct BookmarkListView: View {
         )
     }
 
+    private func shouldShowFileBookmark(_ bookmark: BookmarkedDirectory) -> Bool {
+        guard !activeFileTypeFilters.isEmpty, let url = bookmark.resolveURL() else { return true }
+        let ft = FileType.detect(from: url)
+        return activeFileTypeFilters.contains(where: { $0.matchingFileTypes.contains(ft) })
+    }
+
     var body: some View {
         ForEach(bookmarks) { bookmark in
             let bookmarkID = bookmark.persistentModelID.hashValue.description
             let isSelected = appState.selectedBookmarkID == bookmarkID
 
             if bookmark.isFile {
-                fileBookmarkRow(bookmark)
-                    .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
-                    .draggable(bookmarkID) { dragPreview(bookmark: bookmark) }
-                    .dropDestination(for: String.self) { droppedIDs, _ in
-                        guard let sourceID = droppedIDs.first else { return false }
-                        reorderBookmark(sourceID: sourceID, beforeTargetID: bookmarkID)
-                        draggingBookmarkID = nil
-                        return true
-                    }
+                if shouldShowFileBookmark(bookmark) {
+                    fileBookmarkRow(bookmark)
+                        .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+                        .draggable(bookmarkID) { dragPreview(bookmark: bookmark) }
+                        .dropDestination(for: String.self) { droppedIDs, _ in
+                            guard let sourceID = droppedIDs.first else { return false }
+                            reorderBookmark(sourceID: sourceID, beforeTargetID: bookmarkID)
+                            draggingBookmarkID = nil
+                            return true
+                        }
+                }
             } else {
                 // M-2: Use Button inside DisclosureGroup label instead of onTapGesture
                 DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
-                    FileTreeContent(bookmark: bookmark, filterText: filterText)
+                    FileTreeContent(bookmark: bookmark, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters)
                 } label: {
                     Button {
                         appState.selectedBookmarkID = bookmarkID

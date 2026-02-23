@@ -17,6 +17,7 @@ class WorkspaceTab: Identifiable {
     let id = UUID()
     let content: TabContent
     var isPinned: Bool = false
+    var customName: String?
 
     init(content: TabContent) {
         self.content = content
@@ -24,8 +25,9 @@ class WorkspaceTab: Identifiable {
 
     var displayName: String {
         switch content {
-        case .document(let doc):
-            return doc.fileName
+        case .document:
+            if let customName { return customName }
+            return document!.fileName
         case .terminal(let session):
             return session.displayTitle
         }

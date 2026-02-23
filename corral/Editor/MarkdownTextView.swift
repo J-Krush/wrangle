@@ -112,10 +112,10 @@ struct MarkdownTextView: NSViewRepresentable {
         } else {
             currentPlain = ""
         }
-        if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
-            context.coordinator.setTextViewContent(text)
-        } else if modeChanged {
+        if modeChanged {
             context.coordinator.forceRestyle()
+        } else if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
+            context.coordinator.setTextViewContent(text)
         }
     }
 
@@ -251,7 +251,7 @@ struct MarkdownTextView: NSViewRepresentable {
             isStyling = true
             defer { isStyling = false }
 
-            let plainText = storage.string
+            let plainText = rawText(from: storage)
             let hidesSyntax = editingMode == .writing
 
             let styled: NSAttributedString
@@ -425,10 +425,10 @@ struct MarkdownTextView: NSViewRepresentable {
 
             // Push plain text back to the binding
             isUpdatingFromTextView = true
+            defer { isUpdatingFromTextView = false }
             text.wrappedValue = newText
             document?.content = newText
             document?.markDirty()
-            isUpdatingFromTextView = false
 
             // Re-apply styling after the user's edit
             restyleInPlace()

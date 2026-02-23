@@ -141,6 +141,31 @@ struct FileNode: Identifiable, Comparable {
         }
         return nil
     }
+
+    /// Returns a filtered copy matching both text filter and file type filters.
+    func filtered(by filter: String, fileTypes: Set<FileTypeFilter>) -> FileNode? {
+        if filter.isEmpty && fileTypes.isEmpty { return self }
+
+        // For files: must match text AND type (when each is active)
+        if !isDirectory {
+            let textMatch = filter.isEmpty || name.localizedCaseInsensitiveContains(filter)
+            let typeMatch = fileTypes.isEmpty || fileTypes.contains(where: { $0.matchingFileTypes.contains(fileType) })
+            return (textMatch && typeMatch) ? self : nil
+        }
+
+        // For directories: show if any child matches; also show if directory name matches text
+        // (but only when no type filters are active — type filters only match files)
+        let filteredChildren = children?.compactMap { $0.filtered(by: filter, fileTypes: fileTypes) }
+        let hasMatchingChildren = !(filteredChildren?.isEmpty ?? true)
+        let dirNameMatchesText = !filter.isEmpty && fileTypes.isEmpty && name.localizedCaseInsensitiveContains(filter)
+
+        if hasMatchingChildren || dirNameMatchesText {
+            var node = self
+            node.children = filteredChildren
+            return node
+        }
+        return nil
+    }
 }
 
 // MARK: - FileTreeNodeView

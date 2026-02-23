@@ -38,16 +38,23 @@ class TerminalSession: Identifiable {
 
     var displayTitle: String {
         if let customTitle { return customTitle }
-        if isClaude { return "Claude Code" }
-        return emulator.title ?? projectName
+        if let dir = workingDirectory ?? emulator.workingDirectory {
+            return dir.lastPathComponent
+        }
+        return projectName
     }
 
     var displaySubtitle: String? {
-        (workingDirectory ?? emulator.workingDirectory)?.path(percentEncoded: false)
+        guard let path = (workingDirectory ?? emulator.workingDirectory)?.path(percentEncoded: false) else { return nil }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        if path.hasPrefix(home) {
+            return "~" + path.dropFirst(home.count)
+        }
+        return path
     }
 
     var iconName: String {
-        isClaude ? "brain.head.profile" : "terminal.fill"
+        "terminal.fill"
     }
 
     var iconColor: Color {

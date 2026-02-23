@@ -22,15 +22,9 @@ struct Theme {
     // MARK: - Terminal Colors
 
     var terminalBackground: NSColor
-    var terminalForeground: NSColor
     var terminalCursor: NSColor
     var terminalSelection: NSColor
     var terminalFont: NSFont
-
-    /// 16 ANSI colors: [black, red, green, yellow, blue, magenta, cyan, white,
-    ///                   brightBlack, brightRed, brightGreen, brightYellow,
-    ///                   brightBlue, brightMagenta, brightCyan, brightWhite]
-    var terminalAnsiColors: [NSColor]
 
     // MARK: - Fonts
 
@@ -76,13 +70,11 @@ struct Theme {
         blockquoteText: NSColor(white: 0.4, alpha: 1.0),
         selectionColor: NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 0.2),
         xmlTagColors: defaultXMLTagColors(dark: false),
-        // Terminal — warm off-white with high-contrast text
+        // Terminal — warm off-white background, let shell control text colors
         terminalBackground: NSColor(red: 0.98, green: 0.98, blue: 0.96, alpha: 1.0),  // #fafaf5
-        terminalForeground: NSColor(red: 0.22, green: 0.38, blue: 0.75, alpha: 1.0),  // #3760bf
         terminalCursor: NSColor(red: 0.22, green: 0.38, blue: 0.75, alpha: 1.0),
         terminalSelection: NSColor(red: 0.71, green: 0.75, blue: 0.89, alpha: 0.5),   // #b6bfe2
         terminalFont: monoFont,
-        terminalAnsiColors: lightAnsiColors(),
         editorFont: NSFont.systemFont(ofSize: 15),
         codeFont: monoFont,
         lineSpacing: 4,
@@ -101,13 +93,11 @@ struct Theme {
         blockquoteText: NSColor(white: 0.6, alpha: 1.0),
         selectionColor: NSColor(red: 0.35, green: 0.68, blue: 1.0, alpha: 0.3),
         xmlTagColors: defaultXMLTagColors(dark: true),
-        // Terminal — Tokyo Night-inspired muted professional palette
+        // Terminal — dark background, let shell control text colors
         terminalBackground: NSColor(red: 0.10, green: 0.11, blue: 0.15, alpha: 1.0),  // #1a1b26
-        terminalForeground: NSColor(red: 0.66, green: 0.69, blue: 0.84, alpha: 1.0),  // #a9b1d6
         terminalCursor: NSColor(red: 0.75, green: 0.79, blue: 0.96, alpha: 1.0),       // #c0caf5
         terminalSelection: NSColor(red: 0.20, green: 0.27, blue: 0.49, alpha: 0.6),    // #33467c
         terminalFont: monoFont,
-        terminalAnsiColors: darkAnsiColors(),
         editorFont: NSFont.systemFont(ofSize: 15),
         codeFont: monoFont,
         lineSpacing: 4,
@@ -159,53 +149,4 @@ struct Theme {
         }
     }
 
-    // MARK: - ANSI Color Palettes
-
-    /// Dark theme ANSI colors — Tokyo Night-inspired
-    private static func darkAnsiColors() -> [NSColor] {
-        [
-            // Normal colors
-            NSColor(red: 0.08, green: 0.09, blue: 0.12, alpha: 1.0),  // black   #15161e
-            NSColor(red: 0.97, green: 0.47, blue: 0.56, alpha: 1.0),  // red     #f7768e
-            NSColor(red: 0.62, green: 0.81, blue: 0.42, alpha: 1.0),  // green   #9ece6a
-            NSColor(red: 0.88, green: 0.69, blue: 0.41, alpha: 1.0),  // yellow  #e0af68
-            NSColor(red: 0.48, green: 0.64, blue: 0.97, alpha: 1.0),  // blue    #7aa2f7
-            NSColor(red: 0.73, green: 0.60, blue: 0.97, alpha: 1.0),  // magenta #bb9af7
-            NSColor(red: 0.49, green: 0.81, blue: 1.00, alpha: 1.0),  // cyan    #7dcfff
-            NSColor(red: 0.66, green: 0.69, blue: 0.84, alpha: 1.0),  // white   #a9b1d6
-            // Bright colors
-            NSColor(red: 0.25, green: 0.28, blue: 0.41, alpha: 1.0),  // bright black   #414868
-            NSColor(red: 0.97, green: 0.47, blue: 0.56, alpha: 1.0),  // bright red     #f7768e
-            NSColor(red: 0.62, green: 0.81, blue: 0.42, alpha: 1.0),  // bright green   #9ece6a
-            NSColor(red: 0.88, green: 0.69, blue: 0.41, alpha: 1.0),  // bright yellow  #e0af68
-            NSColor(red: 0.48, green: 0.64, blue: 0.97, alpha: 1.0),  // bright blue    #7aa2f7
-            NSColor(red: 0.73, green: 0.60, blue: 0.97, alpha: 1.0),  // bright magenta #bb9af7
-            NSColor(red: 0.49, green: 0.81, blue: 1.00, alpha: 1.0),  // bright cyan    #7dcfff
-            NSColor(red: 0.75, green: 0.79, blue: 0.96, alpha: 1.0),  // bright white   #c0caf5
-        ]
-    }
-
-    /// Light theme ANSI colors — warm high-contrast
-    private static func lightAnsiColors() -> [NSColor] {
-        [
-            // Normal colors
-            NSColor(red: 0.06, green: 0.06, blue: 0.08, alpha: 1.0),  // black   #0f0f14
-            NSColor(red: 0.96, green: 0.16, blue: 0.40, alpha: 1.0),  // red     #f52a65
-            NSColor(red: 0.35, green: 0.46, blue: 0.22, alpha: 1.0),  // green   #587539
-            NSColor(red: 0.55, green: 0.42, blue: 0.24, alpha: 1.0),  // yellow  #8c6c3e
-            NSColor(red: 0.18, green: 0.49, blue: 0.91, alpha: 1.0),  // blue    #2e7de9
-            NSColor(red: 0.60, green: 0.33, blue: 0.95, alpha: 1.0),  // magenta #9854f1
-            NSColor(red: 0.00, green: 0.44, blue: 0.59, alpha: 1.0),  // cyan    #007197
-            NSColor(red: 0.38, green: 0.45, blue: 0.69, alpha: 1.0),  // white   #6172b0
-            // Bright colors
-            NSColor(red: 0.38, green: 0.45, blue: 0.69, alpha: 1.0),  // bright black   #6172b0
-            NSColor(red: 0.96, green: 0.16, blue: 0.40, alpha: 1.0),  // bright red     #f52a65
-            NSColor(red: 0.35, green: 0.46, blue: 0.22, alpha: 1.0),  // bright green   #587539
-            NSColor(red: 0.55, green: 0.42, blue: 0.24, alpha: 1.0),  // bright yellow  #8c6c3e
-            NSColor(red: 0.18, green: 0.49, blue: 0.91, alpha: 1.0),  // bright blue    #2e7de9
-            NSColor(red: 0.60, green: 0.33, blue: 0.95, alpha: 1.0),  // bright magenta #9854f1
-            NSColor(red: 0.00, green: 0.44, blue: 0.59, alpha: 1.0),  // bright cyan    #007197
-            NSColor(red: 0.22, green: 0.38, blue: 0.75, alpha: 1.0),  // bright white   #3760bf
-        ]
-    }
 }

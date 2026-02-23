@@ -1,81 +1,28 @@
 import SwiftUI
 import SwiftData
 
-struct RecentFilesButton: View {
+struct RecentFilesMenuContent: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \RecentFile.lastOpened, order: .reverse) private var recentFiles: [RecentFile]
-    @State private var showingPopover = false
 
     var body: some View {
-        Button {
-            showingPopover.toggle()
-        } label: {
-            ZStack(alignment: .bottomTrailing) {
-                Image(systemName: "folder")
-                    .font(.system(size: 14))
-                Image(systemName: "clock.fill")
-                    .font(.system(size: 7))
-                    .foregroundColor(.secondary)
-                    .offset(x: 2, y: 2)
-            }
-        }
-        .buttonStyle(.borderless)
-        .help("Recent Files")
-        .popover(isPresented: $showingPopover, arrowEdge: .bottom) {
-            recentFilesPopover
-        }
-    }
-
-    private var recentFilesPopover: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack {
-                Text("Recent Files")
-                    .font(.headline)
-                Spacer()
-                if !recentFiles.isEmpty {
-                    Button("Clear") {
-                        clearRecents()
-                    }
-                    .font(.caption)
-                    .buttonStyle(.borderless)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 6)
-
-            Divider()
-
-            if recentFiles.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "doc.text")
-                        .font(.title2)
-                        .foregroundStyle(.tertiary)
-                    Text("No recent files")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(Array(recentFiles.prefix(20)), id: \.urlString) { recentFile in
-                            if let url = recentFile.url {
-                                RecentFileRow(url: url, date: recentFile.lastOpened) {
-                                    appState.openFile(url: url)
-                                    showingPopover = false
-                                }
-                            }
-                        }
+        Menu("Open Recent") {
+            ForEach(Array(recentFiles.prefix(20)), id: \.urlString) { recentFile in
+                if let url = recentFile.url {
+                    Button(url.lastPathComponent) {
+                        appState.openFile(url: url)
                     }
                 }
-                .frame(maxHeight: 400)
+            }
+
+            if !recentFiles.isEmpty {
+                Divider()
+                Button("Clear Menu") {
+                    clearRecents()
+                }
             }
         }
-        .frame(width: 300)
     }
 
     private func clearRecents() {

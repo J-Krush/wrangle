@@ -227,6 +227,20 @@ class AppState {
         }
     }
 
+    func closeAllTabs() {
+        for tab in tabs {
+            if let session = tab.terminalSession {
+                session.stop()
+            }
+        }
+        tabs.removeAll()
+        previewTabID = nil
+        let blank = EditorDocument()
+        let tab = WorkspaceTab(content: .document(blank))
+        tabs.append(tab)
+        activeTabIndex = 0
+    }
+
     func closeTab(_ tab: WorkspaceTab) {
         if let index = tabs.firstIndex(where: { $0.id == tab.id }) {
             closeTab(at: index)
@@ -284,15 +298,6 @@ class AppState {
     }
 
     func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false) {
-        // If a terminal for this bookmark already exists, switch to it
-        if let bid = bookmarkID,
-           let existingIndex = tabs.firstIndex(where: {
-               $0.terminalSession?.bookmarkID == bid && $0.terminalSession?.isClaude == launchClaude
-           }) {
-            activeTabIndex = existingIndex
-            return
-        }
-
         let emulator = TerminalEmulator()
         // Don't start the process here — SwiftTermView will start it when rendered
 
@@ -306,7 +311,13 @@ class AppState {
 
         if launchClaude {
             session.pendingCommand = ClaudeCodeLauncher.launchCommand()
-            emulator.title = "Claude Code"
+        }
+
+        // Deduplicate terminal display names (e.g., "my-project", "my-project 2")
+        let baseName = session.displayTitle
+        let uniqueName = uniqueTerminalName(for: baseName)
+        if uniqueName != baseName {
+            session.customTitle = uniqueName
         }
 
         let tab = WorkspaceTab(content: .terminal(session))
@@ -314,8 +325,31 @@ class AppState {
         activeTabIndex = tabs.count - 1
     }
 
+    /// Opens a terminal (or Claude Code session) using the active project's context.
+    func openTerminalForActiveProject(launchClaude: Bool = false) {
+        let directory = activeDocument?.fileURL?.deletingLastPathComponent()
+        openTerminal(
+            projectName: activeProjectName ?? "Terminal",
+            directory: directory,
+            bookmarkID: selectedBookmarkID,
+            launchClaude: launchClaude
+        )
+    }
+
     /// Find the tab index for a given terminal session
     func tabIndex(for session: TerminalSession) -> Int? {
         tabs.firstIndex(where: { $0.terminalSession?.id == session.id })
+    }
+
+    /// Returns a unique terminal display name by appending " 2", " 3", etc. if the base name is already in use.
+    private func uniqueTerminalName(for baseName: String) -> String {
+        let existingNames = Set(
+            tabs.compactMap { $0.terminalSession?.displayTitle }
+        )
+        if !existingNames.contains(baseName) { return baseName }
+
+        var n = 2
+        while existingNames.contains("\(baseName) \(n)") { n += 1 }
+        return "\(baseName) \(n)"
     }
 }

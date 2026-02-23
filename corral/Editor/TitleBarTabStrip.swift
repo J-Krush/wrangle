@@ -77,6 +77,8 @@ private class WindowAccessorView: NSView {
 
 struct TitleBarTabStrip: View {
     @Environment(AppState.self) private var appState
+    @State private var showTerminalPicker = false
+    @State private var pendingLaunchClaude = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -89,9 +91,17 @@ struct TitleBarTabStrip: View {
                             isPreview: tab.id == appState.previewTabID,
                             onSelect: { appState.selectTab(at: index) },
                             onClose: { appState.requestCloseTab(at: index) },
+                            onCloseAll: { appState.closeAllTabs() },
                             onPromote: {
                                 if let doc = tab.document {
                                     appState.promotePreviewTab(for: doc.id)
+                                }
+                            },
+                            onRename: { name in
+                                if let session = tab.terminalSession {
+                                    session.customTitle = name.isEmpty ? nil : name
+                                } else {
+                                    tab.customName = name.isEmpty ? nil : name
                                 }
                             }
                         )
@@ -101,9 +111,21 @@ struct TitleBarTabStrip: View {
 
             Spacer(minLength: 0)
 
-            // "+" button styled as a small tab
-            Button {
-                appState.newDocument()
+            // "+" menu for new tab options
+            Menu {
+                Button("New File") {
+                    appState.newDocument()
+                }
+                Button("New Terminal") {
+                    pendingLaunchClaude = false
+                    showTerminalPicker = true
+                }
+                if ClaudeCodeLauncher.isInstalled() {
+                    Button("New Claude Code Session") {
+                        pendingLaunchClaude = true
+                        showTerminalPicker = true
+                    }
+                }
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .medium))
@@ -115,9 +137,20 @@ struct TitleBarTabStrip: View {
                     )
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.borderless)
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
             .help("New Tab")
             .padding(.horizontal, 6)
+            .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
+                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude) { name, url, bookmarkID in
+                    appState.openTerminal(
+                        projectName: name,
+                        directory: url,
+                        bookmarkID: bookmarkID,
+                        launchClaude: pendingLaunchClaude
+                    )
+                }
+            }
         }
         .padding(.horizontal, 8)
     }
@@ -131,9 +164,13 @@ struct TitleBarTabItem: View {
     let isPreview: Bool
     let onSelect: () -> Void
     let onClose: () -> Void
+    let onCloseAll: () -> Void
     let onPromote: () -> Void
+    let onRename: (String) -> Void
 
     @State private var isHovering = false
+    @State private var isRenaming = false
+    @State private var renameText = ""
 
     var body: some View {
         HStack(spacing: 4) {
@@ -205,10 +242,48 @@ struct TitleBarTabItem: View {
                 Button("Keep Open") { onPromote() }
                 Divider()
             }
+            Button("Rename") {
+                renameText = tab.terminalSession?.customTitle ?? tab.customName ?? tab.displayName
+                isRenaming = true
+            }
+            Divider()
             Button("Close") { onClose() }
             Button("Close Others") {
                 // Close all tabs except this one
             }
+            Button("Close All") { onCloseAll() }
+        }
+        .popover(isPresented: $isRenaming, arrowEdge: .bottom) {
+            VStack(spacing: 8) {
+                Text("Rename Tab")
+                    .font(.headline)
+                TextField("Tab name", text: $renameText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 200)
+                    .onSubmit {
+                        onRename(renameText.trimmingCharacters(in: .whitespaces))
+                        isRenaming = false
+                    }
+                HStack {
+                    Button("Cancel") {
+                        isRenaming = false
+                    }
+                    .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    if tab.terminalSession?.customTitle != nil || tab.customName != nil {
+                        Button("Reset") {
+                            onRename("")
+                            isRenaming = false
+                        }
+                    }
+                    Button("Save") {
+                        onRename(renameText.trimmingCharacters(in: .whitespaces))
+                        isRenaming = false
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding()
         }
     }
 }
