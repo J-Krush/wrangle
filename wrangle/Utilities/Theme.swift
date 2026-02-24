@@ -4,12 +4,16 @@ import SwiftUI
 struct Theme {
     // MARK: - Colors
 
+    var windowBackground: NSColor
+    var windowBackgroundColor: Color { Color(nsColor: windowBackground) }
+
     var editorBackground: NSColor
 
     /// SwiftUI-compatible version of the editor background color.
     var editorBackgroundColor: Color { Color(nsColor: editorBackground) }
     var editorForeground: NSColor
     var sidebarBackground: NSColor
+    var sidebarBackgroundColor: Color { Color(nsColor: sidebarBackground) }
     var headingColor: NSColor
     var codeBackground: NSColor
     var codeForeground: NSColor
@@ -59,6 +63,7 @@ struct Theme {
         ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
 
     static let light = Theme(
+        windowBackground: NSColor(white: 0.96, alpha: 1.0),
         editorBackground: NSColor(white: 1.0, alpha: 1.0),
         editorForeground: NSColor(white: 0.1, alpha: 1.0),
         sidebarBackground: NSColor(white: 0.96, alpha: 1.0),
@@ -82,9 +87,10 @@ struct Theme {
     )
 
     static let dark = Theme(
+        windowBackground: NSColor(red: 43/255.0, green: 41/255.0, blue: 40/255.0, alpha: 1.0),
         editorBackground: NSColor(white: 0.12, alpha: 1.0),
         editorForeground: NSColor(white: 0.9, alpha: 1.0),
-        sidebarBackground: NSColor(white: 0.1, alpha: 1.0),
+        sidebarBackground: NSColor(red: 43/255.0, green: 41/255.0, blue: 40/255.0, alpha: 1.0),
         headingColor: NSColor(white: 1.0, alpha: 1.0),
         codeBackground: NSColor(white: 0.18, alpha: 1.0),
         codeForeground: NSColor(red: 0.99, green: 0.42, blue: 0.42, alpha: 1.0),

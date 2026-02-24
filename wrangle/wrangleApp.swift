@@ -8,10 +8,41 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import UserNotifications
+
+// MARK: - Notification Delegate
+
+class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    weak var appState: AppState?
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let sessionID = userInfo["sessionID"] as? String {
+            Task { @MainActor in
+                appState?.claudeHookService?.handleNotificationTap(sessionID: sessionID)
+            }
+        }
+        completionHandler()
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        // Show banner even when app is foreground (service already filtered)
+        completionHandler([.banner, .sound])
+    }
+}
 
 @main
 struct wrangleApp: App {
     @State private var appState = AppState()
+    private let notificationDelegate = NotificationDelegate()
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -41,6 +72,10 @@ struct wrangleApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
+                .onAppear {
+                    setupNotifications()
+                    setupForegroundTracking()
+                }
         }
         .modelContainer(sharedModelContainer)
         .windowToolbarStyle(.unified(showsTitle: true))
@@ -127,17 +162,25 @@ struct wrangleApp: App {
 
             // View menu — terminal commands
             CommandGroup(after: .toolbar) {
-                if ClaudeCodeLauncher.isInstalled() {
-                    Button("New Claude Code Session") {
-                        appState.openTerminal(
-                            projectName: appState.activeProjectName ?? "Claude Code",
-                            directory: activeProjectDirectory(),
-                            bookmarkID: appState.selectedBookmarkID,
-                            launchClaude: true
-                        )
-                    }
-                    .keyboardShortcut("`", modifiers: [.command, .shift])
+                Button("New Claude Code Session") {
+                    appState.openTerminal(
+                        projectName: appState.activeProjectName ?? "Claude Code",
+                        directory: activeProjectDirectory(),
+                        bookmarkID: appState.selectedBookmarkID,
+                        launchClaude: true
+                    )
                 }
+                .keyboardShortcut("`", modifiers: [.command, .shift])
+
+                Button("New Gemini Code Session") {
+                    appState.openTerminal(
+                        projectName: appState.activeProjectName ?? "Gemini Code",
+                        directory: activeProjectDirectory(),
+                        bookmarkID: appState.selectedBookmarkID,
+                        launchGemini: true
+                    )
+                }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
 
                 Divider()
 
@@ -253,6 +296,52 @@ struct wrangleApp: App {
     private func revealInFinder() {
         if let url = appState.activeDocument?.fileURL {
             NSWorkspace.shared.activateFileViewerSelecting([url])
+        }
+    }
+
+    // MARK: - Notification Setup
+
+    private func setupNotifications() {
+        let center = UNUserNotificationCenter.current()
+        notificationDelegate.appState = appState
+        center.delegate = notificationDelegate
+
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+            if let error {
+                print("[Wrangle] Notification auth error: \(error)")
+            }
+        }
+
+        // Register notification category
+        let category = UNNotificationCategory(
+            identifier: "CLAUDE_HOOK_EVENT",
+            actions: [],
+            intentIdentifiers: []
+        )
+        center.setNotificationCategories([category])
+
+        // Start the hook service
+        appState.claudeHookService = ClaudeHookService(appState: appState)
+
+        // Install hooks if needed (one-time, non-blocking)
+        ClaudeHookService.setupHooksIfNeeded()
+    }
+
+    private func setupForegroundTracking() {
+        let state = appState
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in state.isAppForeground = true }
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in state.isAppForeground = false }
         }
     }
 }

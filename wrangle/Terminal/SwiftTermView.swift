@@ -62,6 +62,7 @@ struct SwiftTermView: NSViewRepresentable {
             var env = ProcessInfo.processInfo.environment
             env["TERM"] = "xterm-256color"
             env["LANG"] = "en_US.UTF-8"
+            env["WRANGLE_SESSION_ID"] = session.id.uuidString
             let envStrings = env.map { "\($0.key)=\($0.value)" }
 
             let currentDir = session.workingDirectory?.path(percentEncoded: false)

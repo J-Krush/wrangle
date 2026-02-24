@@ -30,6 +30,12 @@ class AppState {
     // Terminal session manager (retained for stopAll on quit)
     var terminalSessionManager = TerminalSessionManager()
 
+    // App foreground state (tracked for notification suppression)
+    var isAppForeground: Bool = true
+
+    // Claude Code hook service for notifications
+    var claudeHookService: ClaudeHookService?
+
     // Set by ContentView from the @Query bookmarks array
     var activeProjectName: String?
 
@@ -196,6 +202,7 @@ class AppState {
     func selectTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }
         activeTabIndex = index
+        tabs[index].terminalSession?.needsAttention = false
     }
 
     func closeTab(at index: Int) {
@@ -297,7 +304,7 @@ class AppState {
         showTerminalCloseConfirmation = false
     }
 
-    func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false) {
+    func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false, launchGemini: Bool = false) {
         let emulator = TerminalEmulator()
         // Don't start the process here — SwiftTermView will start it when rendered
 
@@ -306,11 +313,14 @@ class AppState {
             projectName: projectName,
             workingDirectory: directory,
             bookmarkID: bookmarkID,
-            isClaude: launchClaude
+            isClaude: launchClaude,
+            isGemini: launchGemini
         )
 
         if launchClaude {
             session.pendingCommand = ClaudeCodeLauncher.launchCommand()
+        } else if launchGemini {
+            session.pendingCommand = GeminiCodeLauncher.launchCommand()
         }
 
         // Deduplicate terminal display names (e.g., "my-project", "my-project 2")
@@ -325,14 +335,15 @@ class AppState {
         activeTabIndex = tabs.count - 1
     }
 
-    /// Opens a terminal (or Claude Code session) using the active project's context.
-    func openTerminalForActiveProject(launchClaude: Bool = false) {
+    /// Opens a terminal (or AI session) using the active project's context.
+    func openTerminalForActiveProject(launchClaude: Bool = false, launchGemini: Bool = false) {
         let directory = activeDocument?.fileURL?.deletingLastPathComponent()
         openTerminal(
             projectName: activeProjectName ?? "Terminal",
             directory: directory,
             bookmarkID: selectedBookmarkID,
-            launchClaude: launchClaude
+            launchClaude: launchClaude,
+            launchGemini: launchGemini
         )
     }
 

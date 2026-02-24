@@ -76,7 +76,7 @@ struct FileNode: Identifiable, Comparable, Sendable {
     }
 
     var iconColor: Color {
-        if isDirectory { return .blue }
+        if isDirectory { return .gray }
         if !isOpenable { return .secondary.opacity(0.5) }
         return fileType.iconColor
     }
@@ -178,7 +178,11 @@ struct FileTreeNodeView: View {
     @State private var isExpanded = false
 
     private var isSelected: Bool {
-        appState.selectedFileTreeURL == node.url
+        if node.isDirectory {
+            return appState.selectedFileTreeURL == node.url
+        } else {
+            return appState.activeDocument?.fileURL == node.url
+        }
     }
 
     var body: some View {

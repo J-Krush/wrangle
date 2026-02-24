@@ -82,6 +82,7 @@ struct ContentView: View {
                 GlobalSearchView()
             }
         }
+        .background(Theme.current.windowBackgroundColor)
         .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
         .background { TitleBarAccessoryInstaller(appState: appState) }
         .frame(minWidth: 800, minHeight: 500)
@@ -287,6 +288,6 @@ struct StatusBarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(Theme.current.editorBackgroundColor)
+        .background(Theme.current.windowBackgroundColor)
     }
 }

@@ -15,7 +15,9 @@ class TerminalSession: Identifiable {
     let workingDirectory: URL?
     let bookmarkID: String?
     var isClaude: Bool
+    var isGemini: Bool
     var customTitle: String?
+    var needsAttention: Bool = false
 
     /// Command to send after the shell process initializes (e.g., claude path).
     /// Consumed by SwiftTermView.Coordinator after process start.
@@ -26,13 +28,15 @@ class TerminalSession: Identifiable {
         projectName: String,
         workingDirectory: URL?,
         bookmarkID: String? = nil,
-        isClaude: Bool = false
+        isClaude: Bool = false,
+        isGemini: Bool = false
     ) {
         self.emulator = emulator
         self.projectName = projectName
         self.workingDirectory = workingDirectory
         self.bookmarkID = bookmarkID
         self.isClaude = isClaude
+        self.isGemini = isGemini
         updateDetectedClaudeFile()
     }
 
@@ -54,11 +58,19 @@ class TerminalSession: Identifiable {
     }
 
     var iconName: String {
-        "terminal.fill"
+        if isClaude { return "claude-logo" }
+        if isGemini { return "google-g-logo" }
+        return "terminal.fill"
+    }
+    
+    var isCustomIcon: Bool {
+        isClaude || isGemini
     }
 
     var iconColor: Color {
-        isClaude ? .orange : .mint
+        if isClaude { return .orange }
+        if isGemini { return .blue }
+        return .mint
     }
 
     var isRunning: Bool {

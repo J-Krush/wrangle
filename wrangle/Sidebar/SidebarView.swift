@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import SwiftData
 import UniformTypeIdentifiers
 
@@ -39,6 +40,10 @@ struct SidebarView: View {
                 }
                 .padding(.trailing, 4)
             }
+        }
+        .onTapGesture {
+            appState.selectedBookmarkID = nil
+            appState.selectedFileTreeURL = nil
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .top, spacing: 0) {

@@ -51,6 +51,13 @@ class WorkspaceTab: Identifiable {
         }
     }
 
+    var isCustomIcon: Bool {
+        if case .terminal(let session) = content {
+            return session.isCustomIcon
+        }
+        return false
+    }
+
     var iconColor: Color {
         switch content {
         case .document(let doc):

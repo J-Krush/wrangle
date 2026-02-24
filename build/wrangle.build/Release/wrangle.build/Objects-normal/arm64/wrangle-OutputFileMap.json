@@ -1,0 +1,211 @@
+{
+  "" : {
+    "const-values" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary.swiftconstvalues",
+    "dependencies" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary.d",
+    "diagnostics" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary.dia",
+    "emit-module-dependencies" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary-emit-module.dia",
+    "pch" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangle-primary.swiftdeps"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/App/AppState.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/AppState.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/AppState.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/AppState.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/ContentView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/EditorContext.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorContext.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorContext.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorContext.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/EditorTextView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorTextView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorTextView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorTextView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/EditorToolbar.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorToolbar.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorToolbar.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorToolbar.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/JsonSyntaxHighlighter.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/JsonSyntaxHighlighter.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/JsonSyntaxHighlighter.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/JsonSyntaxHighlighter.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/JsonToolbar.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/JsonToolbar.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/JsonToolbar.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/JsonToolbar.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/MarkdownParser.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/MarkdownParser.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/MarkdownParser.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/MarkdownParser.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/MarkdownTextView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/MarkdownTextView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/MarkdownTextView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/MarkdownTextView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/TitleBarTabStrip.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TitleBarTabStrip.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TitleBarTabStrip.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TitleBarTabStrip.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/TokenCounter.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TokenCounter.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TokenCounter.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TokenCounter.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Editor/XMLTagRenderer.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/XMLTagRenderer.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/XMLTagRenderer.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/XMLTagRenderer.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Features/ExternalEditorLauncher.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ExternalEditorLauncher.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ExternalEditorLauncher.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ExternalEditorLauncher.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Features/FuzzyFinder.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FuzzyFinder.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FuzzyFinder.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FuzzyFinder.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Features/GlobalSearch.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/GlobalSearch.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/GlobalSearch.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/GlobalSearch.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Models/BookmarkedDirectory.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/BookmarkedDirectory.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/BookmarkedDirectory.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/BookmarkedDirectory.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Models/EditorDocument.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorDocument.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorDocument.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/EditorDocument.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Models/RecentFile.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/RecentFile.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/RecentFile.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/RecentFile.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Models/WorkspaceTab.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/WorkspaceTab.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/WorkspaceTab.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/WorkspaceTab.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Sidebar/ActiveTerminalsView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ActiveTerminalsView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ActiveTerminalsView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ActiveTerminalsView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Sidebar/BookmarkListView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/BookmarkListView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/BookmarkListView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/BookmarkListView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Sidebar/FileTreeNode.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileTreeNode.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileTreeNode.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileTreeNode.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Sidebar/FileTreeView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileTreeView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileTreeView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileTreeView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Sidebar/RecentFilesView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/RecentFilesView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/RecentFilesView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/RecentFilesView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Sidebar/SidebarView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SidebarView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SidebarView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SidebarView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/ClaudeCodeLauncher.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ClaudeCodeLauncher.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ClaudeCodeLauncher.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ClaudeCodeLauncher.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/ClaudeHookService.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ClaudeHookService.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ClaudeHookService.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/ClaudeHookService.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/SwiftTermView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SwiftTermView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SwiftTermView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SwiftTermView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/TerminalDirectoryPicker.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalDirectoryPicker.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalDirectoryPicker.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalDirectoryPicker.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/TerminalEmulator.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalEmulator.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalEmulator.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalEmulator.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/TerminalSession.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalSession.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalSession.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalSession.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/TerminalSessionManager.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalSessionManager.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalSessionManager.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalSessionManager.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/TerminalTabContentView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalTabContentView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalTabContentView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalTabContentView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Terminal/TerminalView.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalView.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalView.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/TerminalView.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Utilities/FileWatcher.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileWatcher.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileWatcher.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/FileWatcher.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Utilities/SecurityScopedBookmark.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SecurityScopedBookmark.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SecurityScopedBookmark.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/SecurityScopedBookmark.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Utilities/Sendable+Extensions.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/Sendable+Extensions.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/Sendable+Extensions.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/Sendable+Extensions.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/Utilities/Theme.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/Theme.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/Theme.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/Theme.o"
+  },
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/wrangleApp.swift" : {
+    "index-unit-output-path" : "/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangleApp.o",
+    "llvm-bc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangleApp.bc",
+    "object" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/arm64/wrangleApp.o"
+  }
+}

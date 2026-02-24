@@ -97,12 +97,35 @@ struct FileTreeContent: View {
                 showNewFolderSheet = true
             }
             Divider()
+            Button("Open Terminal Here") {
+                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: nil)
+            }
+            Button("Launch Claude Code Here") {
+                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: nil, launchClaude: true)
+            }
+            Button("Launch Gemini Code Here") {
+                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: nil, launchGemini: true)
+            }
+            Divider()
             Button("Reveal in Finder") {
                 NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: node.url.path)
             }
         } else {
             Button("Open") {
                 appState.openFile(url: node.url, scopedURL: resolvedURL)
+            }
+            Divider()
+            Button("Open Terminal Here") {
+                let parentURL = node.url.deletingLastPathComponent()
+                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: nil)
+            }
+            Button("Launch Claude Code Here") {
+                let parentURL = node.url.deletingLastPathComponent()
+                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: nil, launchClaude: true)
+            }
+            Button("Launch Gemini Code Here") {
+                let parentURL = node.url.deletingLastPathComponent()
+                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: nil, launchGemini: true)
             }
             Divider()
             Button("Reveal in Finder") {

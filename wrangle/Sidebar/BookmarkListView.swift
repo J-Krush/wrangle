@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct BookmarkListView: View {
     let filterText: String
@@ -13,14 +14,11 @@ struct BookmarkListView: View {
     enum SheetState: Equatable {
         case none
         case renaming(BookmarkedDirectory, text: String)
-        case pickingColor(BookmarkedDirectory)
 
         static func == (lhs: SheetState, rhs: SheetState) -> Bool {
             switch (lhs, rhs) {
             case (.none, .none): return true
             case (.renaming(let a, _), .renaming(let b, _)):
-                return a.persistentModelID == b.persistentModelID
-            case (.pickingColor(let a), .pickingColor(let b)):
                 return a.persistentModelID == b.persistentModelID
             default: return false
             }
@@ -29,30 +27,13 @@ struct BookmarkListView: View {
 
     @State private var activeSheet: SheetState = .none
     @State private var expandedBookmarks: Set<String> = []
-    @State private var draggingBookmarkID: String?
     @State private var renameText: String = ""
-
-    private let availableColors: [(String, Color)] = [
-        ("#007AFF", .blue),
-        ("#FF3B30", .red),
-        ("#FF9500", .orange),
-        ("#FFCC00", .yellow),
-        ("#34C759", .green),
-        ("#AF52DE", .purple),
-        ("#FF2D55", .pink),
-        ("#8E8E93", .gray),
-    ]
+    @State private var draggingBookmarkID: String?
+    @State private var dropTargetBookmarkID: String?
 
     private var showRenameSheet: Binding<Bool> {
         Binding(
             get: { if case .renaming = activeSheet { return true }; return false },
-            set: { if !$0 { activeSheet = .none } }
-        )
-    }
-
-    private var showColorPicker: Binding<Bool> {
-        Binding(
-            get: { if case .pickingColor = activeSheet { return true }; return false },
             set: { if !$0 { activeSheet = .none } }
         )
     }
@@ -66,18 +47,19 @@ struct BookmarkListView: View {
     var body: some View {
         ForEach(bookmarks) { bookmark in
             let bookmarkID = bookmark.persistentModelID.hashValue.description
-            let isSelected = appState.selectedBookmarkID == bookmarkID
+            let isSelected = appState.selectedBookmarkID == bookmarkID && appState.selectedFileTreeURL == nil
 
             if bookmark.isFile {
                 if shouldShowFileBookmark(bookmark) {
+                    let isFileSelected = appState.activeDocument?.fileURL == bookmark.resolveURL()
                     fileBookmarkRow(bookmark)
-                        .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
-                        .draggable(bookmarkID) { dragPreview(bookmark: bookmark) }
-                        .dropDestination(for: String.self) { droppedIDs, _ in
-                            guard let sourceID = droppedIDs.first else { return false }
-                            reorderBookmark(sourceID: sourceID, beforeTargetID: bookmarkID)
-                            draggingBookmarkID = nil
-                            return true
+                        .listRowBackground(reorderBackground(isSelected: isFileSelected, bookmarkID: bookmarkID))
+                        .onDrag {
+                            draggingBookmarkID = bookmarkID
+                            return NSItemProvider(object: bookmarkID as NSString)
+                        }
+                        .onDrop(of: [UTType.text], isTargeted: dropTargetBinding(for: bookmarkID)) { providers in
+                            handleReorderDrop(providers: providers, targetID: bookmarkID)
                         }
                 }
             } else {
@@ -100,28 +82,41 @@ struct BookmarkListView: View {
                                 .truncationMode(.tail)
                         } icon: {
                             Image(systemName: "folder.fill")
-                                .foregroundStyle(colorFromHex(bookmark.iconColorHex))
+                                .foregroundStyle(.gray)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
-                .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+                .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                 .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
                 .opacity(isFinderDragActive ? 0.3 : 1.0)
-                .draggable(bookmarkID) { dragPreview(bookmark: bookmark) }
-                .dropDestination(for: String.self) { droppedIDs, _ in
-                    guard let sourceID = droppedIDs.first else { return false }
-                    reorderBookmark(sourceID: sourceID, beforeTargetID: bookmarkID)
-                    draggingBookmarkID = nil
-                    return true
-                }
                 .contextMenu { bookmarkContextMenu(bookmark) }
+                .onDrag {
+                    draggingBookmarkID = bookmarkID
+                    expandedBookmarks.remove(bookmarkID)
+                    return NSItemProvider(object: bookmarkID as NSString)
+                }
+                .onDrop(of: [UTType.text], isTargeted: dropTargetBinding(for: bookmarkID)) { providers in
+                    handleReorderDrop(providers: providers, targetID: bookmarkID)
+                }
             }
         }
-        .sheet(isPresented: showRenameSheet) { renameSheet }
-        .sheet(isPresented: showColorPicker) { colorPickerSheet }
+
+        // Invisible drop target for end-of-list reorder
+        Color.clear
+            .frame(height: 20)
+            .frame(maxWidth: .infinity)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(reorderEndBackground())
+            .listRowSeparator(.hidden)
+            .onDrop(of: [UTType.text], isTargeted: dropTargetBinding(for: Self.endOfListID)) { providers in
+                handleReorderDrop(providers: providers, targetID: Self.endOfListID)
+            }
+
+        Spacer()
+            .sheet(isPresented: showRenameSheet) { renameSheet }
     }
 
     // MARK: - Bindings
@@ -139,22 +134,6 @@ struct BookmarkListView: View {
                 }
             }
         )
-    }
-
-    // MARK: - Drag Preview
-
-    private func dragPreview(bookmark: BookmarkedDirectory) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: bookmark.isFile ? "doc.fill" : "folder.fill")
-            Text(bookmark.name)
-        }
-        .padding(8)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .onAppear {
-            draggingBookmarkID = bookmark.persistentModelID.hashValue.description
-            expandedBookmarks.removeAll()
-        }
     }
 
     // MARK: - Bookmark Rows
@@ -182,7 +161,7 @@ struct BookmarkListView: View {
                     .truncationMode(.tail)
             } icon: {
                 Image(systemName: "doc.fill")
-                    .foregroundStyle(colorFromHex(bookmark.iconColorHex))
+                    .foregroundStyle(.gray)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -202,10 +181,12 @@ struct BookmarkListView: View {
                 openTerminal(for: bookmark)
             }
 
-            if ClaudeCodeLauncher.isInstalled() {
-                Button("Launch Claude Code") {
-                    launchClaude(for: bookmark)
-                }
+            Button("Launch Claude Code") {
+                launchClaude(for: bookmark)
+            }
+
+            Button("Launch Gemini Code") {
+                launchGemini(for: bookmark)
             }
 
             let editors = ExternalEditorLauncher.availableEditors()
@@ -234,11 +215,6 @@ struct BookmarkListView: View {
             renameText = bookmark.name
             activeSheet = .renaming(bookmark, text: bookmark.name)
         }
-        if !bookmark.isFile {
-            Button("Change Color...") {
-                activeSheet = .pickingColor(bookmark)
-            }
-        }
         Divider()
         Button("Remove", role: .destructive) {
             removeBookmark(bookmark)
@@ -264,6 +240,17 @@ struct BookmarkListView: View {
             directory: dir,
             bookmarkID: bookmarkID,
             launchClaude: true
+        )
+    }
+
+    private func launchGemini(for bookmark: BookmarkedDirectory) {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID,
+            launchGemini: true
         )
     }
 
@@ -295,44 +282,84 @@ struct BookmarkListView: View {
         .frame(width: 300)
     }
 
-    // MARK: - Color Picker Sheet
+    // MARK: - Drag & Drop Reordering
 
-    private var colorPickerSheet: some View {
-        VStack(spacing: 16) {
-            Text("Choose Color")
-                .font(.headline)
-            LazyVGrid(columns: Array(repeating: GridItem(.fixed(36)), count: 4), spacing: 12) {
-                ForEach(availableColors, id: \.0) { hex, color in
-                    // M-1: Use Button instead of onTapGesture for color circles
-                    Button {
-                        if case .pickingColor(let bookmark) = activeSheet {
-                            bookmark.iconColorHex = hex
-                        }
-                        activeSheet = .none
-                    } label: {
-                        Circle()
-                            .fill(color)
-                            .frame(width: 28, height: 28)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.primary, lineWidth: {
-                                        if case .pickingColor(let bookmark) = activeSheet {
-                                            return bookmark.iconColorHex == hex ? 2 : 0
-                                        }
-                                        return 0
-                                    }())
-                            )
-                    }
-                    .buttonStyle(.plain)
+    private static let endOfListID = "__end_of_list__"
+
+    @ViewBuilder
+    private func reorderBackground(isSelected: Bool, bookmarkID: String) -> some View {
+        let isDropTarget = dropTargetBookmarkID == bookmarkID
+            && draggingBookmarkID != nil
+            && draggingBookmarkID != bookmarkID
+
+        ZStack(alignment: .top) {
+            Theme.sidebarSelectionBackground(isSelected: isSelected)
+            if isDropTarget {
+                Color.accentColor
+                    .frame(height: 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func reorderEndBackground() -> some View {
+        let isDropTarget = dropTargetBookmarkID == Self.endOfListID && draggingBookmarkID != nil
+
+        if isDropTarget {
+            VStack { Color.accentColor.frame(height: 2); Spacer() }
+        } else {
+            Color.clear
+        }
+    }
+
+    private func dropTargetBinding(for bookmarkID: String) -> Binding<Bool> {
+        Binding(
+            get: { dropTargetBookmarkID == bookmarkID },
+            set: { isTargeted in
+                if isTargeted {
+                    dropTargetBookmarkID = bookmarkID
+                } else if dropTargetBookmarkID == bookmarkID {
+                    dropTargetBookmarkID = nil
                 }
             }
-            Button("Cancel") {
-                activeSheet = .none
+        )
+    }
+
+    private func handleReorderDrop(providers: [NSItemProvider], targetID: String) -> Bool {
+        guard let provider = providers.first else { return false }
+        provider.loadObject(ofClass: NSString.self) { item, _ in
+            guard let sourceID = item as? String else { return }
+            Task { @MainActor in
+                reorderBookmark(sourceID: sourceID, beforeTargetID: targetID)
+                draggingBookmarkID = nil
+                dropTargetBookmarkID = nil
             }
-            .keyboardShortcut(.cancelAction)
         }
-        .padding()
-        .frame(width: 220)
+        return true
+    }
+
+    private func reorderBookmark(sourceID: String, beforeTargetID: String) {
+        var ordered = Array(bookmarks)
+        guard let sourceIndex = ordered.firstIndex(where: {
+            $0.persistentModelID.hashValue.description == sourceID
+        }) else { return }
+
+        let source = ordered.remove(at: sourceIndex)
+
+        if beforeTargetID == Self.endOfListID {
+            ordered.append(source)
+        } else if let targetIndex = ordered.firstIndex(where: {
+            $0.persistentModelID.hashValue.description == beforeTargetID
+        }) {
+            ordered.insert(source, at: targetIndex)
+        } else {
+            ordered.append(source)
+        }
+
+        for (index, bookmark) in ordered.enumerated() {
+            bookmark.displayOrder = index
+        }
+        try? modelContext.save()
     }
 
     // MARK: - Actions
@@ -347,36 +374,4 @@ struct BookmarkListView: View {
         try? modelContext.save()
     }
 
-    private func reorderBookmark(sourceID: String, beforeTargetID: String) {
-        guard sourceID != beforeTargetID else { return }
-        var ordered = bookmarks
-        guard let sourceIndex = ordered.firstIndex(where: { $0.persistentModelID.hashValue.description == sourceID }),
-              let targetIndex = ordered.firstIndex(where: { $0.persistentModelID.hashValue.description == beforeTargetID }) else {
-            return
-        }
-        let item = ordered.remove(at: sourceIndex)
-        let insertIndex = sourceIndex < targetIndex ? targetIndex : targetIndex
-        ordered.insert(item, at: insertIndex)
-        for (index, bookmark) in ordered.enumerated() {
-            bookmark.displayOrder = index
-        }
-        try? modelContext.save()
-    }
-
-    // MARK: - Helpers
-
-    private func colorFromHex(_ hex: String) -> Color {
-        var hexString = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        if hexString.hasPrefix("#") {
-            hexString.removeFirst()
-        }
-        guard hexString.count == 6,
-              let value = UInt64(hexString, radix: 16) else {
-            return .blue
-        }
-        let r = Double((value >> 16) & 0xFF) / 255.0
-        let g = Double((value >> 8) & 0xFF) / 255.0
-        let b = Double(value & 0xFF) / 255.0
-        return Color(red: r, green: g, blue: b)
-    }
 }

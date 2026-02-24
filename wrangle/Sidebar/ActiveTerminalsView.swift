@@ -35,11 +35,22 @@ private struct ActiveTerminalRow: View {
         Button {
             if let index = appState.tabIndex(for: session) {
                 appState.selectTab(at: index)
+                appState.selectedBookmarkID = nil
+                appState.selectedFileTreeURL = nil
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: session.iconName)
-                    .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                if session.isCustomIcon {
+                    Image(session.iconName)
+                        .resizable()
+                        .renderingMode(.template)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: session.isClaude ? 18 : 15, height: session.isClaude ? 18 : 15)
+                        .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                } else {
+                    Image(systemName: session.iconName)
+                        .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(session.displayTitle)
                         .lineLimit(1)
@@ -53,7 +64,7 @@ private struct ActiveTerminalRow: View {
                     }
                 }
                 Spacer()
-                if session.isRunning {
+                if session.needsAttention {
                     Circle()
                         .fill(.green)
                         .frame(width: 6, height: 6)

@@ -8,6 +8,7 @@ import SwiftData
 
 struct TerminalDirectoryPicker: View {
     let launchClaude: Bool
+    let launchGemini: Bool
     let onSelect: (String, URL, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -18,7 +19,7 @@ struct TerminalDirectoryPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(launchClaude ? "Open Claude Code in..." : "Open Terminal in...")
+            Text(launchClaude ? "Open Claude Code in..." : (launchGemini ? "Open Gemini Code in..." : "Open Terminal in..."))
                 .font(.headline)
                 .padding(.horizontal, 12)
                 .padding(.top, 10)
@@ -42,7 +43,7 @@ struct TerminalDirectoryPicker: View {
                                 } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "folder.fill")
-                                            .foregroundStyle(Color(hex: bookmark.iconColorHex) ?? .blue)
+                                            .foregroundStyle(.gray)
                                             .font(.caption)
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(bookmark.name)
@@ -101,7 +102,7 @@ struct TerminalDirectoryPicker: View {
 
     private func browseForDirectory() {
         let panel = NSOpenPanel()
-        panel.title = launchClaude ? "Choose directory for Claude Code" : "Choose directory for Terminal"
+        panel.title = launchClaude ? "Choose directory for Claude Code" : (launchGemini ? "Choose directory for Gemini Code" : "Choose directory for Terminal")
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false

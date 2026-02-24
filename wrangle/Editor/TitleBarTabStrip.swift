@@ -26,6 +26,7 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .visible
             window.toolbar?.isVisible = false
+            window.backgroundColor = Theme.current.windowBackground
 
             let tabStrip = TitleBarTabStrip().environment(appState)
             let hostingView = NSHostingView(rootView: tabStrip)
@@ -79,6 +80,7 @@ struct TitleBarTabStrip: View {
     @Environment(AppState.self) private var appState
     @State private var showTerminalPicker = false
     @State private var pendingLaunchClaude = false
+    @State private var pendingLaunchGemini = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -118,13 +120,18 @@ struct TitleBarTabStrip: View {
                 }
                 Button("New Terminal") {
                     pendingLaunchClaude = false
+                    pendingLaunchGemini = false
                     showTerminalPicker = true
                 }
-                if ClaudeCodeLauncher.isInstalled() {
-                    Button("New Claude Code Session") {
-                        pendingLaunchClaude = true
-                        showTerminalPicker = true
-                    }
+                Button("New Claude Code Session") {
+                    pendingLaunchClaude = true
+                    pendingLaunchGemini = false
+                    showTerminalPicker = true
+                }
+                Button("New Gemini Code Session") {
+                    pendingLaunchClaude = false
+                    pendingLaunchGemini = true
+                    showTerminalPicker = true
                 }
             } label: {
                 Image(systemName: "plus")
@@ -142,12 +149,13 @@ struct TitleBarTabStrip: View {
             .help("New Tab")
             .padding(.horizontal, 6)
             .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
-                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude) { name, url, bookmarkID in
+                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini) { name, url, bookmarkID in
                     appState.openTerminal(
                         projectName: name,
                         directory: url,
                         bookmarkID: bookmarkID,
-                        launchClaude: pendingLaunchClaude
+                        launchClaude: pendingLaunchClaude,
+                        launchGemini: pendingLaunchGemini
                     )
                 }
             }
@@ -174,9 +182,18 @@ struct TitleBarTabItem: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: tab.iconName)
-                .font(.system(size: 10))
-                .foregroundColor(isActive ? tab.iconColor : .secondary)
+            if tab.isCustomIcon {
+                Image(tab.iconName)
+                    .resizable()
+                    .renderingMode(.template)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: tab.terminalSession?.isClaude == true ? 13 : 11, height: tab.terminalSession?.isClaude == true ? 13 : 11)
+                    .foregroundColor(isActive ? tab.iconColor : .secondary)
+            } else {
+                Image(systemName: tab.iconName)
+                    .font(.system(size: 10))
+                    .foregroundColor(isActive ? tab.iconColor : .secondary)
+            }
 
             Text(tab.displayName)
                 .font(.system(size: 11, weight: isActive ? .medium : .regular))
@@ -188,7 +205,7 @@ struct TitleBarTabItem: View {
                 Circle()
                     .fill(.orange)
                     .frame(width: 5, height: 5)
-            } else if tab.isRunningTerminal {
+            } else if tab.terminalSession?.needsAttention == true {
                 Circle()
                     .fill(.green)
                     .frame(width: 5, height: 5)
@@ -230,7 +247,15 @@ struct TitleBarTabItem: View {
         .animation(.spring(duration: 0.2), value: isActive)
         .draggable(tab.document?.fileURL ?? URL(filePath: "/dev/null")) {
             HStack(spacing: 4) {
-                Image(systemName: tab.iconName)
+                if tab.isCustomIcon {
+                    Image(tab.iconName)
+                        .resizable()
+                        .renderingMode(.template)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: tab.terminalSession?.isClaude == true ? 17 : 14, height: tab.terminalSession?.isClaude == true ? 17 : 14)
+                } else {
+                    Image(systemName: tab.iconName)
+                }
                 Text(tab.displayName)
             }
             .padding(6)

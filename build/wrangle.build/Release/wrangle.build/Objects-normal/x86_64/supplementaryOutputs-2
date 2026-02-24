@@ -1,0 +1,12 @@
+{
+  "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/wrangle/App/AppState.swift" : {
+    "abi-baseline-json" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle.abi.json",
+    "const-values" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle-primary.swiftconstvalues",
+    "dependencies" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle-primary.d",
+    "diagnostics" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle-primary.dia",
+    "objc-header" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle-Swift.h",
+    "swiftdoc" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle.swiftdoc",
+    "swiftmodule" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle.swiftmodule",
+    "swiftsourceinfo" : "/Users/krush/Projects/Krush-Dev/Wrangle/Wrangle/build/wrangle.build/Release/wrangle.build/Objects-normal/x86_64/wrangle.swiftsourceinfo"
+  }
+}
