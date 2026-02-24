@@ -44,6 +44,23 @@ The rendering pipeline:
 - Bookmarks use macOS security-scoped bookmarks so we retain access across launches.
 - The app should feel like a file editor, not a note-taking app.
 
+### Chrome & Theming
+The window uses a three-layer color system, all defined as appearance-aware dynamic `NSColor`s on `Theme`:
+
+| Layer | Dark | Light | Used by |
+|-------|------|-------|---------|
+| `Theme.chromeBackground` | `#1C1C1C` | `.windowBackgroundColor` | Window background, titlebar, status bar, editor area |
+| `Theme.sidebarBackground` | `#262626` | `#ECECEC` | Sidebar panel — slightly lighter so it reads as a card |
+| `Theme.current.editorBackground` | 12% white | 100% white | Editor text area content background |
+
+Key implementation details:
+- `TitleBarTabStrip` sets `window.backgroundColor = Theme.chromeBackground` in `makeNSView`
+- `ContentView` uses `.toolbarBackground(.hidden, for: .windowToolbar)` to suppress the system toolbar material so the window background shows through
+- `SidebarView` uses `.scrollContentBackground(.hidden)` + `.background(Color(nsColor: Theme.sidebarBackground))` to override the default sidebar material
+- Colors use `NSColor(name:dynamicProvider:)` with `appearance.bestMatch` — they respond to system appearance changes automatically
+
+Appearance mode (`AppState.appearanceMode`) cycles system → dark → light via a status bar button. It sets both `NSApp.appearance` (for AppKit views like the terminal) and `.preferredColorScheme` (for SwiftUI views).
+
 ## Project Structure
 
 ```
@@ -52,7 +69,7 @@ wrangle/
 ├── wrangle/
 │   ├── App/
 │   │   ├── wrangleApp.swift               # App entry point, WindowGroup
-│   │   ├── AppState.swift                 # Global app state (@Observable)
+│   │   ├── AppState.swift                 # Global app state (@Observable), AppearanceMode enum
 │   │   └── ContentView.swift              # Main NavigationSplitView layout
 │   ├── Models/
 │   │   ├── BookmarkedDirectory.swift      # SwiftData @Model for bookmarks
