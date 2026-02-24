@@ -46,6 +46,8 @@ struct SidebarView: View {
             appState.selectedFileTreeURL = nil
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .background(Color(nsColor: Theme.sidebarBackground))
         .safeAreaInset(edge: .top, spacing: 0) {
             sidebarSearchBar
         }
@@ -117,6 +119,7 @@ struct SidebarView: View {
                 FileTypeFilterPopover(activeFilters: $activeFileTypeFilters)
             }
             .help("Filter by file type")
+
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

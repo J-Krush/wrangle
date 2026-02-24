@@ -18,6 +18,7 @@ protocol TerminalProcessController: AnyObject {
 
 struct SwiftTermView: NSViewRepresentable {
     let session: TerminalSession
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator {
         Coordinator(session: session)
@@ -38,7 +39,10 @@ struct SwiftTermView: NSViewRepresentable {
     }
 
     func updateNSView(_ terminalView: LocalProcessTerminalView, context: Context) {
-        context.coordinator.configureAppearance(terminalView)
+        if context.coordinator.lastColorScheme != colorScheme {
+            context.coordinator.lastColorScheme = colorScheme
+            context.coordinator.configureAppearance(terminalView)
+        }
     }
 
     // MARK: - Coordinator
@@ -46,6 +50,7 @@ struct SwiftTermView: NSViewRepresentable {
     class Coordinator: NSObject, LocalProcessTerminalViewDelegate, TerminalProcessController {
         let session: TerminalSession
         weak var terminalView: LocalProcessTerminalView?
+        var lastColorScheme: ColorScheme?
 
         init(session: TerminalSession) {
             self.session = session

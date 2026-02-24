@@ -26,7 +26,7 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .visible
             window.toolbar?.isVisible = false
-            window.backgroundColor = Theme.current.windowBackground
+            window.backgroundColor = Theme.chromeBackground
 
             let tabStrip = TitleBarTabStrip().environment(appState)
             let hostingView = NSHostingView(rootView: tabStrip)

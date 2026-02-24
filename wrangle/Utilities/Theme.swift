@@ -4,16 +4,8 @@ import SwiftUI
 struct Theme {
     // MARK: - Colors
 
-    var windowBackground: NSColor
-    var windowBackgroundColor: Color { Color(nsColor: windowBackground) }
-
     var editorBackground: NSColor
-
-    /// SwiftUI-compatible version of the editor background color.
-    var editorBackgroundColor: Color { Color(nsColor: editorBackground) }
     var editorForeground: NSColor
-    var sidebarBackground: NSColor
-    var sidebarBackgroundColor: Color { Color(nsColor: sidebarBackground) }
     var headingColor: NSColor
     var codeBackground: NSColor
     var codeForeground: NSColor
@@ -63,10 +55,8 @@ struct Theme {
         ?? NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
 
     static let light = Theme(
-        windowBackground: NSColor(white: 0.96, alpha: 1.0),
         editorBackground: NSColor(white: 1.0, alpha: 1.0),
         editorForeground: NSColor(white: 0.1, alpha: 1.0),
-        sidebarBackground: NSColor(white: 0.96, alpha: 1.0),
         headingColor: NSColor(white: 0.0, alpha: 1.0),
         codeBackground: NSColor(white: 0.94, alpha: 1.0),
         codeForeground: NSColor(red: 0.84, green: 0.19, blue: 0.21, alpha: 1.0),
@@ -87,10 +77,8 @@ struct Theme {
     )
 
     static let dark = Theme(
-        windowBackground: NSColor(red: 43/255.0, green: 41/255.0, blue: 40/255.0, alpha: 1.0),
         editorBackground: NSColor(white: 0.12, alpha: 1.0),
         editorForeground: NSColor(white: 0.9, alpha: 1.0),
-        sidebarBackground: NSColor(red: 43/255.0, green: 41/255.0, blue: 40/255.0, alpha: 1.0),
         headingColor: NSColor(white: 1.0, alpha: 1.0),
         codeBackground: NSColor(white: 0.18, alpha: 1.0),
         codeForeground: NSColor(red: 0.99, green: 0.42, blue: 0.42, alpha: 1.0),
@@ -109,6 +97,27 @@ struct Theme {
         lineSpacing: 4,
         paragraphSpacing: 8
     )
+
+    /// Darker chrome background for titlebar, toolbars, and status bars.
+    /// In dark mode this is (28,28,28), making the sidebar "float" as a lighter card.
+    /// In light mode it falls back to the standard window background.
+    static let chromeBackground = NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+            return NSColor(srgbRed: 28/255, green: 28/255, blue: 28/255, alpha: 1)
+        } else {
+            return .windowBackgroundColor
+        }
+    }
+
+    /// Sidebar background — slightly lighter than chromeBackground so it appears
+    /// as a floating container on top of the uniform window chrome.
+    static let sidebarBackground = NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+            return NSColor(srgbRed: 38/255, green: 38/255, blue: 38/255, alpha: 1)
+        } else {
+            return NSColor(srgbRed: 236/255, green: 236/255, blue: 236/255, alpha: 1)
+        }
+    }
 
     /// Shared sidebar selection background used by all sidebar rows.
     static func sidebarSelectionBackground(isSelected: Bool) -> some View {

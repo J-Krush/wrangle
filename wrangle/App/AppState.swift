@@ -7,6 +7,18 @@ enum EditingMode: String, CaseIterable {
     case dev
 }
 
+enum AppearanceMode: String, CaseIterable {
+    case system, light, dark
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 @MainActor
 @Observable
 class AppState {
@@ -18,6 +30,7 @@ class AppState {
     var searchQuery: String = ""
     var sidebarWidth: CGFloat = 240
     var editingMode: EditingMode = .writing
+    var appearanceMode: AppearanceMode = .system
     var selectedFileTreeURL: URL? = nil
 
     // Preview tab tracking — only one preview tab at a time

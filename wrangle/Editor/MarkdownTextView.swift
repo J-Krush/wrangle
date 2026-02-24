@@ -15,6 +15,7 @@ struct MarkdownTextView: NSViewRepresentable {
     /// Optional shared context so external views (like toolbars) can drive formatting.
     var editorContext: EditorContext?
     var editingMode: EditingMode = .writing
+    @Environment(\.colorScheme) private var colorScheme
 
     // MARK: - NSViewRepresentable
 
@@ -100,6 +101,16 @@ struct MarkdownTextView: NSViewRepresentable {
             context.coordinator.documentID = document?.id
         }
 
+        // Detect appearance change and update NSTextView colors + restyle
+        let appearanceChanged = context.coordinator.lastColorScheme != colorScheme
+        if appearanceChanged {
+            context.coordinator.lastColorScheme = colorScheme
+            let theme = Theme.current
+            textView.backgroundColor = theme.editorBackground
+            textView.insertionPointColor = theme.editorForeground
+            textView.textColor = theme.editorForeground
+        }
+
         // Sync editing mode and restyle if it changed
         let modeChanged = context.coordinator.editingMode != editingMode
         context.coordinator.editingMode = editingMode
@@ -112,7 +123,7 @@ struct MarkdownTextView: NSViewRepresentable {
         } else {
             currentPlain = ""
         }
-        if modeChanged {
+        if modeChanged || appearanceChanged {
             context.coordinator.forceRestyle()
         } else if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
             context.coordinator.setTextViewContent(text)
@@ -128,6 +139,7 @@ struct MarkdownTextView: NSViewRepresentable {
         weak var textView: NSTextView?
         weak var editorContext: EditorContext?
         var editingMode: EditingMode = .writing
+        var lastColorScheme: ColorScheme?
 
         /// Guard against feedback loops: true while we are pushing changes from the
         /// text view back to the binding (so `updateNSView` won't re-enter).

@@ -72,9 +72,17 @@ struct wrangleApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
+                .preferredColorScheme(appState.appearanceMode.colorScheme)
                 .onAppear {
                     setupNotifications()
                     setupForegroundTracking()
+                }
+                .onChange(of: appState.appearanceMode) { _, mode in
+                    switch mode {
+                    case .system: NSApp.appearance = nil
+                    case .light:  NSApp.appearance = NSAppearance(named: .aqua)
+                    case .dark:   NSApp.appearance = NSAppearance(named: .darkAqua)
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)

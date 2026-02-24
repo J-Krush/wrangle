@@ -20,7 +20,7 @@ struct TerminalTabContentView: View {
 
             terminalStatusBar
         }
-        .background(Theme.current.windowBackgroundColor)
+        .background(Color(nsColor: Theme.chromeBackground))
     }
 
     // MARK: - Status Bar
@@ -65,9 +65,39 @@ struct TerminalTabContentView: View {
                     .lineLimit(1)
                     .truncationMode(.head)
             }
+
+            Button {
+                switch appState.appearanceMode {
+                case .system: appState.appearanceMode = .dark
+                case .dark:   appState.appearanceMode = .light
+                case .light:  appState.appearanceMode = .system
+                }
+            } label: {
+                Image(systemName: appearanceIcon)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(appearanceTooltip)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(Theme.current.windowBackgroundColor)
+        .background(Color(nsColor: Theme.chromeBackground))
+    }
+
+    private var appearanceIcon: String {
+        switch appState.appearanceMode {
+        case .system: "circle.lefthalf.filled"
+        case .light:  "sun.max.fill"
+        case .dark:   "moon.fill"
+        }
+    }
+
+    private var appearanceTooltip: String {
+        switch appState.appearanceMode {
+        case .system: "Appearance: System"
+        case .light:  "Appearance: Light"
+        case .dark:   "Appearance: Dark"
+        }
     }
 }

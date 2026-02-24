@@ -51,6 +51,7 @@ struct ContentView: View {
                     }
                 }
             }
+            .background(Color(nsColor: Theme.chromeBackground), ignoresSafeAreaEdges: .all)
             .alert(
                 "Close Terminal?",
                 isPresented: Binding(
@@ -74,6 +75,7 @@ struct ContentView: View {
                 }
             }
         }
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .overlay {
             if appState.showFuzzyFinder {
                 FuzzyFinderView()
@@ -82,7 +84,6 @@ struct ContentView: View {
                 GlobalSearchView()
             }
         }
-        .background(Theme.current.windowBackgroundColor)
         .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
         .background { TitleBarAccessoryInstaller(appState: appState) }
         .frame(minWidth: 800, minHeight: 500)
@@ -121,7 +122,7 @@ struct ContentView: View {
                     editorContext.insertBlock(block)
                 }
             )
-            .background(Theme.current.editorBackgroundColor)
+            .background(Color(nsColor: Theme.chromeBackground))
 
             Divider()
         } else {
@@ -129,7 +130,7 @@ struct ContentView: View {
                 get: { appState.editingMode },
                 set: { appState.editingMode = $0 }
             ))
-            .background(Theme.current.editorBackgroundColor)
+            .background(Color(nsColor: Theme.chromeBackground))
 
             Divider()
         }
@@ -238,6 +239,7 @@ struct ContentView: View {
 
 struct StatusBarView: View {
     let document: EditorDocument
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         HStack(spacing: 16) {
@@ -285,9 +287,39 @@ struct StatusBarView: View {
                     .lineLimit(1)
                     .truncationMode(.head)
             }
+
+            Button {
+                switch appState.appearanceMode {
+                case .system: appState.appearanceMode = .dark
+                case .dark:   appState.appearanceMode = .light
+                case .light:  appState.appearanceMode = .system
+                }
+            } label: {
+                Image(systemName: appearanceIcon)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help(appearanceTooltip)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(Theme.current.windowBackgroundColor)
+        .background(Color(nsColor: Theme.chromeBackground))
+    }
+
+    private var appearanceIcon: String {
+        switch appState.appearanceMode {
+        case .system: "circle.lefthalf.filled"
+        case .light:  "sun.max.fill"
+        case .dark:   "moon.fill"
+        }
+    }
+
+    private var appearanceTooltip: String {
+        switch appState.appearanceMode {
+        case .system: "Appearance: System"
+        case .light:  "Appearance: Light"
+        case .dark:   "Appearance: Dark"
+        }
     }
 }
