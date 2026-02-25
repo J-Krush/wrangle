@@ -16,15 +16,87 @@ protocol TerminalProcessController: AnyObject {
     func sendString(_ string: String)
 }
 
+// MARK: - TerminalContainerView (drag-and-drop target)
+
+/// Wraps a `LocalProcessTerminalView` to add file drag-and-drop support.
+/// We can't subclass `LocalProcessTerminalView` (it's `public`, not `open`),
+/// so this container registers for dragged types and forwards dropped file
+/// paths as shell-escaped text into the terminal process.
+class TerminalContainerView: NSView {
+    let terminalView: LocalProcessTerminalView
+    var isActive: Bool = false
+
+    init(terminalView: LocalProcessTerminalView) {
+        self.terminalView = terminalView
+        super.init(frame: .zero)
+
+        terminalView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(terminalView)
+        NSLayoutConstraint.activate([
+            terminalView.topAnchor.constraint(equalTo: topAnchor),
+            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
+        ])
+
+        registerForDraggedTypes([.fileURL])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    // MARK: - Click-to-Focus
+
+    override func mouseDown(with event: NSEvent) {
+        guard isActive else { return }
+        window?.makeFirstResponder(terminalView)
+        super.mouseDown(with: event)
+    }
+
+    // MARK: - NSDraggingDestination
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        guard isActive else { return [] }
+        return sender.draggingPasteboard.canReadObject(forClasses: [NSURL.self], options: nil) ? .copy : []
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        guard isActive else { return false }
+        return sender.draggingPasteboard.canReadObject(forClasses: [NSURL.self], options: nil)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        guard isActive else { return false }
+        guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+              !urls.isEmpty else {
+            return false
+        }
+        let paths = urls.map { shellEscape($0.path(percentEncoded: false)) }
+        let text = paths.joined(separator: " ")
+        guard let data = text.data(using: .utf8) else { return false }
+        terminalView.process.send(data: ArraySlice(data))
+        return true
+    }
+
+    private func shellEscape(_ path: String) -> String {
+        "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+}
+
+// MARK: - SwiftTermView
+
 struct SwiftTermView: NSViewRepresentable {
     let session: TerminalSession
+    var isActive: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     func makeCoordinator() -> Coordinator {
         Coordinator(session: session)
     }
 
-    func makeNSView(context: Context) -> LocalProcessTerminalView {
+    func makeNSView(context: Context) -> TerminalContainerView {
         let terminalView = LocalProcessTerminalView(frame: .zero)
         terminalView.processDelegate = context.coordinator
         context.coordinator.terminalView = terminalView
@@ -35,13 +107,39 @@ struct SwiftTermView: NSViewRepresentable {
         // Start the shell process
         context.coordinator.startProcess(in: terminalView)
 
-        return terminalView
+        // Shift+Return handling for TUI apps (e.g., Claude Code multi-line input)
+        context.coordinator.installKeyboardMonitor(for: terminalView)
+
+        let container = TerminalContainerView(terminalView: terminalView)
+        container.isActive = isActive
+        context.coordinator.isActive = isActive
+        return container
     }
 
-    func updateNSView(_ terminalView: LocalProcessTerminalView, context: Context) {
+    func updateNSView(_ container: TerminalContainerView, context: Context) {
+        let terminalView = container.terminalView
+
+        // Sync isActive state to coordinator and container
+        context.coordinator.isActive = isActive
+        container.isActive = isActive
+
         if context.coordinator.lastColorScheme != colorScheme {
             context.coordinator.lastColorScheme = colorScheme
             context.coordinator.configureAppearance(terminalView)
+        }
+
+        // When this terminal tab becomes active, claim keyboard focus
+        if isActive, let window = terminalView.window, window.firstResponder !== terminalView {
+            window.makeFirstResponder(terminalView)
+        }
+    }
+
+    static func dismantleNSView(_ container: TerminalContainerView, coordinator: Coordinator) {
+        coordinator.isActive = false
+        container.isActive = false
+        if let monitor = coordinator.keyboardMonitor {
+            NSEvent.removeMonitor(monitor)
+            coordinator.keyboardMonitor = nil
         }
     }
 
@@ -51,11 +149,65 @@ struct SwiftTermView: NSViewRepresentable {
         let session: TerminalSession
         weak var terminalView: LocalProcessTerminalView?
         var lastColorScheme: ColorScheme?
+        var isActive: Bool = false
+        fileprivate var keyboardMonitor: Any?
 
         init(session: TerminalSession) {
             self.session = session
             super.init()
             session.emulator.processController = self
+        }
+
+        deinit {
+            if let monitor = keyboardMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
+        }
+
+        /// Intercepts special key combinations and sends appropriate escape sequences.
+        func installKeyboardMonitor(for terminalView: LocalProcessTerminalView) {
+            keyboardMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self, weak terminalView] event in
+                guard let self, self.isActive,
+                      let terminalView,
+                      let window = terminalView.window,
+                      window.firstResponder === terminalView else {
+                    return event
+                }
+
+                // Shift+Return: send kitty keyboard protocol ESC[13;2u
+                if event.keyCode == 36 && event.modifierFlags.contains(.shift) {
+                    let escSeq: [UInt8] = [0x1B, 0x5B, 0x31, 0x33, 0x3B, 0x32, 0x75]
+                    terminalView.process.send(data: ArraySlice(escSeq))
+                    return nil
+                }
+
+                // fn+Arrow keys (Home/End/PageUp/PageDown)
+                if let escSeq = Self.fnKeySequence(for: event) {
+                    terminalView.process.send(data: ArraySlice(escSeq))
+                    return nil
+                }
+
+                return event
+            }
+        }
+
+        /// Returns the escape sequence for fn+arrow key events, or nil if not applicable.
+        private static func fnKeySequence(for event: NSEvent) -> [UInt8]? {
+            // These keyCodes are generated when fn+arrow is pressed on macOS
+            switch event.keyCode {
+            case 115: // Home (fn+Left)
+                return [0x1B, 0x5B, 0x48]           // ESC[H
+            case 119: // End (fn+Right)
+                return [0x1B, 0x5B, 0x46]           // ESC[F
+            case 116: // Page Up (fn+Up)
+                return [0x1B, 0x5B, 0x35, 0x7E]     // ESC[5~
+            case 121: // Page Down (fn+Down)
+                return [0x1B, 0x5B, 0x36, 0x7E]     // ESC[6~
+            case 117: // Forward Delete (fn+Delete)
+                return [0x1B, 0x5B, 0x33, 0x7E]     // ESC[3~
+            default:
+                return nil
+            }
         }
 
         // MARK: - Process Lifecycle
@@ -66,6 +218,7 @@ struct SwiftTermView: NSViewRepresentable {
             // Build environment inheriting parent's env
             var env = ProcessInfo.processInfo.environment
             env["TERM"] = "xterm-256color"
+            env["COLORTERM"] = "truecolor"
             env["LANG"] = "en_US.UTF-8"
             env["WRANGLE_SESSION_ID"] = session.id.uuidString
             let envStrings = env.map { "\($0.key)=\($0.value)" }
@@ -94,10 +247,14 @@ struct SwiftTermView: NSViewRepresentable {
 
         func configureAppearance(_ terminalView: LocalProcessTerminalView) {
             let theme = Theme.current
+            terminalView.nativeForegroundColor = theme.terminalForeground
             terminalView.nativeBackgroundColor = theme.terminalBackground
             terminalView.selectedTextBackgroundColor = theme.terminalSelection
             terminalView.caretColor = theme.terminalCursor
             terminalView.font = theme.terminalFont
+            terminalView.optionAsMetaKey = true
+            terminalView.allowMouseReporting = true
+            TerminalPalette.install(on: terminalView)
         }
 
         // MARK: - LocalProcessTerminalViewDelegate

@@ -9,6 +9,13 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
+private struct DetailLeadingKey: PreferenceKey {
+    static var defaultValue: CGFloat = 240
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct ContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
@@ -43,6 +50,9 @@ struct ContentView: View {
                                 documentContentView(doc)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                                handleFileDrop(providers)
+                            }
                         case .terminal:
                             EmptyView()
                         }
@@ -51,6 +61,14 @@ struct ContentView: View {
                     }
                 }
             }
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: DetailLeadingKey.self,
+                        value: geo.frame(in: .named("root")).minX
+                    )
+                }
+            )
             .background(Color(nsColor: Theme.chromeBackground), ignoresSafeAreaEdges: .all)
             .alert(
                 "Close Terminal?",
@@ -75,6 +93,10 @@ struct ContentView: View {
                 }
             }
         }
+        .coordinateSpace(name: "root")
+        .onPreferenceChange(DetailLeadingKey.self) { value in
+            appState.detailAreaLeading = value
+        }
         .toolbarBackground(.hidden, for: .windowToolbar)
         .overlay {
             if appState.showFuzzyFinder {
@@ -87,9 +109,6 @@ struct ContentView: View {
         .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
         .background { TitleBarAccessoryInstaller(appState: appState) }
         .frame(minWidth: 800, minHeight: 500)
-        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-            handleFileDrop(providers)
-        }
         .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
                 recordRecentFile(url: url, in: modelContext)
@@ -302,7 +321,7 @@ struct StatusBarView: View {
             .buttonStyle(.plain)
             .help(appearanceTooltip)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 18)
         .padding(.vertical, 4)
         .background(Color(nsColor: Theme.chromeBackground))
     }

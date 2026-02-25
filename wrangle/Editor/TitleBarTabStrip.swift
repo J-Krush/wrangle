@@ -160,7 +160,8 @@ struct TitleBarTabStrip: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.leading, 8)
+        .padding(.trailing, 8)
     }
 }
 
@@ -181,70 +182,72 @@ struct TitleBarTabItem: View {
     @State private var renameText = ""
 
     var body: some View {
-        HStack(spacing: 4) {
-            if tab.isCustomIcon {
-                Image(tab.iconName)
-                    .resizable()
-                    .renderingMode(.template)
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: tab.terminalSession?.isClaude == true ? 13 : 11, height: tab.terminalSession?.isClaude == true ? 13 : 11)
-                    .foregroundColor(isActive ? tab.iconColor : .secondary)
-            } else {
-                Image(systemName: tab.iconName)
-                    .font(.system(size: 10))
-                    .foregroundColor(isActive ? tab.iconColor : .secondary)
-            }
-
-            Text(tab.displayName)
-                .font(.system(size: 11, weight: isActive ? .medium : .regular))
-                .foregroundStyle(isActive ? .primary : .secondary)
-                .italic(isPreview)
-                .lineLimit(1)
-
-            if tab.isDirty {
-                Circle()
-                    .fill(.orange)
-                    .frame(width: 5, height: 5)
-            } else if tab.terminalSession?.needsAttention == true {
-                Circle()
-                    .fill(.green)
-                    .frame(width: 5, height: 5)
-            }
-
-            if isHovering || isActive {
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(.secondary)
+        Button(action: onSelect) {
+            HStack(spacing: 4) {
+                if tab.isCustomIcon {
+                    Image(tab.iconName)
+                        .resizable()
+                        .renderingMode(.template)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: tab.terminalSession?.isClaude == true ? 13 : 11, height: tab.terminalSession?.isClaude == true ? 13 : 11)
+                        .foregroundColor(isActive ? tab.iconColor : .secondary)
+                } else {
+                    Image(systemName: tab.iconName)
+                        .font(.system(size: 10))
+                        .foregroundColor(isActive ? tab.iconColor : .secondary)
                 }
-                .buttonStyle(.borderless)
-                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+
+                Text(tab.displayName)
+                    .font(.system(size: 11, weight: isActive ? .medium : .regular))
+                    .foregroundStyle(isActive ? .primary : .secondary)
+                    .italic(isPreview)
+                    .lineLimit(1)
+
+                if tab.isDirty {
+                    Circle()
+                        .fill(.orange)
+                        .frame(width: 5, height: 5)
+                } else if tab.terminalSession?.needsAttention == true {
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 5, height: 5)
+                }
+
+                if isHovering || isActive {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 7, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
             }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .frame(minWidth: 80, maxWidth: 180)
-        .background {
-            if isActive {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(.background.opacity(0.6))
-            } else if isHovering {
-                RoundedRectangle(cornerRadius: 5)
-                    .fill(.quaternary.opacity(0.5))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .frame(minWidth: 80, maxWidth: 180)
+            .background {
+                if isActive {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(.background.opacity(0.6))
+                } else if isHovering {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(.quaternary.opacity(0.5))
+                }
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .strokeBorder(
+                        Color(nsColor: .separatorColor).opacity(isActive ? 1 : 0.6),
+                        lineWidth: 1
+                    )
+            )
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 5)
-                .strokeBorder(
-                    Color(nsColor: .separatorColor).opacity(isActive ? 1 : 0.6),
-                    lineWidth: 1
-                )
-        )
+        .buttonStyle(.plain)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) { onPromote() }
-        .onTapGesture(count: 1, perform: onSelect)
+        .simultaneousGesture(TapGesture(count: 2).onEnded { onPromote() })
         .onHover { isHovering = $0 }
-        .animation(.spring(duration: 0.2), value: isActive)
+        .animation(.easeOut(duration: 0.1), value: isActive)
         .draggable(tab.document?.fileURL ?? URL(filePath: "/dev/null")) {
             HStack(spacing: 4) {
                 if tab.isCustomIcon {

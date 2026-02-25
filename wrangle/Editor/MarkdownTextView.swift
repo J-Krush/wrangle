@@ -50,7 +50,7 @@ struct MarkdownTextView: NSViewRepresentable {
         let theme = Theme.current
         textView.backgroundColor = theme.editorBackground
         textView.insertionPointColor = theme.editorForeground
-        textView.textContainerInset = NSSize(width: 40, height: 60)
+        textView.textContainerInset = NSSize(width: 35, height: 50)
         textView.font = theme.editorFont
         textView.textColor = theme.editorForeground
 

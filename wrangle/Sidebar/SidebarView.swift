@@ -48,7 +48,7 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         .background(Color(nsColor: Theme.sidebarBackground))
-        .safeAreaInset(edge: .top, spacing: 0) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             sidebarSearchBar
         }
         .frame(minWidth: 200, idealWidth: 240)
@@ -119,7 +119,6 @@ struct SidebarView: View {
                 FileTypeFilterPopover(activeFilters: $activeFileTypeFilters)
             }
             .help("Filter by file type")
-
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

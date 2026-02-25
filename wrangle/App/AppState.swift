@@ -9,14 +9,6 @@ enum EditingMode: String, CaseIterable {
 
 enum AppearanceMode: String, CaseIterable {
     case system, light, dark
-
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
 }
 
 @MainActor
@@ -29,6 +21,7 @@ class AppState {
     var showGlobalSearch: Bool = false
     var searchQuery: String = ""
     var sidebarWidth: CGFloat = 240
+    var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing
     var appearanceMode: AppearanceMode = .system
     var selectedFileTreeURL: URL? = nil

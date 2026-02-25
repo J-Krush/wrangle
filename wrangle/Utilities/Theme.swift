@@ -17,6 +17,7 @@ struct Theme {
 
     // MARK: - Terminal Colors
 
+    var terminalForeground: NSColor
     var terminalBackground: NSColor
     var terminalCursor: NSColor
     var terminalSelection: NSColor
@@ -65,7 +66,8 @@ struct Theme {
         blockquoteText: NSColor(white: 0.4, alpha: 1.0),
         selectionColor: NSColor(red: 0.0, green: 0.48, blue: 1.0, alpha: 0.2),
         xmlTagColors: defaultXMLTagColors(dark: false),
-        // Terminal — warm off-white background, let shell control text colors
+        // Terminal — warm off-white background with near-black text
+        terminalForeground: NSColor(red: 0.10, green: 0.11, blue: 0.15, alpha: 1.0),  // #1a1b26
         terminalBackground: NSColor(red: 0.98, green: 0.98, blue: 0.96, alpha: 1.0),  // #fafaf5
         terminalCursor: NSColor(red: 0.22, green: 0.38, blue: 0.75, alpha: 1.0),
         terminalSelection: NSColor(red: 0.71, green: 0.75, blue: 0.89, alpha: 0.5),   // #b6bfe2
@@ -87,7 +89,8 @@ struct Theme {
         blockquoteText: NSColor(white: 0.6, alpha: 1.0),
         selectionColor: NSColor(red: 0.35, green: 0.68, blue: 1.0, alpha: 0.3),
         xmlTagColors: defaultXMLTagColors(dark: true),
-        // Terminal — dark background, let shell control text colors
+        // Terminal — dark background with bright off-white text
+        terminalForeground: NSColor(red: 0.78, green: 0.81, blue: 0.96, alpha: 1.0),  // #c8cff5
         terminalBackground: NSColor(red: 0.10, green: 0.11, blue: 0.15, alpha: 1.0),  // #1a1b26
         terminalCursor: NSColor(red: 0.75, green: 0.79, blue: 0.96, alpha: 1.0),       // #c0caf5
         terminalSelection: NSColor(red: 0.20, green: 0.27, blue: 0.49, alpha: 0.6),    // #33467c

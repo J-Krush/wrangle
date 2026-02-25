@@ -225,6 +225,7 @@ class EditorDocument: Identifiable {
         self.fileURL = fileURL
         self.content = content
         self.lastSavedContent = content
+        self.isDirty = fileURL == nil
     }
 
     deinit {
@@ -274,7 +275,7 @@ class EditorDocument: Identifiable {
     }
 
     func markDirty() {
-        isDirty = content != lastSavedContent
+        isDirty = fileURL == nil || content != lastSavedContent
         scheduleCachedStatsUpdate()
     }
 

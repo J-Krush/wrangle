@@ -42,7 +42,19 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct wrangleApp: App {
     @State private var appState = AppState()
+    @State private var resolvedSystemScheme: ColorScheme = {
+        guard let app = NSApp else { return .dark }
+        return app.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
+    }()
     private let notificationDelegate = NotificationDelegate()
+
+    private var effectiveColorScheme: ColorScheme {
+        switch appState.appearanceMode {
+        case .system: resolvedSystemScheme
+        case .light:  .light
+        case .dark:   .dark
+        }
+    }
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -72,10 +84,23 @@ struct wrangleApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
-                .preferredColorScheme(appState.appearanceMode.colorScheme)
+                .preferredColorScheme(effectiveColorScheme)
                 .onAppear {
                     setupNotifications()
                     setupForegroundTracking()
+                    updateSystemScheme()
+                    // Listen for macOS appearance changes
+                    DistributedNotificationCenter.default().addObserver(
+                        forName: Notification.Name("AppleInterfaceThemeChangedNotification"),
+                        object: nil,
+                        queue: .main
+                    ) { _ in
+                        // Small delay for AppKit to settle
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(100))
+                            updateSystemScheme()
+                        }
+                    }
                 }
                 .onChange(of: appState.appearanceMode) { _, mode in
                     switch mode {
@@ -305,6 +330,13 @@ struct wrangleApp: App {
         if let url = appState.activeDocument?.fileURL {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         }
+    }
+
+    // MARK: - System Appearance Tracking
+
+    private func updateSystemScheme() {
+        let isDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        resolvedSystemScheme = isDark ? .dark : .light
     }
 
     // MARK: - Notification Setup
