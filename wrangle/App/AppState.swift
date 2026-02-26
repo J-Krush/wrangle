@@ -69,6 +69,16 @@ class AppState {
         tabs.compactMap(\.terminalSession)
     }
 
+    /// Terminal sessions belonging to a specific bookmark location
+    func terminalSessions(for bookmarkID: String) -> [TerminalSession] {
+        tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == bookmarkID }
+    }
+
+    /// Terminal sessions with no associated bookmark (opened via Browse, etc.)
+    var orphanedTerminalSessions: [TerminalSession] {
+        tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == nil }
+    }
+
     init() {
         let blank = EditorDocument()
         let tab = WorkspaceTab(content: .document(blank))
@@ -310,7 +320,7 @@ class AppState {
         showTerminalCloseConfirmation = false
     }
 
-    func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false, launchGemini: Bool = false) {
+    func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false, launchGemini: Bool = false, dangerousMode: Bool = false) {
         let emulator = TerminalEmulator()
         // Don't start the process here — SwiftTermView will start it when rendered
 
@@ -324,7 +334,7 @@ class AppState {
         )
 
         if launchClaude {
-            session.pendingCommand = ClaudeCodeLauncher.launchCommand()
+            session.pendingCommand = ClaudeCodeLauncher.launchCommand(dangerousMode: dangerousMode)
         } else if launchGemini {
             session.pendingCommand = GeminiCodeLauncher.launchCommand()
         }

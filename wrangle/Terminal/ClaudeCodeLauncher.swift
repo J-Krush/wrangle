@@ -27,9 +27,10 @@ enum ClaudeCodeLauncher {
     }
 
     /// Returns the command string to launch Claude Code (including trailing newline).
-    static func launchCommand() -> String {
+    static func launchCommand(dangerousMode: Bool = false) -> String {
         if let path = claudePath() {
-            return "\(path)\n"
+            let flags = dangerousMode ? " --dangerously-skip-permissions" : ""
+            return "\(path)\(flags)\n"
         } else {
             return """
             echo ""

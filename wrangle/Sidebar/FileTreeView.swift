@@ -18,6 +18,10 @@ struct FileTreeContent: View {
     @State private var newFolderName: String = ""
     @State private var targetFolderURL: URL?
 
+    private var parentBookmarkID: String {
+        bookmark.persistentModelID.hashValue.description
+    }
+
     private var filteredNodes: [FileNode] {
         if filterText.isEmpty && activeFileTypeFilters.isEmpty { return nodes }
         return nodes.compactMap { $0.filtered(by: filterText, fileTypes: activeFileTypeFilters) }
@@ -98,13 +102,13 @@ struct FileTreeContent: View {
             }
             Divider()
             Button("Open Terminal Here") {
-                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: nil)
+                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: parentBookmarkID)
             }
             Button("Launch Claude Code Here") {
-                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: nil, launchClaude: true)
+                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: parentBookmarkID, launchClaude: true)
             }
             Button("Launch Gemini Code Here") {
-                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: nil, launchGemini: true)
+                appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: parentBookmarkID, launchGemini: true)
             }
             Divider()
             Button("Reveal in Finder") {
@@ -117,15 +121,15 @@ struct FileTreeContent: View {
             Divider()
             Button("Open Terminal Here") {
                 let parentURL = node.url.deletingLastPathComponent()
-                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: nil)
+                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: parentBookmarkID)
             }
             Button("Launch Claude Code Here") {
                 let parentURL = node.url.deletingLastPathComponent()
-                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: nil, launchClaude: true)
+                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: parentBookmarkID, launchClaude: true)
             }
             Button("Launch Gemini Code Here") {
                 let parentURL = node.url.deletingLastPathComponent()
-                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: nil, launchGemini: true)
+                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: parentBookmarkID, launchGemini: true)
             }
             Divider()
             Button("Reveal in Finder") {

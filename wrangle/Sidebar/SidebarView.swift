@@ -21,8 +21,6 @@ struct SidebarView: View {
 
     var body: some View {
         List {
-            ActiveTerminalsView()
-
             Section {
                 BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering)
             } header: {
@@ -32,14 +30,16 @@ struct SidebarView: View {
                     Button {
                         addLocation()
                     } label: {
-                        Image(systemName: "plus")
-                            .foregroundStyle(.secondary)
+                        Text("Add")
                     }
                     .buttonStyle(.plain)
                     .help("Add Location")
                 }
-                .padding(.trailing, 4)
+                .padding(.trailing, 15)
+                .padding(.vertical, 4)
             }
+
+            OrphanedSessionsSection()
         }
         .onTapGesture {
             appState.selectedBookmarkID = nil
@@ -287,5 +287,22 @@ struct FileTypeFilterPopover: View {
         }
         .padding(.bottom, 6)
         .frame(width: 180)
+    }
+}
+
+// MARK: - Orphaned Sessions Section
+
+private struct OrphanedSessionsSection: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        let orphaned = appState.orphanedTerminalSessions
+        if !orphaned.isEmpty {
+            Section("Other Sessions") {
+                ForEach(orphaned) { session in
+                    LocationSessionRow(session: session)
+                }
+            }
+        }
     }
 }

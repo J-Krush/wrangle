@@ -81,6 +81,7 @@ struct TitleBarTabStrip: View {
     @State private var showTerminalPicker = false
     @State private var pendingLaunchClaude = false
     @State private var pendingLaunchGemini = false
+    @State private var pendingDangerousMode = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -121,18 +122,35 @@ struct TitleBarTabStrip: View {
                 Button("New Terminal") {
                     pendingLaunchClaude = false
                     pendingLaunchGemini = false
+                    pendingDangerousMode = false
                     showTerminalPicker = true
                 }
                 Button("New Claude Code Session") {
                     pendingLaunchClaude = true
                     pendingLaunchGemini = false
+                    pendingDangerousMode = false
                     showTerminalPicker = true
                 }
                 Button("New Gemini Code Session") {
                     pendingLaunchClaude = false
                     pendingLaunchGemini = true
+                    pendingDangerousMode = false
                     showTerminalPicker = true
                 }
+                Divider()
+                Button {
+                    pendingLaunchClaude = true
+                    pendingLaunchGemini = false
+                    pendingDangerousMode = true
+                    showTerminalPicker = true
+                } label: {
+                    Label {
+                        Text("Claude (Skip Permissions)")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                    }
+                }
+                .help("Runs claude --dangerously-skip-permissions")
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .medium))
@@ -155,7 +173,8 @@ struct TitleBarTabStrip: View {
                         directory: url,
                         bookmarkID: bookmarkID,
                         launchClaude: pendingLaunchClaude,
-                        launchGemini: pendingLaunchGemini
+                        launchGemini: pendingLaunchGemini,
+                        dangerousMode: pendingDangerousMode
                     )
                 }
             }

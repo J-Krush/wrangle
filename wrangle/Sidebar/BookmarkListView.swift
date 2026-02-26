@@ -65,29 +65,52 @@ struct BookmarkListView: View {
             } else {
                 // M-2: Use Button inside DisclosureGroup label instead of onTapGesture
                 DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
+                    ForEach(appState.terminalSessions(for: bookmarkID)) { session in
+                        LocationSessionRow(session: session)
+                    }
                     FileTreeContent(bookmark: bookmark, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters)
                 } label: {
-                    Button {
-                        appState.selectedBookmarkID = bookmarkID
-                        appState.selectedFileTreeURL = nil
-                        if expandedBookmarks.contains(bookmarkID) {
-                            expandedBookmarks.remove(bookmarkID)
-                        } else {
-                            expandedBookmarks.insert(bookmarkID)
+                    HStack(spacing: 4) {
+                        Button {
+                            appState.selectedBookmarkID = bookmarkID
+                            appState.selectedFileTreeURL = nil
+                            if expandedBookmarks.contains(bookmarkID) {
+                                expandedBookmarks.remove(bookmarkID)
+                            } else {
+                                expandedBookmarks.insert(bookmarkID)
+                            }
+                        } label: {
+                            Label {
+                                Text(bookmark.name)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            } icon: {
+                                Image(systemName: "folder.fill")
+                                    .foregroundStyle(.gray)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                    } label: {
-                        Label {
-                            Text(bookmark.name)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        } icon: {
-                            Image(systemName: "folder.fill")
-                                .foregroundStyle(.gray)
+                        .buttonStyle(.plain)
+
+                        // Session count
+                        let sessionCount = appState.terminalSessions(for: bookmarkID).count
+                        let hasAttention = appState.terminalSessions(for: bookmarkID).contains { $0.needsAttention }
+                        if sessionCount > 0 {
+                            Text("\(sessionCount)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(
+                                    Capsule()
+                                        .fill(hasAttention ? Color.green.opacity(0.25) : Color.secondary.opacity(0.15))
+                                )
+                                .foregroundStyle(hasAttention ? .green : .secondary)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
+
+                        SessionAddButton(bookmark: bookmark)
                     }
-                    .buttonStyle(.plain)
                 }
                 .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                 .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
@@ -117,6 +140,11 @@ struct BookmarkListView: View {
 
         Spacer()
             .sheet(isPresented: showRenameSheet) { renameSheet }
+            .onChange(of: appState.activeTabIndex) { _, _ in
+                guard let session = appState.activeTab?.terminalSession,
+                      let bookmarkID = session.bookmarkID else { return }
+                expandedBookmarks.insert(bookmarkID)
+            }
     }
 
     // MARK: - Bindings
@@ -374,4 +402,94 @@ struct BookmarkListView: View {
         try? modelContext.save()
     }
 
+}
+
+// MARK: - Session Add Button
+
+private struct SessionAddButton: View {
+    let bookmark: BookmarkedDirectory
+    @Environment(AppState.self) private var appState
+
+    private var hasActiveSessions: Bool {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        return !appState.terminalSessions(for: bookmarkID).isEmpty
+    }
+
+    var body: some View {
+        Menu {
+            Button("New Terminal") { openTerminal() }
+            Button("New Claude Code Session") { launchClaude() }
+            Button("New Gemini Code Session") { launchGemini() }
+            Divider()
+            Button {
+                launchClaudeDangerous()
+            } label: {
+                Label {
+                    Text("Claude (Skip Permissions)")
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+            }
+            .help("Runs claude --dangerously-skip-permissions. Use with caution — this bypasses all permission prompts.")
+        } label: {
+            Image(systemName: "brain.head.profile")
+                .foregroundStyle(.secondary)
+                .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .contentShape(Rectangle())
+        .tint(hasActiveSessions
+            ? Color.purple
+            : Color(red: 0.578, green: 0.578, blue: 0.578, opacity: 1.0))
+        .menuIndicator(.hidden)
+        .help("New Session")
+    }
+
+    private func openTerminal() {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID
+        )
+    }
+
+    private func launchClaude() {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID,
+            launchClaude: true
+        )
+    }
+
+    private func launchGemini() {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID,
+            launchGemini: true
+        )
+    }
+
+    private func launchClaudeDangerous() {
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        let dir = bookmark.resolveURL()
+        appState.openTerminal(
+            projectName: bookmark.name,
+            directory: dir,
+            bookmarkID: bookmarkID,
+            launchClaude: true,
+            dangerousMode: true
+        )
+    }
+}
+
+#Preview{
+    SessionAddButton(bookmark: BookmarkedDirectory(name: "Wrangle", bookmarkData: Data()))
 }
