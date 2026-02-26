@@ -32,46 +32,51 @@ private struct ActiveTerminalRow: View {
     }
 
     var body: some View {
-        Button {
-            if let index = appState.tabIndex(for: session) {
-                appState.selectTab(at: index)
-                appState.selectedBookmarkID = nil
-                appState.selectedFileTreeURL = nil
-            }
-        } label: {
-            HStack(spacing: 8) {
+        HStack(spacing: 8) {
+            Group {
                 if session.isCustomIcon {
                     Image(session.iconName)
                         .resizable()
                         .renderingMode(.template)
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: session.isClaude ? 18 : 15, height: session.isClaude ? 18 : 15)
+                        .frame(width: 14, height: 14)
                         .foregroundStyle(isActive ? session.iconColor : Color.secondary)
                 } else {
                     Image(systemName: session.iconName)
                         .foregroundStyle(isActive ? session.iconColor : Color.secondary)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(session.displayTitle)
+            }
+            .frame(width: 20, alignment: .center)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(session.displayTitle)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                if let subtitle = session.displaySubtitle {
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
                         .lineLimit(1)
-                        .truncationMode(.tail)
-                    if let subtitle = session.displaySubtitle {
-                        Text(subtitle)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                            .truncationMode(.head)
-                    }
-                }
-                Spacer()
-                if session.needsAttention {
-                    Circle()
-                        .fill(.green)
-                        .frame(width: 6, height: 6)
+                        .truncationMode(.head)
                 }
             }
+            Spacer()
+            if session.needsAttention {
+                Circle()
+                    .fill(.green)
+                    .frame(width: 6, height: 6)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+        .padding(.leading, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let index = appState.tabIndex(for: session) {
+                appState.selectTab(at: index)
+                appState.selectedBookmarkID = nil
+                appState.selectedFileTreeURL = nil
+            }
+        }
         .help(session.displaySubtitle ?? session.displayTitle)
         .listRowBackground(
             isActive ? session.iconColor.opacity(0.12) : Color.clear

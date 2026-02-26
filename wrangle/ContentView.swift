@@ -39,6 +39,7 @@ struct ContentView: View {
                             TerminalTabContentView(session: session)
                                 .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
                                 .allowsHitTesting(appState.activeTab?.id == tab.id)
+                                .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
                         }
                     }
 

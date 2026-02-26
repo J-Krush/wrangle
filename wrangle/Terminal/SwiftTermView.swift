@@ -24,7 +24,16 @@ protocol TerminalProcessController: AnyObject {
 /// paths as shell-escaped text into the terminal process.
 class TerminalContainerView: NSView {
     let terminalView: LocalProcessTerminalView
-    var isActive: Bool = false
+    var isActive: Bool = false {
+        didSet {
+            guard isActive != oldValue else { return }
+            if isActive {
+                registerForDraggedTypes([.fileURL])
+            } else {
+                unregisterDraggedTypes()
+            }
+        }
+    }
 
     init(terminalView: LocalProcessTerminalView) {
         self.terminalView = terminalView
@@ -38,8 +47,7 @@ class TerminalContainerView: NSView {
             terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
             terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
-
-        registerForDraggedTypes([.fileURL])
+        // Drag type registration is managed dynamically via isActive didSet
     }
 
     @available(*, unavailable)
@@ -47,10 +55,19 @@ class TerminalContainerView: NSView {
         fatalError("init(coder:) is not supported")
     }
 
-    // MARK: - Click-to-Focus
+    // MARK: - Hit Testing
+
+    /// Inactive terminals must be fully transparent to AppKit event routing.
+    /// SwiftUI's `.allowsHitTesting(false)` only gates SwiftUI-level events;
+    /// stacked NSViewRepresentable views still receive AppKit drag-and-drop
+    /// and mouse events. Returning nil here ensures only the active terminal
+    /// participates in hit testing, drag destination resolution, and focus.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard isActive else { return nil }
+        return super.hitTest(point)
+    }
 
     override func mouseDown(with event: NSEvent) {
-        guard isActive else { return }
         window?.makeFirstResponder(terminalView)
         super.mouseDown(with: event)
     }
