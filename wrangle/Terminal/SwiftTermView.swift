@@ -289,6 +289,7 @@ struct SwiftTermView: NSViewRepresentable {
             Task { @MainActor in
                 session.emulator.workingDirectory = URL(fileURLWithPath: dir)
                 session.updateDetectedClaudeFile()
+                session.refreshSessionContext()
             }
         }
 

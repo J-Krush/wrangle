@@ -18,6 +18,7 @@ class TerminalSession: Identifiable {
     var isGemini: Bool
     var customTitle: String?
     var needsAttention: Bool = false
+    var sessionContext: SessionContext?
 
     /// Command to send after the shell process initializes (e.g., claude path).
     /// Consumed by SwiftTermView.Coordinator after process start.
@@ -38,6 +39,7 @@ class TerminalSession: Identifiable {
         self.isClaude = isClaude
         self.isGemini = isGemini
         updateDetectedClaudeFile()
+        refreshSessionContext()
     }
 
     var displayTitle: String {
@@ -96,6 +98,13 @@ class TerminalSession: Identifiable {
             }.value
             detectedClaudeFile = found
         }
+    }
+
+    func refreshSessionContext() {
+        guard isClaude || isGemini else { return }
+        if sessionContext == nil { sessionContext = SessionContext() }
+        let dir = workingDirectory ?? emulator.workingDirectory
+        sessionContext?.refresh(for: dir, isClaude: isClaude, isGemini: isGemini)
     }
 
     func stop() {

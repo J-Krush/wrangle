@@ -12,7 +12,10 @@ struct SidebarView: View {
     @State private var showFilterPopover = false
     @State private var rawDropTargeted = false
     @State private var dropState: DropState = .idle
+    @State private var showActiveSessionsOnly = false
     @State private var dropDebounceTask: Task<Void, Never>?
+    @State private var isSearchExpanded = false
+    @FocusState private var isSearchFieldFocused: Bool
 
     enum DropState {
         case idle
@@ -22,7 +25,14 @@ struct SidebarView: View {
     var body: some View {
         List {
             Section {
-                BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering)
+                sidebarToolbar
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+
+            Section {
+                BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly)
             } header: {
                 HStack {
                     Text("Locations")
@@ -36,21 +46,14 @@ struct SidebarView: View {
                     .help("Add Location")
                 }
                 .padding(.trailing, 15)
-                .padding(.vertical, 4)
+//                .padding(.vertical, 2)
             }
 
             OrphanedSessionsSection()
         }
-        .onTapGesture {
-            appState.selectedBookmarkID = nil
-            appState.selectedFileTreeURL = nil
-        }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
         .background(Color(nsColor: Theme.sidebarBackground))
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            sidebarSearchBar
-        }
         .frame(minWidth: 200, idealWidth: 240)
         .overlay {
             if dropState == .hovering {
@@ -78,50 +81,96 @@ struct SidebarView: View {
         }
     }
 
-    // MARK: - Search Bar
+    // MARK: - Toolbar
 
-    private var sidebarSearchBar: some View {
+    private var sidebarToolbar: some View {
         HStack(spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                TextField("Filter files", text: $filterText)
-                    .textFieldStyle(.plain)
-                    .font(.caption)
-                if !filterText.isEmpty {
-                    Button {
-                        filterText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
+            if isSearchExpanded {
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12))
+                    TextField("Filter files", text: $filterText)
+                        .textFieldStyle(.plain)
+                        .font(.body)
+                        .focused($isSearchFieldFocused)
+                    if !filterText.isEmpty {
+                        Button {
+                            filterText = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                                .font(.system(size: 12))
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(.quaternary.opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                Spacer()
+                toolbarButton(
+                    icon: "magnifyingglass",
+                    isActive: false,
+                    activeColor: .secondary
+                ) {
+                    toggleSearch()
+                }
+                .help("Search files")
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(.quaternary.opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            Button {
-                showFilterPopover.toggle()
-            } label: {
-                Image(systemName: activeFileTypeFilters.isEmpty
-                      ? "line.3.horizontal.decrease.circle"
-                      : "line.3.horizontal.decrease.circle.fill")
-                    .foregroundStyle(activeFileTypeFilters.isEmpty ? Color.secondary : Color.accentColor)
-                    .font(.system(size: 14))
+            HStack(spacing: 4) {
+                toolbarButton(
+                    icon: activeFileTypeFilters.isEmpty
+                        ? "line.3.horizontal.decrease.circle"
+                        : "line.3.horizontal.decrease.circle.fill",
+                    isActive: !activeFileTypeFilters.isEmpty,
+                    activeColor: .accentColor
+                ) {
+                    showFilterPopover.toggle()
+                }
+                .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
+                    FileTypeFilterPopover(activeFilters: $activeFileTypeFilters)
+                }
+                .help("Filter by file type")
+
+                toolbarButton(
+                    icon: showActiveSessionsOnly ? "terminal.fill" : "terminal",
+                    isActive: showActiveSessionsOnly,
+                    activeColor: .mint
+                ) {
+                    showActiveSessionsOnly.toggle()
+                }
+                .help("Show Active Sessions")
             }
-            .buttonStyle(.plain)
-            .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
-                FileTypeFilterPopover(activeFilters: $activeFileTypeFilters)
+
+            if !isSearchExpanded {
+                Spacer()
             }
-            .help("Filter by file type")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .animation(.snappy(duration: 0.2), value: isSearchExpanded)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .onChange(of: isSearchFieldFocused) { _, focused in
+            if !focused && filterText.isEmpty {
+                isSearchExpanded = false
+            }
+        }
+    }
+
+    private func toolbarButton(
+        icon: String, isActive: Bool, activeColor: Color, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(isActive ? activeColor : .secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Drop Overlay
@@ -151,6 +200,19 @@ struct SidebarView: View {
     }
 
     // MARK: - Actions
+
+    private func toggleSearch() {
+        if isSearchExpanded {
+            filterText = ""
+            isSearchExpanded = false
+        } else {
+            isSearchExpanded = true
+            Task {
+                try? await Task.sleep(for: .milliseconds(50))
+                isSearchFieldFocused = true
+            }
+        }
+    }
 
     private func addLocation() {
         let panel = NSOpenPanel()

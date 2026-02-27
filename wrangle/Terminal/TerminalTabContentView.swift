@@ -11,6 +11,8 @@ struct TerminalTabContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            SessionContextBar(session: session)
+
             // SwiftTerm handles both rendering and keyboard input
             SwiftTermView(session: session, isActive: appState.activeTab?.terminalSession?.id == session.id)
                 .padding(.horizontal, 8)

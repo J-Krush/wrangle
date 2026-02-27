@@ -6,6 +6,7 @@ struct BookmarkListView: View {
     let filterText: String
     let activeFileTypeFilters: Set<FileTypeFilter>
     let isFinderDragActive: Bool
+    let showActiveSessionsOnly: Bool
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
@@ -48,8 +49,59 @@ struct BookmarkListView: View {
         ForEach(bookmarks) { bookmark in
             let bookmarkID = bookmark.persistentModelID.hashValue.description
             let isSelected = appState.selectedBookmarkID == bookmarkID && appState.selectedFileTreeURL == nil
+            let sessions = appState.terminalSessions(for: bookmarkID)
 
-            if bookmark.isFile {
+            if showActiveSessionsOnly {
+                // Sessions filter: skip file bookmarks and locations without sessions
+                if !bookmark.isFile && !sessions.isEmpty {
+                    DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
+                        ForEach(sessions) { session in
+                            LocationSessionRow(session: session)
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Button {
+                                appState.selectedBookmarkID = bookmarkID
+                                appState.selectedFileTreeURL = nil
+                                if expandedBookmarks.contains(bookmarkID) {
+                                    expandedBookmarks.remove(bookmarkID)
+                                } else {
+                                    expandedBookmarks.insert(bookmarkID)
+                                }
+                            } label: {
+                                Label {
+                                    Text(bookmark.name)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                } icon: {
+                                    Image(systemName: "folder.fill")
+                                        .foregroundStyle(.gray)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+
+                            let hasAttention = sessions.contains { $0.needsAttention }
+                            Text("\(sessions.count)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(
+                                    Capsule()
+                                        .fill(hasAttention ? Color.green.opacity(0.25) : Color.secondary.opacity(0.15))
+                                )
+                                .foregroundStyle(hasAttention ? .green : .secondary)
+
+                            SessionAddButton(bookmark: bookmark)
+                        }
+                    }
+                    .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
+                    .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
+                    .contextMenu { bookmarkContextMenu(bookmark) }
+                }
+            } else if bookmark.isFile {
                 if shouldShowFileBookmark(bookmark) {
                     let isFileSelected = appState.activeDocument?.fileURL == bookmark.resolveURL()
                     fileBookmarkRow(bookmark)
@@ -65,7 +117,7 @@ struct BookmarkListView: View {
             } else {
                 // M-2: Use Button inside DisclosureGroup label instead of onTapGesture
                 DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
-                    ForEach(appState.terminalSessions(for: bookmarkID)) { session in
+                    ForEach(sessions) { session in
                         LocationSessionRow(session: session)
                     }
                     FileTreeContent(bookmark: bookmark, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters)
@@ -94,10 +146,9 @@ struct BookmarkListView: View {
                         .buttonStyle(.plain)
 
                         // Session count
-                        let sessionCount = appState.terminalSessions(for: bookmarkID).count
-                        let hasAttention = appState.terminalSessions(for: bookmarkID).contains { $0.needsAttention }
-                        if sessionCount > 0 {
-                            Text("\(sessionCount)")
+                        let hasAttention = sessions.contains { $0.needsAttention }
+                        if !sessions.isEmpty {
+                            Text("\(sessions.count)")
                                 .font(.caption2)
                                 .fontWeight(.medium)
                                 .padding(.horizontal, 5)
@@ -138,12 +189,32 @@ struct BookmarkListView: View {
                 handleReorderDrop(providers: providers, targetID: Self.endOfListID)
             }
 
-        Spacer()
+        Color.clear
+            .frame(minHeight: 500)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                appState.selectedBookmarkID = nil
+                appState.selectedFileTreeURL = nil
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
             .sheet(isPresented: showRenameSheet) { renameSheet }
             .onChange(of: appState.activeTabIndex) { _, _ in
                 guard let session = appState.activeTab?.terminalSession,
                       let bookmarkID = session.bookmarkID else { return }
                 expandedBookmarks.insert(bookmarkID)
+            }
+            .onChange(of: showActiveSessionsOnly) { _, isActive in
+                if isActive {
+                    for bookmark in bookmarks where !bookmark.isFile {
+                        let id = bookmark.persistentModelID.hashValue.description
+                        if !appState.terminalSessions(for: id).isEmpty {
+                            expandedBookmarks.insert(id)
+                        }
+                    }
+                }
             }
     }
 
