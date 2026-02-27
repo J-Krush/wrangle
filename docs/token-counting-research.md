@@ -2,7 +2,7 @@
 
 ## Current Implementation
 
-`wrangle/Editor/TokenCounter.swift` uses a heuristic: `(wordCount × 1.3) + (specialChars / 2)`. This gives ±20-30% accuracy — adequate as a visual indicator but not reliable for precise token limit tracking or cost estimation.
+`Wrangle/Editor/TokenCounter.swift` uses a heuristic: `(wordCount × 1.3) + (specialChars / 2)`. This gives ±20-30% accuracy — adequate as a visual indicator but not reliable for precise token limit tracking or cost estimation.
 
 ## Why Exact Offline Counting Isn't Possible
 
@@ -90,5 +90,5 @@ Call Anthropic's `count_tokens` endpoint in the background. Trigger on file save
 
 ## Key Files
 
-- `wrangle/Editor/TokenCounter.swift` — current heuristic implementation
-- `wrangle/ContentView.swift` (StatusBarView) — UI integration
+- `Wrangle/Editor/TokenCounter.swift` — current heuristic implementation
+- `Wrangle/ContentView.swift` (StatusBarView) — UI integration

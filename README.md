@@ -30,7 +30,7 @@ Built for developers who spend their day in `CLAUDE.md`, `SKILL.md`, system prom
 
 ```bash
 git clone <repo-url>
-open wrangle.xcodeproj
+open Wrangle.xcodeproj
 # Build & Run with Cmd+R
 ```
 
@@ -41,7 +41,7 @@ Dependencies (SwiftTerm) are resolved automatically via Swift Package Manager on
 ## Project Structure
 
 ```
-wrangle/
+Wrangle/
 ├── App/              # App entry point, global state, main layout
 ├── Editor/           # NSTextView-based markdown editor, parser, tab strip
 ├── Sidebar/          # File tree, bookmarks, terminal list

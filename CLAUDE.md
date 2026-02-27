@@ -8,7 +8,7 @@ Wrangle is a native macOS (Apple Silicon) markdown editor purpose-built for deve
 
 Think "Typora meets AI development" — rich rendered editing by default, with deep awareness of the unique file patterns in AI/agent workflows (XML-in-markdown, token counting, `.claude.md` files, SKILL.md files, MCP configs).
 
-**Xcode project name:** `wrangle`  |  **Bundle identifier:** Wrangle
+**Xcode project name:** `Wrangle`  |  **Bundle identifier:** Wrangle
 
 ## Tech Stack
 

@@ -47,11 +47,11 @@ Appearance mode (`AppState.appearanceMode`) cycles system → dark → light via
 ## Project Structure
 
 ```
-wrangle/
-├── wrangle.xcodeproj
-├── wrangle/
+Wrangle/
+├── Wrangle.xcodeproj
+├── Wrangle/
 │   ├── App/
-│   │   ├── wrangleApp.swift               # App entry point, WindowGroup
+│   │   ├── WrangleApp.swift               # App entry point, WindowGroup
 │   │   ├── AppState.swift                 # Global app state (@Observable), AppearanceMode enum
 │   │   └── ContentView.swift              # Main NavigationSplitView layout
 │   ├── Models/

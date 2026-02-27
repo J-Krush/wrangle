@@ -23,36 +23,34 @@ struct SidebarView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                sidebarToolbar
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            }
-
-            Section {
-                BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly)
-            } header: {
-                HStack {
-                    Text("Locations")
-                    Spacer()
-                    Button {
-                        addLocation()
-                    } label: {
-                        Text("Add")
+        VStack(spacing: 0) {
+            sidebarToolbar
+                .background(Color(nsColor: Theme.sidebarBackground))
+            Divider()
+            List {
+                Section {
+                    BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly, onAddLocation: addLocation)
+                } header: {
+                    HStack {
+                        Text("Locations")
+                        Spacer()
+                        Button {
+                            addLocation()
+                        } label: {
+                            Text("Add")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Add Location")
                     }
-                    .buttonStyle(.plain)
-                    .help("Add Location")
+                    .padding(.trailing, 15)
+                    .padding(.vertical, 8)
                 }
-                .padding(.trailing, 15)
-//                .padding(.vertical, 2)
-            }
 
-            OrphanedSessionsSection()
+                OrphanedSessionsSection()
+            }
+            .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
         .background(Color(nsColor: Theme.sidebarBackground))
         .frame(minWidth: 200, idealWidth: 240)
         .overlay {
@@ -87,9 +85,14 @@ struct SidebarView: View {
         HStack(spacing: 6) {
             if isSearchExpanded {
                 HStack(spacing: 4) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                        .font(.system(size: 12))
+                    Button {
+                        toggleSearch()
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.plain)
                     TextField("Filter files", text: $filterText)
                         .textFieldStyle(.plain)
                         .font(.body)
@@ -139,11 +142,12 @@ struct SidebarView: View {
                 toolbarButton(
                     icon: showActiveSessionsOnly ? "terminal.fill" : "terminal",
                     isActive: showActiveSessionsOnly,
-                    activeColor: .mint
+                    activeColor: .accentColor
                 ) {
                     showActiveSessionsOnly.toggle()
                 }
                 .help("Show Active Sessions")
+
             }
 
             if !isSearchExpanded {

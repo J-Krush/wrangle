@@ -1,5 +1,5 @@
 //
-//  wrangleApp.swift
+//  WrangleApp.swift
 //  wrangle
 //
 //  Created by John Kreisher on 2/21/26.
@@ -40,7 +40,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 }
 
 @main
-struct wrangleApp: App {
+struct WrangleApp: App {
     @State private var appState = AppState()
     @State private var resolvedSystemScheme: ColorScheme = {
         guard let app = NSApp else { return .dark }

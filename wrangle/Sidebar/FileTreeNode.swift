@@ -102,16 +102,17 @@ struct FileNode: Identifiable, Comparable, Sendable {
         guard let contents = try? fm.contentsOfDirectory(
             at: url,
             includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) else {
             return []
         }
 
         return contents.compactMap { childURL in
+            let name = childURL.lastPathComponent
             let isDir = (try? childURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
             var children: [FileNode]? = nil
             if isDir {
-                if skippedDirectories.contains(childURL.lastPathComponent) {
+                if skippedDirectories.contains(name) {
                     children = nil
                 } else {
                     children = buildTree(at: childURL, depth: depth - 1)
@@ -119,7 +120,7 @@ struct FileNode: Identifiable, Comparable, Sendable {
             }
             return FileNode(
                 url: childURL,
-                name: childURL.lastPathComponent,
+                name: name,
                 isDirectory: isDir,
                 children: children
             )

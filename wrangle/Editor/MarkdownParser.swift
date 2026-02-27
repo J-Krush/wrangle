@@ -8,7 +8,7 @@ import Foundation
 /// (writing mode), all syntax characters are hidden. When false (dev mode), all syntax
 /// characters remain visible.
 extension NSAttributedString.Key {
-    static let bulletMarker = NSAttributedString.Key("com.wrangle.bulletMarker")
+    static let bulletMarker = NSAttributedString.Key("com.Wrangle.bulletMarker")
 }
 
 final class MarkdownParser: @unchecked Sendable {

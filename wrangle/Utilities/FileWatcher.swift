@@ -6,7 +6,7 @@ final class FileWatcher {
     private let url: URL
     private let onChange: () -> Void
     private let debounceInterval: TimeInterval
-    private let queue = DispatchQueue(label: "dev.wrangle.FileWatcher", qos: .utility)
+    private let queue = DispatchQueue(label: "dev.Wrangle.FileWatcher", qos: .utility)
     private var fileDescriptor: Int32 = -1
     private var dispatchSource: DispatchSourceFileSystemObject?
     private var debounceWorkItem: DispatchWorkItem?

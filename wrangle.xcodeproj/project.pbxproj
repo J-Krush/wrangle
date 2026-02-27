@@ -11,13 +11,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		01DE76CE2F4A086A0046C9A7 /* wrangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = wrangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		01DE76CE2F4A086A0046C9A7 /* Wrangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wrangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		01DE76D02F4A086A0046C9A7 /* wrangle */ = {
+		01DE76D02F4A086A0046C9A7 /* Wrangle */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = wrangle;
+			path = Wrangle;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -37,7 +37,7 @@
 		01DE76C52F4A086A0046C9A7 = {
 			isa = PBXGroup;
 			children = (
-				01DE76D02F4A086A0046C9A7 /* wrangle */,
+				01DE76D02F4A086A0046C9A7 /* Wrangle */,
 				01DE76CF2F4A086A0046C9A7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -45,7 +45,7 @@
 		01DE76CF2F4A086A0046C9A7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				01DE76CE2F4A086A0046C9A7 /* wrangle.app */,
+				01DE76CE2F4A086A0046C9A7 /* Wrangle.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -53,9 +53,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		01DE76CD2F4A086A0046C9A7 /* wrangle */ = {
+		01DE76CD2F4A086A0046C9A7 /* Wrangle */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 01DE76DB2F4A086B0046C9A7 /* Build configuration list for PBXNativeTarget "wrangle" */;
+			buildConfigurationList = 01DE76DB2F4A086B0046C9A7 /* Build configuration list for PBXNativeTarget "Wrangle" */;
 			buildPhases = (
 				01DE76CA2F4A086A0046C9A7 /* Sources */,
 				01DE76CB2F4A086A0046C9A7 /* Frameworks */,
@@ -66,14 +66,14 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				01DE76D02F4A086A0046C9A7 /* wrangle */,
+				01DE76D02F4A086A0046C9A7 /* Wrangle */,
 			);
-			name = wrangle;
+			name = Wrangle;
 			packageProductDependencies = (
 				01DE77022F4B10000046C9A7 /* SwiftTerm */,
 			);
-			productName = wrangle;
-			productReference = 01DE76CE2F4A086A0046C9A7 /* wrangle.app */;
+			productName = Wrangle;
+			productReference = 01DE76CE2F4A086A0046C9A7 /* Wrangle.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -91,7 +91,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 01DE76C92F4A086A0046C9A7 /* Build configuration list for PBXProject "wrangle" */;
+			buildConfigurationList = 01DE76C92F4A086A0046C9A7 /* Build configuration list for PBXProject "Wrangle" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -108,7 +108,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				01DE76CD2F4A086A0046C9A7 /* wrangle */,
+				01DE76CD2F4A086A0046C9A7 /* Wrangle */,
 			);
 		};
 /* End PBXProject section */
@@ -262,7 +262,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3DEKQ7GUK6;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -297,7 +297,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 3DEKQ7GUK6;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -327,7 +327,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		01DE76C92F4A086A0046C9A7 /* Build configuration list for PBXProject "wrangle" */ = {
+		01DE76C92F4A086A0046C9A7 /* Build configuration list for PBXProject "Wrangle" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				01DE76D92F4A086B0046C9A7 /* Debug */,
@@ -336,7 +336,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		01DE76DB2F4A086B0046C9A7 /* Build configuration list for PBXNativeTarget "wrangle" */ = {
+		01DE76DB2F4A086B0046C9A7 /* Build configuration list for PBXNativeTarget "Wrangle" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				01DE76DC2F4A086B0046C9A7 /* Debug */,

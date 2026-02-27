@@ -7,6 +7,7 @@ struct BookmarkListView: View {
     let activeFileTypeFilters: Set<FileTypeFilter>
     let isFinderDragActive: Bool
     let showActiveSessionsOnly: Bool
+    var onAddLocation: (() -> Void)?
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
@@ -50,10 +51,25 @@ struct BookmarkListView: View {
             let bookmarkID = bookmark.persistentModelID.hashValue.description
             let isSelected = appState.selectedBookmarkID == bookmarkID && appState.selectedFileTreeURL == nil
             let sessions = appState.terminalSessions(for: bookmarkID)
+            // Sessions-only mode: active sessions toggle ON with no file type filters
+            let sessionsOnlyMode = showActiveSessionsOnly && activeFileTypeFilters.isEmpty
 
-            if showActiveSessionsOnly {
-                // Sessions filter: skip file bookmarks and locations without sessions
-                if !bookmark.isFile && !sessions.isEmpty {
+            if bookmark.isFile {
+                if !sessionsOnlyMode && shouldShowFileBookmark(bookmark) {
+                    let isFileSelected = appState.activeDocument?.fileURL == bookmark.resolveURL()
+                    fileBookmarkRow(bookmark)
+                        .listRowBackground(reorderBackground(isSelected: isFileSelected, bookmarkID: bookmarkID))
+                        .onDrag {
+                            draggingBookmarkID = bookmarkID
+                            return NSItemProvider(object: bookmarkID as NSString)
+                        }
+                        .onDrop(of: [UTType.text], isTargeted: dropTargetBinding(for: bookmarkID)) { providers in
+                            handleReorderDrop(providers: providers, targetID: bookmarkID)
+                        }
+                }
+            } else if sessionsOnlyMode {
+                // Sessions-only: show locations that have active sessions, sessions only
+                if !sessions.isEmpty {
                     DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
                         ForEach(sessions) { session in
                             LocationSessionRow(session: session)
@@ -101,21 +117,8 @@ struct BookmarkListView: View {
                     .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
                     .contextMenu { bookmarkContextMenu(bookmark) }
                 }
-            } else if bookmark.isFile {
-                if shouldShowFileBookmark(bookmark) {
-                    let isFileSelected = appState.activeDocument?.fileURL == bookmark.resolveURL()
-                    fileBookmarkRow(bookmark)
-                        .listRowBackground(reorderBackground(isSelected: isFileSelected, bookmarkID: bookmarkID))
-                        .onDrag {
-                            draggingBookmarkID = bookmarkID
-                            return NSItemProvider(object: bookmarkID as NSString)
-                        }
-                        .onDrop(of: [UTType.text], isTargeted: dropTargetBinding(for: bookmarkID)) { providers in
-                            handleReorderDrop(providers: providers, targetID: bookmarkID)
-                        }
-                }
             } else {
-                // M-2: Use Button inside DisclosureGroup label instead of onTapGesture
+                // Normal view: sessions + filtered file tree (handles both filters composing)
                 DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
                     ForEach(sessions) { session in
                         LocationSessionRow(session: session)
@@ -197,6 +200,7 @@ struct BookmarkListView: View {
                 appState.selectedBookmarkID = nil
                 appState.selectedFileTreeURL = nil
             }
+            .overlay { RightClickMenuArea { onAddLocation?() } }
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
@@ -558,6 +562,42 @@ private struct SessionAddButton: View {
             launchClaude: true,
             dangerousMode: true
         )
+    }
+}
+
+// MARK: - Right-Click Menu (no highlight)
+
+private struct RightClickMenuArea: NSViewRepresentable {
+    var onAddLocation: () -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        let menu = NSMenu()
+        let item = NSMenuItem(title: "Add Location...", action: #selector(Coordinator.addLocation), keyEquivalent: "")
+        item.target = context.coordinator
+        menu.addItem(item)
+        view.menu = menu
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.onAddLocation = onAddLocation
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onAddLocation: onAddLocation)
+    }
+
+    class Coordinator: NSObject {
+        var onAddLocation: () -> Void
+
+        init(onAddLocation: @escaping () -> Void) {
+            self.onAddLocation = onAddLocation
+        }
+
+        @objc func addLocation() {
+            onAddLocation()
+        }
     }
 }
 

@@ -25,7 +25,6 @@ class AppState {
     var editingMode: EditingMode = .writing
     var appearanceMode: AppearanceMode = .system
     var selectedFileTreeURL: URL? = nil
-
     // Preview tab tracking — only one preview tab at a time
     var previewTabID: UUID? = nil
 
