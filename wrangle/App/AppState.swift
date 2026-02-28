@@ -14,6 +14,10 @@ enum AppearanceMode: String, CaseIterable {
 @MainActor
 @Observable
 class AppState {
+    let windowID = UUID()
+    weak var coordinator: AppCoordinator?
+    weak var nsWindow: NSWindow?
+
     var tabs: [WorkspaceTab]
     var activeTabIndex: Int
     var selectedBookmarkID: String?
@@ -23,7 +27,6 @@ class AppState {
     var sidebarWidth: CGFloat = 240
     var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing
-    var appearanceMode: AppearanceMode = .system
     var selectedFileTreeURL: URL? = nil
     var revealFileURL: URL? = nil
     // Preview tab tracking — only one preview tab at a time
@@ -39,11 +42,16 @@ class AppState {
     // Scratch pad manager
     var scratchPadManager = ScratchPadManager()
 
-    // App foreground state (tracked for notification suppression)
-    var isAppForeground: Bool = true
+    // Computed delegates to coordinator for app-global state
+    var appearanceMode: AppearanceMode {
+        get { coordinator?.appearanceMode ?? .system }
+        set { coordinator?.appearanceMode = newValue }
+    }
 
-    // Claude Code hook service for notifications
-    var claudeHookService: ClaudeHookService?
+    var isAppForeground: Bool {
+        get { coordinator?.isAppForeground ?? true }
+        set { coordinator?.isAppForeground = newValue }
+    }
 
     // Set by ContentView from the @Query bookmarks array
     var activeProjectName: String?
@@ -229,6 +237,35 @@ class AppState {
     }
 
     // MARK: - Tab Management
+
+    func moveTab(fromID sourceID: UUID, toID destinationID: UUID) {
+        guard sourceID != destinationID,
+              let fromIndex = tabs.firstIndex(where: { $0.id == sourceID }),
+              let toIndex = tabs.firstIndex(where: { $0.id == destinationID })
+        else { return }
+
+        let activeID = activeTab?.id
+        let tab = tabs.remove(at: fromIndex)
+        tabs.insert(tab, at: toIndex)
+
+        if let activeID, let newActiveIndex = tabs.firstIndex(where: { $0.id == activeID }) {
+            activeTabIndex = newActiveIndex
+        }
+    }
+
+    func moveTabToEnd(sourceID: UUID) {
+        guard let fromIndex = tabs.firstIndex(where: { $0.id == sourceID }),
+              fromIndex != tabs.count - 1
+        else { return }
+
+        let activeID = activeTab?.id
+        let tab = tabs.remove(at: fromIndex)
+        tabs.append(tab)
+
+        if let activeID, let newActiveIndex = tabs.firstIndex(where: { $0.id == activeID }) {
+            activeTabIndex = newActiveIndex
+        }
+    }
 
     func selectTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }

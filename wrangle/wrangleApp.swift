@@ -13,7 +13,7 @@ import UserNotifications
 // MARK: - Notification Delegate
 
 class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    weak var appState: AppState?
+    weak var coordinator: AppCoordinator?
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -23,7 +23,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         if let sessionID = userInfo["sessionID"] as? String {
             Task { @MainActor in
-                appState?.claudeHookService?.handleNotificationTap(sessionID: sessionID)
+                coordinator?.claudeHookService?.handleNotificationTap(sessionID: sessionID)
             }
         }
         completionHandler()
@@ -41,7 +41,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
 @main
 struct WrangleApp: App {
-    @State private var appState = AppState()
+    @State private var coordinator = AppCoordinator()
+    @FocusedValue(\.appState) private var focusedAppState
     @State private var resolvedSystemScheme: ColorScheme = {
         guard let app = NSApp else { return .dark }
         return app.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
@@ -49,7 +50,7 @@ struct WrangleApp: App {
     private let notificationDelegate = NotificationDelegate()
 
     private var effectiveColorScheme: ColorScheme {
-        switch appState.appearanceMode {
+        switch coordinator.appearanceMode {
         case .system: resolvedSystemScheme
         case .light:  .light
         case .dark:   .dark
@@ -81,11 +82,13 @@ struct WrangleApp: App {
     }()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
-                .environment(appState)
+                .environment(coordinator)
                 .preferredColorScheme(effectiveColorScheme)
                 .onAppear {
+                    guard !coordinator.isSetupComplete else { return }
+                    coordinator.isSetupComplete = true
                     setupNotifications()
                     setupForegroundTracking()
                     updateSystemScheme()
@@ -102,7 +105,7 @@ struct WrangleApp: App {
                         }
                     }
                 }
-                .onChange(of: appState.appearanceMode) { _, mode in
+                .onChange(of: coordinator.appearanceMode) { _, mode in
                     switch mode {
                     case .system: NSApp.appearance = nil
                     case .light:  NSApp.appearance = NSAppearance(named: .aqua)
@@ -116,23 +119,32 @@ struct WrangleApp: App {
             // File menu
             CommandGroup(replacing: .newItem) {
                 Button("New File") {
-                    appState.newDocument()
+                    focusedAppState?.newDocument()
                 }
                 .keyboardShortcut("n")
+                .disabled(focusedAppState == nil)
 
                 Button("New Scratch Pad") {
-                    appState.newScratchPad()
+                    focusedAppState?.newScratchPad()
                 }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
 
                 Button("New Terminal") {
-                    appState.openTerminal(
-                        projectName: appState.activeProjectName ?? "Terminal",
+                    guard let state = focusedAppState else { return }
+                    state.openTerminal(
+                        projectName: state.activeProjectName ?? "Terminal",
                         directory: activeProjectDirectory(),
-                        bookmarkID: appState.selectedBookmarkID
+                        bookmarkID: state.selectedBookmarkID
                     )
                 }
                 .keyboardShortcut("`", modifiers: .command)
+                .disabled(focusedAppState == nil)
+
+                Button("New Window") {
+                    openNewWindow()
+                }
+                .keyboardShortcut("n", modifiers: [.command, .option])
 
                 Divider()
 
@@ -140,6 +152,7 @@ struct WrangleApp: App {
                     openFile()
                 }
                 .keyboardShortcut("o")
+                .disabled(focusedAppState == nil)
 
                 Menu("Open Recent") {
                     let context = sharedModelContainer.mainContext
@@ -150,7 +163,7 @@ struct WrangleApp: App {
                         ForEach(Array(recents.prefix(20)), id: \.urlString) { recentFile in
                             if let url = recentFile.url {
                                 Button(url.lastPathComponent) {
-                                    appState.openFile(url: url)
+                                    focusedAppState?.openFile(url: url)
                                 }
                             }
                         }
@@ -172,20 +185,24 @@ struct WrangleApp: App {
                     saveFile()
                 }
                 .keyboardShortcut("s")
+                .disabled(focusedAppState == nil)
 
                 Button("Save As...") {
                     saveFileAs()
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
             }
 
             CommandGroup(replacing: .sidebar) {
                 Button("Toggle Sidebar") {
+                    guard let state = focusedAppState else { return }
                     withAnimation {
-                        appState.sidebarWidth = appState.sidebarWidth > 0 ? 0 : 240
+                        state.sidebarWidth = state.sidebarWidth > 0 ? 0 : 240
                     }
                 }
                 .keyboardShortcut("\\", modifiers: [.command])
+                .disabled(focusedAppState == nil)
             }
 
             // Edit menu additions
@@ -193,39 +210,45 @@ struct WrangleApp: App {
                 Divider()
 
                 Button("Find in Files") {
-                    appState.showGlobalSearch.toggle()
+                    focusedAppState?.showGlobalSearch.toggle()
                 }
                 .keyboardShortcut("f", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
             }
 
             // View menu — terminal commands
             CommandGroup(after: .toolbar) {
                 Button("New Claude Code Session") {
-                    appState.openTerminal(
-                        projectName: appState.activeProjectName ?? "Claude Code",
+                    guard let state = focusedAppState else { return }
+                    state.openTerminal(
+                        projectName: state.activeProjectName ?? "Claude Code",
                         directory: activeProjectDirectory(),
-                        bookmarkID: appState.selectedBookmarkID,
+                        bookmarkID: state.selectedBookmarkID,
                         launchClaude: true
                     )
                 }
                 .keyboardShortcut("`", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
 
                 Button("New Gemini Code Session") {
-                    appState.openTerminal(
-                        projectName: appState.activeProjectName ?? "Gemini Code",
+                    guard let state = focusedAppState else { return }
+                    state.openTerminal(
+                        projectName: state.activeProjectName ?? "Gemini Code",
                         directory: activeProjectDirectory(),
-                        bookmarkID: appState.selectedBookmarkID,
+                        bookmarkID: state.selectedBookmarkID,
                         launchGemini: true
                     )
                 }
                 .keyboardShortcut("g", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
 
                 Divider()
 
                 Button("Quick Open") {
-                    appState.showFuzzyFinder.toggle()
+                    focusedAppState?.showFuzzyFinder.toggle()
                 }
                 .keyboardShortcut("p", modifiers: .command)
+                .disabled(focusedAppState == nil)
             }
 
             // Open in external editor
@@ -257,36 +280,48 @@ struct WrangleApp: App {
             // Tab navigation
             CommandGroup(after: .windowArrangement) {
                 Button("Next Tab") {
-                    if appState.activeTabIndex < appState.tabs.count - 1 {
-                        appState.selectTab(at: appState.activeTabIndex + 1)
+                    guard let state = focusedAppState else { return }
+                    if state.activeTabIndex < state.tabs.count - 1 {
+                        state.selectTab(at: state.activeTabIndex + 1)
                     }
                 }
                 .keyboardShortcut("]", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
 
                 Button("Previous Tab") {
-                    if appState.activeTabIndex > 0 {
-                        appState.selectTab(at: appState.activeTabIndex - 1)
+                    guard let state = focusedAppState else { return }
+                    if state.activeTabIndex > 0 {
+                        state.selectTab(at: state.activeTabIndex - 1)
                     }
                 }
                 .keyboardShortcut("[", modifiers: [.command, .shift])
+                .disabled(focusedAppState == nil)
 
                 Button("Close Tab") {
-                    appState.requestCloseTab(at: appState.activeTabIndex)
+                    focusedAppState?.requestCloseTab(at: focusedAppState?.activeTabIndex ?? 0)
                 }
                 .keyboardShortcut("w")
+                .disabled(focusedAppState == nil)
             }
         }
     }
 
+    @Environment(\.openWindow) private var openWindow
+
+    private func openNewWindow() {
+        openWindow(id: "main")
+    }
+
     private func activeProjectDirectory() -> URL? {
-        // Try to derive directory from the active document or selected bookmark
-        if let url = appState.activeDocument?.fileURL {
+        guard let state = focusedAppState else { return nil }
+        if let url = state.activeDocument?.fileURL {
             return url.deletingLastPathComponent()
         }
         return nil
     }
 
     private func openFile() {
+        guard let state = focusedAppState else { return }
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [
             .plainText, .yaml, .json,
@@ -303,14 +338,15 @@ struct WrangleApp: App {
 
         if panel.runModal() == .OK {
             for url in panel.urls {
-                appState.openFile(url: url, scopedURL: url)
+                state.openFile(url: url, scopedURL: url)
             }
         }
     }
 
     private func saveFile() {
-        guard let doc = appState.activeDocument else { return }
-        appState.promotePreviewTab(for: doc.id)
+        guard let state = focusedAppState,
+              let doc = state.activeDocument else { return }
+        state.promotePreviewTab(for: doc.id)
 
         if doc.fileURL != nil {
             try? doc.save()
@@ -320,7 +356,8 @@ struct WrangleApp: App {
     }
 
     private func saveFileAs() {
-        guard let doc = appState.activeDocument else { return }
+        guard let state = focusedAppState,
+              let doc = state.activeDocument else { return }
         showSavePanel(for: doc)
     }
 
@@ -336,13 +373,13 @@ struct WrangleApp: App {
     }
 
     private func openInExternalEditor(bundleID: String) {
-        if let url = appState.activeDocument?.fileURL?.deletingLastPathComponent() {
+        if let url = focusedAppState?.activeDocument?.fileURL?.deletingLastPathComponent() {
             ExternalEditorLauncher.open(directory: url, withBundleID: bundleID)
         }
     }
 
     private func revealInFinder() {
-        if let url = appState.activeDocument?.fileURL {
+        if let url = focusedAppState?.activeDocument?.fileURL {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         }
     }
@@ -358,7 +395,7 @@ struct WrangleApp: App {
 
     private func setupNotifications() {
         let center = UNUserNotificationCenter.current()
-        notificationDelegate.appState = appState
+        notificationDelegate.coordinator = coordinator
         center.delegate = notificationDelegate
 
         center.requestAuthorization(options: [.alert, .sound]) { granted, error in
@@ -376,27 +413,27 @@ struct WrangleApp: App {
         center.setNotificationCategories([category])
 
         // Start the hook service
-        appState.claudeHookService = ClaudeHookService(appState: appState)
+        coordinator.claudeHookService = ClaudeHookService(coordinator: coordinator)
 
         // Install hooks if needed (one-time, non-blocking)
         ClaudeHookService.setupHooksIfNeeded()
     }
 
     private func setupForegroundTracking() {
-        let state = appState
+        let coord = coordinator
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
             queue: .main
         ) { _ in
-            Task { @MainActor in state.isAppForeground = true }
+            Task { @MainActor in coord.isAppForeground = true }
         }
         NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification,
             object: nil,
             queue: .main
         ) { _ in
-            Task { @MainActor in state.isAppForeground = false }
+            Task { @MainActor in coord.isAppForeground = false }
         }
     }
 }

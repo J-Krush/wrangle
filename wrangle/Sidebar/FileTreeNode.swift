@@ -95,6 +95,12 @@ struct FileNode: Identifiable, Comparable, Sendable {
         "__pycache__", ".tox", ".venv", "venv",
     ]
 
+    /// Hidden (dot-prefixed) names that should still appear in the file tree.
+    private nonisolated static let allowedHiddenNames: Set<String> = [
+        ".claude", ".cursor", ".cursorrules", ".gemini",
+        ".agent", ".agents",
+    ]
+
     /// Recursively builds a file tree rooted at `url`, descending up to `depth` levels.
     nonisolated static func buildTree(at url: URL, depth: Int = 20) -> [FileNode] {
         guard depth > 0 else { return [] }
@@ -109,6 +115,10 @@ struct FileNode: Identifiable, Comparable, Sendable {
 
         return contents.compactMap { childURL in
             let name = childURL.lastPathComponent
+            // Hide dotfiles/dotdirs unless they're in the AI-related allowlist
+            if name.hasPrefix(".") && !allowedHiddenNames.contains(name) {
+                return nil
+            }
             let isDir = (try? childURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
             var children: [FileNode]? = nil
             if isDir {
@@ -173,6 +183,7 @@ struct FileNode: Identifiable, Comparable, Sendable {
 
 struct FileTreeNodeView: View {
     let node: FileNode
+    let bookmarkID: String
     let onSelect: (URL) -> Void
     var onDoubleClick: ((URL) -> Void)? = nil
     @Environment(AppState.self) private var appState
@@ -203,7 +214,7 @@ struct FileTreeNodeView: View {
         DisclosureGroup(isExpanded: $isExpanded) {
             if let children = node.children {
                 ForEach(children) { child in
-                    FileTreeNodeView(node: child, onSelect: onSelect, onDoubleClick: onDoubleClick)
+                    FileTreeNodeView(node: child, bookmarkID: bookmarkID, onSelect: onSelect, onDoubleClick: onDoubleClick)
                 }
             }
         } label: {
@@ -222,8 +233,9 @@ struct FileTreeNodeView: View {
                 if isTargeted { isExpanded = true }
             }
         }
+        .id("\(bookmarkID)|\(node.url)")
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
-        .onChange(of: appState.revealFileURL) { _, revealURL in
+        .onChange(of: appState.revealFileURL, initial: true) { _, revealURL in
             guard let revealURL else { return }
             let revealPath = revealURL.path(percentEncoded: false)
             let dirPath = node.url.path(percentEncoded: false)
@@ -247,8 +259,9 @@ struct FileTreeNodeView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .id("\(bookmarkID)|\(node.url)")
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
-        .onChange(of: appState.revealFileURL) { _, revealURL in
+        .onChange(of: appState.revealFileURL, initial: true) { _, revealURL in
             guard let revealURL else { return }
             if node.url == revealURL {
                 appState.revealFileURL = nil
@@ -262,6 +275,7 @@ struct FileTreeNodeView: View {
         nodeLabel
             .foregroundStyle(.secondary)
             .opacity(0.4)
+            .id("\(bookmarkID)|\(node.url)")
             .listRowBackground(Color.clear)
             .help("This file type cannot be opened in the editor")
     }

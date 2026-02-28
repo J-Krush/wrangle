@@ -17,7 +17,8 @@ private struct DetailLeadingKey: PreferenceKey {
 }
 
 struct ContentView: View {
-    @Environment(AppState.self) private var appState
+    @State private var appState = AppState()
+    @Environment(AppCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var modelContext
     @State private var editorContext = EditorContext()
 
@@ -123,8 +124,19 @@ struct ContentView: View {
             rebuildBookmarkPathCache()
         }
         .onAppear {
+            appState.coordinator = coordinator
+            coordinator.register(appState)
             rebuildBookmarkPathCache()
         }
+        .onDisappear {
+            // Stop all terminal sessions for this window
+            for tab in appState.tabs {
+                tab.terminalSession?.stop()
+            }
+            coordinator.unregister(appState)
+        }
+        .environment(appState)
+        .focusedSceneValue(\.appState, appState)
     }
 
     // MARK: - Document Content View

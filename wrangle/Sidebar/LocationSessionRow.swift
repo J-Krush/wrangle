@@ -35,7 +35,6 @@ struct LocationSessionRow: View {
                 .frame(width: 16, alignment: .center)
 
                 Text(session.displayTitle)
-                    .font(.caption)
                     .lineLimit(1)
                     .truncationMode(.tail)
 

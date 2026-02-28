@@ -27,42 +27,44 @@ struct SidebarView: View {
             sidebarToolbar
                 .background(Color(nsColor: Theme.sidebarBackground))
             Divider()
-            List {
-                Section {
-                    ScratchPadSection()
-                } header: {
-                    HStack {
-                        Text("Scratch Pads")
-                        Spacer()
-                        Button { appState.newScratchPad() } label: {
-                            Text("Add")
+            ScrollViewReader { scrollProxy in
+                List {
+                    Section {
+                        ScratchPadSection()
+                    } header: {
+                        HStack {
+                            Text("Scratch Pads")
+                            Spacer()
+                            Button { appState.newScratchPad() } label: {
+                                Text("Add")
+                            }
+                            .buttonStyle(.plain)
+                            .help("New Scratch Pad")
                         }
-                        .buttonStyle(.plain)
-                        .help("New Scratch Pad")
+                        .padding(.trailing, 15)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.trailing, 15)
-                    .padding(.vertical, 8)
-                }
 
-                Section {
-                    BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly, onAddLocation: addLocation)
-                } header: {
-                    HStack {
-                        Text("Locations")
-                        Spacer()
-                        Button {
-                            addLocation()
-                        } label: {
-                            Text("Add")
+                    Section {
+                        BookmarkListView(scrollProxy: scrollProxy, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly, onAddLocation: addLocation)
+                    } header: {
+                        HStack {
+                            Text("Locations")
+                            Spacer()
+                            Button {
+                                addLocation()
+                            } label: {
+                                Text("Add")
+                            }
+                            .buttonStyle(.plain)
+                            .help("Add Location")
                         }
-                        .buttonStyle(.plain)
-                        .help("Add Location")
+                        .padding(.trailing, 15)
+                        .padding(.vertical, 8)
                     }
-                    .padding(.trailing, 15)
-                    .padding(.vertical, 8)
-                }
 
-                OrphanedSessionsSection()
+                    OrphanedSessionsSection()
+                }
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)

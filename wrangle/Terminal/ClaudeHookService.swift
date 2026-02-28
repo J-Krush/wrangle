@@ -26,7 +26,7 @@ struct ClaudeHookEvent: Codable {
 class ClaudeHookService {
     private var fileWatcher: FileWatcher?
     private var processTask: Task<Void, Never>?
-    private weak var appState: AppState?
+    private weak var coordinator: AppCoordinator?
 
     nonisolated static let eventsDirectory: URL = {
         FileManager.default.homeDirectoryForCurrentUser
@@ -41,8 +41,8 @@ class ClaudeHookService {
     private nonisolated static let notificationCategory = "CLAUDE_HOOK_EVENT"
     private nonisolated static let staleThreshold: TimeInterval = 300 // 5 minutes
 
-    init(appState: AppState) {
-        self.appState = appState
+    init(coordinator: AppCoordinator) {
+        self.coordinator = coordinator
         ensureDirectories()
         purgeStaleEvents()
         startWatching()
@@ -132,21 +132,23 @@ class ClaudeHookService {
     }
 
     private func markSessionNeedsAttention(for sessionID: String) {
-        guard let appState else { return }
-        let session = appState.tabs
-            .compactMap(\.terminalSession)
-            .first { $0.id.uuidString == sessionID }
-        session?.needsAttention = true
+        guard let coordinator else { return }
+        if let result = coordinator.findTerminalSession(bySessionID: sessionID) {
+            result.session.needsAttention = true
+        }
     }
 
     private func shouldNotify(for event: ClaudeHookEvent) -> Bool {
-        guard let appState else { return true }
+        guard let coordinator else { return true }
 
-        // If app is in foreground and the session's tab is active, suppress
-        if appState.isAppForeground,
-           let activeSession = appState.activeTab?.terminalSession,
-           activeSession.id.uuidString == event.sessionID {
-            return false
+        // If app is in foreground and the session's tab is active in any window, suppress
+        if coordinator.isAppForeground {
+            for state in coordinator.windowStates.values {
+                if let activeSession = state.activeTab?.terminalSession,
+                   activeSession.id.uuidString == event.sessionID {
+                    return false
+                }
+            }
         }
         return true
     }
@@ -195,23 +197,18 @@ class ClaudeHookService {
     }
 
     private func sessionDisplayTitle(for sessionID: String) -> String? {
-        guard let appState else { return nil }
-        let session = appState.tabs
-            .compactMap(\.terminalSession)
-            .first { $0.id.uuidString == sessionID }
-        return session?.displayTitle
+        guard let coordinator else { return nil }
+        return coordinator.findTerminalSession(bySessionID: sessionID)?.session.displayTitle
     }
 
     // MARK: - Notification Click Routing
 
     func handleNotificationTap(sessionID: String) {
-        guard let appState else { return }
+        guard let coordinator,
+              let result = coordinator.findTerminalSession(bySessionID: sessionID) else { return }
 
-        guard let tabIndex = appState.tabs.firstIndex(where: {
-            $0.terminalSession?.id.uuidString == sessionID
-        }) else { return }
-
-        appState.selectTab(at: tabIndex)
+        result.appState.selectTab(at: result.tabIndex)
+        result.appState.nsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 

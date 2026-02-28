@@ -54,6 +54,7 @@ struct FileTreeContent: View {
                 ForEach(filteredNodes) { node in
                     FileTreeNodeView(
                         node: node,
+                        bookmarkID: parentBookmarkID,
                         onSelect: { url in
                             appState.openFileAsPreview(url: url, scopedURL: resolvedURL)
                         },

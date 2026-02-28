@@ -3,6 +3,7 @@ import SwiftData
 import UniformTypeIdentifiers
 
 struct BookmarkListView: View {
+    let scrollProxy: ScrollViewProxy
     let filterText: String
     let activeFileTypeFilters: Set<FileTypeFilter>
     let isFinderDragActive: Bool
@@ -58,6 +59,7 @@ struct BookmarkListView: View {
                 if !sessionsOnlyMode && shouldShowFileBookmark(bookmark) {
                     let isFileSelected = appState.activeDocument?.fileURL == bookmark.resolveURL()
                     fileBookmarkRow(bookmark)
+                        .id(bookmarkID)
                         .listRowBackground(reorderBackground(isSelected: isFileSelected, bookmarkID: bookmarkID))
                         .onDrag {
                             draggingBookmarkID = bookmarkID
@@ -81,6 +83,7 @@ struct BookmarkListView: View {
                             onToggle: { toggleExpansion(bookmarkID: bookmarkID) }
                         )
                     }
+                    .id(bookmarkID)
                     .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                     .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
                     .contextMenu { bookmarkContextMenu(bookmark) }
@@ -99,6 +102,7 @@ struct BookmarkListView: View {
                         onToggle: { toggleExpansion(bookmarkID: bookmarkID) }
                     )
                 }
+                .id(bookmarkID)
                 .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                 .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
                 .opacity(isFinderDragActive ? 0.3 : 1.0)
@@ -126,7 +130,7 @@ struct BookmarkListView: View {
             }
 
         Color.clear
-            .frame(minHeight: 500)
+            .frame(minHeight: 60)
             .frame(maxWidth: .infinity)
             .overlay {
                 RightClickMenuArea(
@@ -156,18 +160,29 @@ struct BookmarkListView: View {
                     }
                 }
             }
-            .onChange(of: appState.revealFileURL) { _, revealURL in
-                guard let revealURL else { return }
-                let filePath = revealURL.path(percentEncoded: false)
-                for bookmark in bookmarks where !bookmark.isFile {
-                    guard let resolvedURL = bookmark.resolveURL() else { continue }
-                    let dirPath = resolvedURL.path(percentEncoded: false)
-                    if filePath.hasPrefix(dirPath) {
-                        let bookmarkID = bookmark.persistentModelID.hashValue.description
-                        expandedBookmarks.insert(bookmarkID)
-                        appState.selectedBookmarkID = bookmarkID
-                        appState.selectedFileTreeURL = revealURL
-                        break
+            .onChange(of: appState.revealFileURL) { oldValue, newValue in
+                if let revealURL = newValue {
+                    // New reveal request: expand bookmark and select, but don't scroll yet
+                    let filePath = revealURL.path(percentEncoded: false)
+                    for bookmark in bookmarks where !bookmark.isFile {
+                        guard let resolvedURL = bookmark.resolveURL() else { continue }
+                        let dirPath = resolvedURL.path(percentEncoded: false)
+                        if filePath.hasPrefix(dirPath) {
+                            let bookmarkID = bookmark.persistentModelID.hashValue.description
+                            expandedBookmarks.insert(bookmarkID)
+                            appState.selectedBookmarkID = bookmarkID
+                            appState.selectedFileTreeURL = revealURL
+                            break
+                        }
+                    }
+                } else if oldValue != nil, let fileURL = appState.selectedFileTreeURL,
+                          let bookmarkID = appState.selectedBookmarkID {
+                    // File row rendered and cleared revealFileURL — safe to scroll
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(100))
+                        withAnimation {
+                            scrollProxy.scrollTo("\(bookmarkID)|\(fileURL)", anchor: .center)
+                        }
                     }
                 }
             }

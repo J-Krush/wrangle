@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import UniformTypeIdentifiers
 
 // MARK: - Title Bar Accessory Installer
 
@@ -31,7 +32,7 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
             window.backgroundColor = Theme.chromeBackground
 
             let tabStrip = TitleBarTabStrip().environment(appState).modelContainer(modelContainer)
-            let hostingView = NSHostingView(rootView: tabStrip)
+            let hostingView = TabStripHostingView(rootView: tabStrip)
             hostingView.translatesAutoresizingMaskIntoConstraints = false
 
             let accessoryVC = NSTitlebarAccessoryViewController()
@@ -39,6 +40,7 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
             accessoryVC.layoutAttribute = .bottom
 
             window.addTitlebarAccessoryViewController(accessoryVC)
+            appState.nsWindow = window
             coordinator.isInstalled = true
             coordinator.accessoryVC = accessoryVC
         }
@@ -65,6 +67,10 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
     }
 }
 
+private class TabStripHostingView<Content: View>: NSHostingView<Content> {
+    override var mouseDownCanMoveWindow: Bool { false }
+}
+
 private class WindowAccessorView: NSView {
     var onWindow: ((NSWindow) -> Void)?
 
@@ -84,6 +90,9 @@ struct TitleBarTabStrip: View {
     @State private var pendingLaunchClaude = false
     @State private var pendingLaunchGemini = false
     @State private var pendingDangerousMode = false
+    @State private var draggingTabID: UUID?
+    @State private var dropTargetTabID: UUID?
+    @State private var isEndDropTargeted = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -94,6 +103,8 @@ struct TitleBarTabStrip: View {
                             tab: tab,
                             isActive: index == appState.activeTabIndex,
                             isPreview: tab.id == appState.previewTabID,
+                            draggingTabID: $draggingTabID,
+                            dropTargetTabID: $dropTargetTabID,
                             onSelect: { appState.selectTab(at: index) },
                             onClose: { appState.requestCloseTab(at: index) },
                             onCloseAll: { appState.closeAllTabs() },
@@ -115,6 +126,27 @@ struct TitleBarTabStrip: View {
             }
 
             Spacer(minLength: 0)
+                .contentShape(Rectangle())
+                .overlay(alignment: .leading) {
+                    if isEndDropTargeted && draggingTabID != nil {
+                        RoundedRectangle(cornerRadius: 1)
+                            .fill(Color.accentColor)
+                            .frame(width: 2)
+                            .padding(.vertical, 2)
+                    }
+                }
+                .onDrop(of: [UTType.text], isTargeted: $isEndDropTargeted) { providers in
+                    guard let provider = providers.first else { return false }
+                    _ = provider.loadObject(ofClass: NSString.self) { string, _ in
+                        guard let idString = string as? String,
+                              let sourceID = UUID(uuidString: idString) else { return }
+                        Task { @MainActor in
+                            appState.moveTabToEnd(sourceID: sourceID)
+                            draggingTabID = nil
+                        }
+                    }
+                    return true
+                }
 
             // "+" menu for new tab options
             Menu {
@@ -196,6 +228,8 @@ struct TitleBarTabItem: View {
     let tab: WorkspaceTab
     let isActive: Bool
     let isPreview: Bool
+    @Binding var draggingTabID: UUID?
+    @Binding var dropTargetTabID: UUID?
     let onSelect: () -> Void
     let onClose: () -> Void
     let onCloseAll: () -> Void
@@ -206,6 +240,7 @@ struct TitleBarTabItem: View {
     @State private var isHovering = false
     @State private var isRenaming = false
     @State private var renameText = ""
+    @State private var isDropTargeted = false
 
     var body: some View {
         Button(action: onSelect) {
@@ -275,22 +310,44 @@ struct TitleBarTabItem: View {
         .onHover { isHovering = $0 }
         .help(tab.document?.fileURL?.path(percentEncoded: false) ?? tab.displayName)
         .animation(.easeOut(duration: 0.1), value: isActive)
-        .draggable(tab.document?.fileURL ?? URL(filePath: "/dev/null")) {
-            HStack(spacing: 4) {
-                if tab.isCustomIcon {
-                    Image(tab.iconName)
-                        .resizable()
-                        .renderingMode(.template)
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: tab.terminalSession?.isClaude == true ? 17 : 14, height: tab.terminalSession?.isClaude == true ? 17 : 14)
-                } else {
-                    Image(systemName: tab.iconName)
+        .opacity(draggingTabID == tab.id ? 0.5 : 1.0)
+        .overlay {
+            if isDropTargeted && draggingTabID != tab.id {
+                let showTrailing: Bool = {
+                    guard let dragID = draggingTabID,
+                          let dragIdx = appState.tabs.firstIndex(where: { $0.id == dragID }),
+                          let targetIdx = appState.tabs.firstIndex(where: { $0.id == tab.id }) else {
+                        return false
+                    }
+                    return dragIdx < targetIdx
+                }()
+
+                HStack {
+                    if showTrailing { Spacer() }
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.accentColor)
+                        .frame(width: 2)
+                        .padding(.vertical, 2)
+                    if !showTrailing { Spacer() }
                 }
-                Text(tab.displayName)
+                .offset(x: showTrailing ? 4 : -4)
             }
-            .padding(6)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .onDrag {
+            draggingTabID = tab.id
+            return NSItemProvider(object: tab.id.uuidString as NSString)
+        }
+        .onDrop(of: [UTType.text], isTargeted: $isDropTargeted) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadObject(ofClass: NSString.self) { string, _ in
+                guard let idString = string as? String,
+                      let sourceID = UUID(uuidString: idString) else { return }
+                Task { @MainActor in
+                    appState.moveTab(fromID: sourceID, toID: tab.id)
+                    draggingTabID = nil
+                }
+            }
+            return true
         }
         .contextMenu {
             if isPreview {
@@ -299,6 +356,7 @@ struct TitleBarTabItem: View {
             }
             if tab.document?.fileURL != nil {
                 Button("Show in Locations") {
+                    onSelect()
                     appState.revealFileURL = tab.document?.fileURL
                 }
                 Button("Show in Finder") {
