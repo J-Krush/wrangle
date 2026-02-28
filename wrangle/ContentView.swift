@@ -108,7 +108,7 @@ struct ContentView: View {
             }
         }
         .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
-        .background { TitleBarAccessoryInstaller(appState: appState) }
+        .background { TitleBarAccessoryInstaller(appState: appState, modelContainer: modelContext.container) }
         .frame(minWidth: 800, minHeight: 500)
         .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
@@ -283,6 +283,7 @@ struct StatusBarView: View {
                     .font(.caption2)
             }
             .foregroundColor(TokenCounter.colorForCount(document.cachedTokenCount))
+            .help("Experimental: estimated via word count × 1.3 + special characters")
 
             Divider()
                 .frame(height: 12)
@@ -307,6 +308,22 @@ struct StatusBarView: View {
                     .lineLimit(1)
                     .truncationMode(.head)
             }
+
+            Menu {
+                Button("Report Bug...") {
+                    FeedbackHelper.openFeedback(.bug)
+                }
+                Button("Request Feature...") {
+                    FeedbackHelper.openFeedback(.feature)
+                }
+            } label: {
+                Image(systemName: "exclamationmark.bubble")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("Send Feedback")
 
             Button {
                 switch appState.appearanceMode {

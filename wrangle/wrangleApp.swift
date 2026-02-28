@@ -120,6 +120,11 @@ struct WrangleApp: App {
                 }
                 .keyboardShortcut("n")
 
+                Button("New Scratch Pad") {
+                    appState.newScratchPad()
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+
                 Button("New Terminal") {
                     appState.openTerminal(
                         projectName: appState.activeProjectName ?? "Terminal",
@@ -236,6 +241,16 @@ struct WrangleApp: App {
                     Button("Reveal in Finder") {
                         revealInFinder()
                     }
+                }
+            }
+
+            // Help menu
+            CommandGroup(replacing: .help) {
+                Button("Report Bug...") {
+                    FeedbackHelper.openFeedback(.bug)
+                }
+                Button("Request Feature...") {
+                    FeedbackHelper.openFeedback(.feature)
                 }
             }
 

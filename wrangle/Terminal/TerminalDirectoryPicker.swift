@@ -12,6 +12,7 @@ struct TerminalDirectoryPicker: View {
     let onSelect: (String, URL, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Query(
         filter: #Predicate<BookmarkedDirectory> { !$0.isFile },
         sort: \BookmarkedDirectory.displayOrder
@@ -28,7 +29,7 @@ struct TerminalDirectoryPicker: View {
             Divider()
 
             if bookmarks.isEmpty {
-                Text("No bookmarked directories")
+                Text("No saved locations")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(12)
@@ -43,7 +44,7 @@ struct TerminalDirectoryPicker: View {
                                 } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "folder.fill")
-                                            .foregroundStyle(.gray)
+                                            .foregroundStyle(.mint)
                                             .font(.caption)
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(bookmark.name)
@@ -73,12 +74,12 @@ struct TerminalDirectoryPicker: View {
             Divider()
 
             Button {
-                browseForDirectory()
+                addLocation()
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "folder.badge.plus")
                         .font(.caption)
-                    Text("Browse...")
+                    Text("Add Location...")
                         .font(.system(size: 12))
                 }
                 .padding(.horizontal, 10)
@@ -100,7 +101,7 @@ struct TerminalDirectoryPicker: View {
         return path
     }
 
-    private func browseForDirectory() {
+    private func addLocation() {
         let panel = NSOpenPanel()
         panel.title = launchClaude ? "Choose directory for Claude Code" : (launchGemini ? "Choose directory for Gemini Code" : "Choose directory for Terminal")
         panel.canChooseDirectories = true
@@ -109,7 +110,25 @@ struct TerminalDirectoryPicker: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let name = url.lastPathComponent
-        onSelect(name, url, nil)
+
+        do {
+            let data = try SecurityScopedBookmark.create(for: url)
+            let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
+            let bookmark = BookmarkedDirectory(
+                name: name,
+                bookmarkData: data,
+                displayOrder: maxOrder + 1,
+                isFile: false
+            )
+            modelContext.insert(bookmark)
+            try? modelContext.save()
+
+            let id = bookmark.persistentModelID.hashValue.description
+            onSelect(name, url, id)
+        } catch {
+            // Fallback: open without saving as location
+            onSelect(name, url, nil)
+        }
         dismiss()
     }
 }

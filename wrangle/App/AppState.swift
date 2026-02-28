@@ -25,6 +25,7 @@ class AppState {
     var editingMode: EditingMode = .writing
     var appearanceMode: AppearanceMode = .system
     var selectedFileTreeURL: URL? = nil
+    var revealFileURL: URL? = nil
     // Preview tab tracking — only one preview tab at a time
     var previewTabID: UUID? = nil
 
@@ -34,6 +35,9 @@ class AppState {
 
     // Terminal session manager (retained for stopAll on quit)
     var terminalSessionManager = TerminalSessionManager()
+
+    // Scratch pad manager
+    var scratchPadManager = ScratchPadManager()
 
     // App foreground state (tracked for notification suppression)
     var isAppForeground: Bool = true
@@ -83,6 +87,18 @@ class AppState {
         let tab = WorkspaceTab(content: .document(blank))
         self.tabs = [tab]
         self.activeTabIndex = 0
+    }
+
+    // MARK: - Scratch Pads
+
+    func newScratchPad(name: String? = nil) {
+        let url: URL
+        if let name, !name.trimmingCharacters(in: .whitespaces).isEmpty {
+            url = scratchPadManager.createScratchPad(name: name)
+        } else {
+            url = scratchPadManager.createScratchPadWithTimestamp()
+        }
+        openFile(url: url)
     }
 
     // MARK: - Scoped URL Resolution

@@ -10,6 +10,8 @@ struct SessionContextBar: View {
     @Environment(AppState.self) private var appState
     @State private var showSkillsPopover = false
     @State private var showMCPPopover = false
+    @State private var copiedSkillId: UUID?
+    @State private var copiedMCPId: UUID?
 
     var body: some View {
         if let context = session.sessionContext {
@@ -142,19 +144,37 @@ struct SessionContextBar: View {
                 .foregroundStyle(.secondary)
 
             ForEach(skills) { skill in
-                HStack(spacing: 6) {
-                    Image(systemName: "wand.and.stars")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.purple)
-                        .frame(width: 14)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(skill.name)
-                            .font(.system(size: 11))
-                        Text("\(skill.source) · \(skill.sourceType)")
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(skill.name, forType: .string)
+                    copiedSkillId = skill.id
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        if copiedSkillId == skill.id {
+                            copiedSkillId = nil
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.purple)
+                            .frame(width: 14)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(skill.name)
+                                .font(.system(size: 11))
+                            Text("\(skill.source) · \(skill.sourceType)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                        Image(systemName: copiedSkillId == skill.id ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 9))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(copiedSkillId == skill.id ? Color.green : Color.secondary)
                     }
                 }
+                .buttonStyle(.plain)
+                .help("Copy skill name")
             }
         }
         .padding(10)
@@ -192,21 +212,39 @@ struct SessionContextBar: View {
                 .foregroundStyle(.secondary)
 
             ForEach(servers) { server in
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(server.status == .configured ? .green : .gray)
-                        .frame(width: 6, height: 6)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(server.name)
-                            .font(.system(size: 11))
-                        if let command = server.command {
-                            Text(command)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
-                                .lineLimit(1)
+                Button {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(server.name, forType: .string)
+                    copiedMCPId = server.id
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        if copiedMCPId == server.id {
+                            copiedMCPId = nil
                         }
                     }
+                } label: {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(server.status == .configured ? .green : .gray)
+                            .frame(width: 6, height: 6)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(server.name)
+                                .font(.system(size: 11))
+                            if let command = server.command {
+                                Text(command)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer()
+                        Image(systemName: copiedMCPId == server.id ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 9))
+                            .foregroundStyle(copiedMCPId == server.id ? Color.green : Color.secondary)
+                    }
                 }
+                .buttonStyle(.plain)
+                .help("Copy server name")
             }
         }
         .padding(10)

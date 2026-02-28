@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import AppKit
 
 // MARK: - Title Bar Accessory Installer
@@ -16,6 +17,7 @@ import AppKit
 /// properly removes the accessory view controller when this view is torn down.
 struct TitleBarAccessoryInstaller: NSViewRepresentable {
     let appState: AppState
+    let modelContainer: ModelContainer
 
     func makeNSView(context: Context) -> NSView {
         let view = WindowAccessorView()
@@ -28,7 +30,7 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
             window.toolbar?.isVisible = false
             window.backgroundColor = Theme.chromeBackground
 
-            let tabStrip = TitleBarTabStrip().environment(appState)
+            let tabStrip = TitleBarTabStrip().environment(appState).modelContainer(modelContainer)
             let hostingView = NSHostingView(rootView: tabStrip)
             hostingView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -119,6 +121,10 @@ struct TitleBarTabStrip: View {
                 Button("New File") {
                     appState.newDocument()
                 }
+                Button("New Scratch Pad") {
+                    appState.newScratchPad()
+                }
+                Divider()
                 Button("New Terminal") {
                     pendingLaunchClaude = false
                     pendingLaunchGemini = false
@@ -196,6 +202,7 @@ struct TitleBarTabItem: View {
     let onPromote: () -> Void
     let onRename: (String) -> Void
 
+    @Environment(AppState.self) private var appState
     @State private var isHovering = false
     @State private var isRenaming = false
     @State private var renameText = ""
@@ -266,6 +273,7 @@ struct TitleBarTabItem: View {
         .contentShape(Rectangle())
         .simultaneousGesture(TapGesture(count: 2).onEnded { onPromote() })
         .onHover { isHovering = $0 }
+        .help(tab.document?.fileURL?.path(percentEncoded: false) ?? tab.displayName)
         .animation(.easeOut(duration: 0.1), value: isActive)
         .draggable(tab.document?.fileURL ?? URL(filePath: "/dev/null")) {
             HStack(spacing: 4) {
@@ -287,6 +295,17 @@ struct TitleBarTabItem: View {
         .contextMenu {
             if isPreview {
                 Button("Keep Open") { onPromote() }
+                Divider()
+            }
+            if tab.document?.fileURL != nil {
+                Button("Show in Locations") {
+                    appState.revealFileURL = tab.document?.fileURL
+                }
+                Button("Show in Finder") {
+                    if let url = tab.document?.fileURL {
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    }
+                }
                 Divider()
             }
             Button("Rename") {

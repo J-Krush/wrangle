@@ -6,7 +6,7 @@
 import Foundation
 
 /// Namespace for static parsing methods. All methods are sync and designed to run on `Task.detached`.
-enum SessionContextParser {
+nonisolated enum SessionContextParser {
     private static let fm = FileManager.default
     private static let home = FileManager.default.homeDirectoryForCurrentUser
 

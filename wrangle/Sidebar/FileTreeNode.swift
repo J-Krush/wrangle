@@ -223,6 +223,15 @@ struct FileTreeNodeView: View {
             }
         }
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+        .onChange(of: appState.revealFileURL) { _, revealURL in
+            guard let revealURL else { return }
+            let revealPath = revealURL.path(percentEncoded: false)
+            let dirPath = node.url.path(percentEncoded: false)
+            // Expand if this directory is an ancestor of the reveal target
+            if revealPath.hasPrefix(dirPath + "/") {
+                isExpanded = true
+            }
+        }
     }
 
     // MARK: - Openable File View
@@ -239,6 +248,12 @@ struct FileTreeNodeView: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
+        .onChange(of: appState.revealFileURL) { _, revealURL in
+            guard let revealURL else { return }
+            if node.url == revealURL {
+                appState.revealFileURL = nil
+            }
+        }
     }
 
     // MARK: - Unopenable File View

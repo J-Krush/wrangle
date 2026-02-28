@@ -29,6 +29,22 @@ struct SidebarView: View {
             Divider()
             List {
                 Section {
+                    ScratchPadSection()
+                } header: {
+                    HStack {
+                        Text("Scratch Pads")
+                        Spacer()
+                        Button { appState.newScratchPad() } label: {
+                            Text("Add")
+                        }
+                        .buttonStyle(.plain)
+                        .help("New Scratch Pad")
+                    }
+                    .padding(.trailing, 15)
+                    .padding(.vertical, 8)
+                }
+
+                Section {
                     BookmarkListView(filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly, onAddLocation: addLocation)
                 } header: {
                     HStack {

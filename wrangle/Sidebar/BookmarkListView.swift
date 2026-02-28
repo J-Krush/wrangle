@@ -75,43 +75,11 @@ struct BookmarkListView: View {
                             LocationSessionRow(session: session)
                         }
                     } label: {
-                        HStack(spacing: 4) {
-                            Button {
-                                appState.selectedBookmarkID = bookmarkID
-                                appState.selectedFileTreeURL = nil
-                                if expandedBookmarks.contains(bookmarkID) {
-                                    expandedBookmarks.remove(bookmarkID)
-                                } else {
-                                    expandedBookmarks.insert(bookmarkID)
-                                }
-                            } label: {
-                                Label {
-                                    Text(bookmark.name)
-                                        .lineLimit(1)
-                                        .truncationMode(.tail)
-                                } icon: {
-                                    Image(systemName: "folder.fill")
-                                        .foregroundStyle(.gray)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-
-                            let hasAttention = sessions.contains { $0.needsAttention }
-                            Text("\(sessions.count)")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(
-                                    Capsule()
-                                        .fill(hasAttention ? Color.green.opacity(0.25) : Color.secondary.opacity(0.15))
-                                )
-                                .foregroundStyle(hasAttention ? .green : .secondary)
-
-                            SessionAddButton(bookmark: bookmark)
-                        }
+                        LocationHeaderLabel(
+                            bookmark: bookmark,
+                            sessions: sessions,
+                            onToggle: { toggleExpansion(bookmarkID: bookmarkID) }
+                        )
                     }
                     .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                     .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
@@ -125,46 +93,11 @@ struct BookmarkListView: View {
                     }
                     FileTreeContent(bookmark: bookmark, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters)
                 } label: {
-                    HStack(spacing: 4) {
-                        Button {
-                            appState.selectedBookmarkID = bookmarkID
-                            appState.selectedFileTreeURL = nil
-                            if expandedBookmarks.contains(bookmarkID) {
-                                expandedBookmarks.remove(bookmarkID)
-                            } else {
-                                expandedBookmarks.insert(bookmarkID)
-                            }
-                        } label: {
-                            Label {
-                                Text(bookmark.name)
-                                    .lineLimit(1)
-                                    .truncationMode(.tail)
-                            } icon: {
-                                Image(systemName: "folder.fill")
-                                    .foregroundStyle(.gray)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-
-                        // Session count
-                        let hasAttention = sessions.contains { $0.needsAttention }
-                        if !sessions.isEmpty {
-                            Text("\(sessions.count)")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(
-                                    Capsule()
-                                        .fill(hasAttention ? Color.green.opacity(0.25) : Color.secondary.opacity(0.15))
-                                )
-                                .foregroundStyle(hasAttention ? .green : .secondary)
-                        }
-
-                        SessionAddButton(bookmark: bookmark)
-                    }
+                    LocationHeaderLabel(
+                        bookmark: bookmark,
+                        sessions: sessions,
+                        onToggle: { toggleExpansion(bookmarkID: bookmarkID) }
+                    )
                 }
                 .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                 .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
@@ -195,12 +128,15 @@ struct BookmarkListView: View {
         Color.clear
             .frame(minHeight: 500)
             .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                appState.selectedBookmarkID = nil
-                appState.selectedFileTreeURL = nil
+            .overlay {
+                RightClickMenuArea(
+                    onLeftClick: {
+                        appState.selectedBookmarkID = nil
+                        appState.selectedFileTreeURL = nil
+                    },
+                    onAddLocation: { onAddLocation?() }
+                )
             }
-            .overlay { RightClickMenuArea { onAddLocation?() } }
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
@@ -217,6 +153,21 @@ struct BookmarkListView: View {
                         if !appState.terminalSessions(for: id).isEmpty {
                             expandedBookmarks.insert(id)
                         }
+                    }
+                }
+            }
+            .onChange(of: appState.revealFileURL) { _, revealURL in
+                guard let revealURL else { return }
+                let filePath = revealURL.path(percentEncoded: false)
+                for bookmark in bookmarks where !bookmark.isFile {
+                    guard let resolvedURL = bookmark.resolveURL() else { continue }
+                    let dirPath = resolvedURL.path(percentEncoded: false)
+                    if filePath.hasPrefix(dirPath) {
+                        let bookmarkID = bookmark.persistentModelID.hashValue.description
+                        expandedBookmarks.insert(bookmarkID)
+                        appState.selectedBookmarkID = bookmarkID
+                        appState.selectedFileTreeURL = revealURL
+                        break
                     }
                 }
             }
@@ -237,6 +188,16 @@ struct BookmarkListView: View {
                 }
             }
         )
+    }
+
+    private func toggleExpansion(bookmarkID: String) {
+        appState.selectedBookmarkID = bookmarkID
+        appState.selectedFileTreeURL = nil
+        if expandedBookmarks.contains(bookmarkID) {
+            expandedBookmarks.remove(bookmarkID)
+        } else {
+            expandedBookmarks.insert(bookmarkID)
+        }
     }
 
     // MARK: - Bookmark Rows
@@ -479,16 +440,59 @@ struct BookmarkListView: View {
 
 }
 
+// MARK: - Location Header Label
+
+private struct LocationHeaderLabel: View {
+    let bookmark: BookmarkedDirectory
+    let sessions: [TerminalSession]
+    let onToggle: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Button(action: onToggle) {
+                Label {
+                    Text(bookmark.name)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "folder.fill")
+                        .foregroundStyle(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if !sessions.isEmpty {
+                let hasAttention = sessions.contains { $0.needsAttention }
+                Text("\(sessions.count)")
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(
+                        Capsule()
+                            .fill(hasAttention ? Color.green.opacity(0.25) : Color.secondary.opacity(0.15))
+                    )
+                    .foregroundStyle(hasAttention ? .green : .secondary)
+            }
+
+            SessionAddButton(bookmark: bookmark, hasActiveSessions: !sessions.isEmpty)
+                .opacity(isHovering || !sessions.isEmpty ? 1 : 0)
+                .allowsHitTesting(isHovering || !sessions.isEmpty)
+                .animation(.easeInOut(duration: 0.15), value: isHovering)
+        }
+        .onHover { isHovering = $0 }
+    }
+}
+
 // MARK: - Session Add Button
 
 private struct SessionAddButton: View {
     let bookmark: BookmarkedDirectory
+    let hasActiveSessions: Bool
     @Environment(AppState.self) private var appState
-
-    private var hasActiveSessions: Bool {
-        let bookmarkID = bookmark.persistentModelID.hashValue.description
-        return !appState.terminalSessions(for: bookmarkID).isEmpty
-    }
 
     var body: some View {
         Menu {
@@ -568,10 +572,11 @@ private struct SessionAddButton: View {
 // MARK: - Right-Click Menu (no highlight)
 
 private struct RightClickMenuArea: NSViewRepresentable {
+    var onLeftClick: () -> Void
     var onAddLocation: () -> Void
 
     func makeNSView(context: Context) -> NSView {
-        let view = NSView()
+        let view = ClickableView(coordinator: context.coordinator)
         let menu = NSMenu()
         let item = NSMenuItem(title: "Add Location...", action: #selector(Coordinator.addLocation), keyEquivalent: "")
         item.target = context.coordinator
@@ -581,17 +586,36 @@ private struct RightClickMenuArea: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.onLeftClick = onLeftClick
         context.coordinator.onAddLocation = onAddLocation
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onAddLocation: onAddLocation)
+        Coordinator(onLeftClick: onLeftClick, onAddLocation: onAddLocation)
+    }
+
+    class ClickableView: NSView {
+        weak var coordinator: Coordinator?
+
+        init(coordinator: Coordinator) {
+            self.coordinator = coordinator
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func mouseDown(with event: NSEvent) {
+            coordinator?.onLeftClick()
+        }
     }
 
     class Coordinator: NSObject {
+        var onLeftClick: () -> Void
         var onAddLocation: () -> Void
 
-        init(onAddLocation: @escaping () -> Void) {
+        init(onLeftClick: @escaping () -> Void, onAddLocation: @escaping () -> Void) {
+            self.onLeftClick = onLeftClick
             self.onAddLocation = onAddLocation
         }
 
@@ -602,5 +626,5 @@ private struct RightClickMenuArea: NSViewRepresentable {
 }
 
 #Preview{
-    SessionAddButton(bookmark: BookmarkedDirectory(name: "Wrangle", bookmarkData: Data()))
+    SessionAddButton(bookmark: BookmarkedDirectory(name: "Wrangle", bookmarkData: Data()), hasActiveSessions: false)
 }
