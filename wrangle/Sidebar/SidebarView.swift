@@ -24,43 +24,14 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            sidebarToolbar
-                .background(Color(nsColor: Theme.sidebarBackground))
-            Divider()
             ScrollViewReader { scrollProxy in
                 List {
-                    Section {
+                    Section("Scratch Pads") {
                         ScratchPadSection()
-                    } header: {
-                        HStack {
-                            Text("Scratch Pads")
-                            Spacer()
-                            Button { appState.newScratchPad() } label: {
-                                Text("Add")
-                            }
-                            .buttonStyle(.plain)
-                            .help("New Scratch Pad")
-                        }
-                        .padding(.trailing, 15)
-                        .padding(.vertical, 8)
                     }
 
-                    Section {
+                    Section("Locations") {
                         BookmarkListView(scrollProxy: scrollProxy, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly, onAddLocation: addLocation)
-                    } header: {
-                        HStack {
-                            Text("Locations")
-                            Spacer()
-                            Button {
-                                addLocation()
-                            } label: {
-                                Text("Add")
-                            }
-                            .buttonStyle(.plain)
-                            .help("Add Location")
-                        }
-                        .padding(.trailing, 15)
-                        .padding(.vertical, 8)
                     }
 
                     OrphanedSessionsSection()
@@ -68,6 +39,7 @@ struct SidebarView: View {
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
+            sidebarBottomBar
         }
         .background(Color(nsColor: Theme.sidebarBackground))
         .frame(minWidth: 200, idealWidth: 240)
@@ -97,20 +69,17 @@ struct SidebarView: View {
         }
     }
 
-    // MARK: - Toolbar
+    // MARK: - Bottom Bar
 
-    private var sidebarToolbar: some View {
-        HStack(spacing: 6) {
+    private var sidebarBottomBar: some View {
+        VStack(spacing: 0) {
+            Divider()
+
             if isSearchExpanded {
                 HStack(spacing: 4) {
-                    Button {
-                        toggleSearch()
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                            .font(.system(size: 12))
-                    }
-                    .buttonStyle(.plain)
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12))
                     TextField("Filter files", text: $filterText)
                         .textFieldStyle(.plain)
                         .font(.body)
@@ -124,25 +93,62 @@ struct SidebarView: View {
                                 .font(.system(size: 12))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Clear filter")
                     }
+                    Button {
+                        toggleSearch()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .foregroundStyle(.secondary)
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Close search")
                 }
                 .padding(.horizontal, 7)
                 .padding(.vertical, 5)
                 .background(.quaternary.opacity(0.5))
                 .clipShape(RoundedRectangle(cornerRadius: 6))
-            } else {
-                Spacer()
-                toolbarButton(
-                    icon: "magnifyingglass",
-                    isActive: false,
-                    activeColor: .secondary
-                ) {
-                    toggleSearch()
-                }
-                .help("Search files")
+                .padding(.horizontal, 8)
+                .padding(.top, 6)
             }
 
             HStack(spacing: 4) {
+                Menu {
+                    Button("New Scratch Pad") {
+                        appState.newScratchPad()
+                    }
+                    Divider()
+                    Button("Add Location...") {
+                        addLocation()
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Add...")
+                .accessibilityLabel("Add")
+
+                Spacer()
+
+                if !isSearchExpanded {
+                    toolbarButton(
+                        icon: "magnifyingglass",
+                        isActive: !filterText.isEmpty,
+                        activeColor: .accentColor
+                    ) {
+                        toggleSearch()
+                    }
+                    .help("Search files")
+                    .accessibilityLabel("Search files")
+                }
+
                 toolbarButton(
                     icon: activeFileTypeFilters.isEmpty
                         ? "line.3.horizontal.decrease.circle"
@@ -152,10 +158,11 @@ struct SidebarView: View {
                 ) {
                     showFilterPopover.toggle()
                 }
-                .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
+                .popover(isPresented: $showFilterPopover, arrowEdge: .top) {
                     FileTypeFilterPopover(activeFilters: $activeFileTypeFilters)
                 }
                 .help("Filter by file type")
+                .accessibilityLabel("Filter by file type")
 
                 toolbarButton(
                     icon: showActiveSessionsOnly ? "terminal.fill" : "terminal",
@@ -165,21 +172,13 @@ struct SidebarView: View {
                     showActiveSessionsOnly.toggle()
                 }
                 .help("Show Active Sessions")
-
+                .accessibilityLabel("Show active sessions")
             }
-
-            if !isSearchExpanded {
-                Spacer()
-            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
+        .background(Color(nsColor: Theme.sidebarBackground))
         .animation(.snappy(duration: 0.2), value: isSearchExpanded)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
-        .onChange(of: isSearchFieldFocused) { _, focused in
-            if !focused && filterText.isEmpty {
-                isSearchExpanded = false
-            }
-        }
     }
 
     private func toolbarButton(

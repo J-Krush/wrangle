@@ -188,8 +188,16 @@ final class MarkdownParser: @unchecked Sendable {
 
             // Hide fence lines in writing mode
             if shouldHideMarkdownSyntax {
-                hideFenceLine(in: attrStr, range: openLineRange)
-                hideFenceLine(in: attrStr, range: closeLineRange)
+                hideFenceLine(in: attrStr, range: openLineRange, isOpening: true)
+                hideFenceLine(in: attrStr, range: closeLineRange, isOpening: false)
+            } else {
+                // Add extra spacing below the closing fence in dev mode
+                let closeStyle = NSMutableParagraphStyle()
+                closeStyle.headIndent = 16
+                closeStyle.firstLineHeadIndent = 16
+                closeStyle.lineSpacing = theme.lineSpacing
+                closeStyle.paragraphSpacing = 12
+                attrStr.addAttribute(.paragraphStyle, value: closeStyle, range: closeLineRange)
             }
 
             protectedRanges.append(range)
@@ -197,13 +205,15 @@ final class MarkdownParser: @unchecked Sendable {
     }
 
     /// Collapses a fence line (```...) to near-zero height so it disappears visually.
-    private func hideFenceLine(in attrStr: NSMutableAttributedString, range: NSRange) {
+    /// Reserves paragraph spacing to prevent the code block background card from overlapping adjacent lines.
+    private func hideFenceLine(in attrStr: NSMutableAttributedString, range: NSRange, isOpening: Bool) {
         let collapsedStyle = NSMutableParagraphStyle()
         collapsedStyle.maximumLineHeight = 0.01
         collapsedStyle.minimumLineHeight = 0.01
         collapsedStyle.lineSpacing = 0
-        collapsedStyle.paragraphSpacing = 0
-        collapsedStyle.paragraphSpacingBefore = 0
+        // Reserve space for the background card expansion (12px each side)
+        collapsedStyle.paragraphSpacingBefore = isOpening ? 12 : 0
+        collapsedStyle.paragraphSpacing = isOpening ? 0 : 14
 
         attrStr.addAttributes([
             .foregroundColor: NSColor.clear,

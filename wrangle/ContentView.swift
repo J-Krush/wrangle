@@ -94,6 +94,31 @@ struct ContentView: View {
                     Text("A terminal session is still running. Are you sure?")
                 }
             }
+            .alert(
+                "Update Available",
+                isPresented: Binding(
+                    get: { coordinator.updateChecker.updateAvailable },
+                    set: { if !$0 { coordinator.updateChecker.dismissUpdate() } }
+                )
+            ) {
+                Button("Download") { coordinator.updateChecker.openDownloadPage() }
+                Button("Not Now", role: .cancel) { coordinator.updateChecker.dismissUpdate() }
+            } message: {
+                let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+                Text("Wrangle v\(coordinator.updateChecker.latestVersion) is available. You're currently running v\(current).")
+            }
+            .alert(
+                "You're Up to Date",
+                isPresented: Binding(
+                    get: { coordinator.updateChecker.showUpToDate },
+                    set: { coordinator.updateChecker.showUpToDate = $0 }
+                )
+            ) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+                Text("Wrangle v\(current) is the latest version.")
+            }
         }
         .coordinateSpace(name: "root")
         .onPreferenceChange(DetailLeadingKey.self) { value in
@@ -107,6 +132,7 @@ struct ContentView: View {
             if appState.showGlobalSearch {
                 GlobalSearchView()
             }
+            LicenseGateView()
         }
         .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
         .background { TitleBarAccessoryInstaller(appState: appState, modelContainer: modelContext.container) }
@@ -143,13 +169,28 @@ struct ContentView: View {
 
     @ViewBuilder
     private func documentContentView(_ doc: EditorDocument) -> some View {
-        // Toolbar area — markdown or JSON depending on file type
-        if doc.fileURL?.pathExtension.lowercased() == "json" {
+        // Toolbar area — file-type-specific toolbar
+        let ext = doc.fileURL?.pathExtension.lowercased()
+        if ext == "json" {
             JsonToolbar(
                 text: Binding(
                     get: { doc.content },
                     set: { doc.content = $0; doc.markDirty(); appState.promotePreviewTab(for: doc.id) }
                 ),
+                onInsert: { block in
+                    editorContext.insertBlock(block)
+                }
+            )
+            .background(Color(nsColor: Theme.chromeBackground))
+
+            Divider()
+        } else if ["xml", "plist", "svg", "xsd", "xsl", "xslt"].contains(ext) {
+            XmlToolbar(
+                text: Binding(
+                    get: { doc.content },
+                    set: { doc.content = $0; doc.markDirty(); appState.promotePreviewTab(for: doc.id) }
+                ),
+                isPlist: ext == "plist",
                 onInsert: { block in
                     editorContext.insertBlock(block)
                 }
@@ -336,6 +377,7 @@ struct StatusBarView: View {
             .menuStyle(.borderlessButton)
             .fixedSize()
             .help("Send Feedback")
+            .accessibilityLabel("Send feedback")
 
             Button {
                 switch appState.appearanceMode {
@@ -350,6 +392,7 @@ struct StatusBarView: View {
             }
             .buttonStyle(.plain)
             .help(appearanceTooltip)
+            .accessibilityLabel(appearanceTooltip)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 4)

@@ -52,6 +52,12 @@ Wrangle/
 └── Resources/        # Asset catalog
 ```
 
+## Documentation
+
+- [Architecture & Structure](docs/architecture.md)
+- [Coding Patterns](docs/coding-patterns.md)
+- [Pre-Launch Todo](docs/pre-launch-todo.md) — remaining tasks before v1.0 ships
+
 ## Architecture
 
 - **SwiftUI + NSTextView hybrid** — SwiftUI for layout and navigation, a custom `NSViewRepresentable` wrapping `NSTextView` for the editor core (full control over attributed string rendering, keyboard shortcuts, and cursor behavior)

@@ -92,6 +92,8 @@ struct WrangleApp: App {
                     setupNotifications()
                     setupForegroundTracking()
                     updateSystemScheme()
+                    coordinator.updateChecker.checkForUpdate()
+                    coordinator.licenseManager.loadOnLaunch()
                     // Listen for macOS appearance changes
                     DistributedNotificationCenter.default().addObserver(
                         forName: Notification.Name("AppleInterfaceThemeChangedNotification"),
@@ -112,10 +114,43 @@ struct WrangleApp: App {
                     case .dark:   NSApp.appearance = NSAppearance(named: .darkAqua)
                     }
                 }
+                .onOpenURL { url in
+                    // Handle files opened from Finder via file type associations
+                    if let state = focusedAppState {
+                        state.openFile(url: url, scopedURL: url)
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
         .windowToolbarStyle(.unified(showsTitle: true))
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Wrangle") {
+                    let credits = NSMutableAttributedString()
+                    credits.append(NSAttributedString(
+                        string: "Made by Krush\n",
+                        attributes: [.font: NSFont.systemFont(ofSize: 11)]
+                    ))
+                    credits.append(NSAttributedString(
+                        string: "wrangle.dev",
+                        attributes: [
+                            .font: NSFont.systemFont(ofSize: 11),
+                            .link: URL(string: "https://wrangle.dev")! as Any,
+                            .foregroundColor: NSColor.linkColor
+                        ]
+                    ))
+                    NSApplication.shared.orderFrontStandardAboutPanel(options: [
+                        .credits: credits,
+                    ])
+                }
+
+                Divider()
+
+                Button("Check for Updates...") {
+                    coordinator.updateChecker.checkForUpdate(manual: true)
+                }
+            }
+
             // File menu
             CommandGroup(replacing: .newItem) {
                 Button("New File") {
@@ -303,6 +338,11 @@ struct WrangleApp: App {
                 .keyboardShortcut("w")
                 .disabled(focusedAppState == nil)
             }
+        }
+
+        Settings {
+            SettingsView()
+                .environment(coordinator)
         }
     }
 

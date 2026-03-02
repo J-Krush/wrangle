@@ -11,6 +11,11 @@
       "sourceType": "github",
       "computedHash": "991d7c84dc20ee2d4c9e487a5b004a3a1e1bb5941a569edb07c1fb176292d6db"
     },
+    "macos-development": {
+      "source": "rshankras/claude-code-apple-skills",
+      "sourceType": "github",
+      "computedHash": "ff7fba1c081a1efb29e67526abc4e281fbb482f10e2b364f11fbbe85c2d34e05"
+    },
     "swiftui-expert-skill": {
       "source": "avdlee/swiftui-agent-skill",
       "sourceType": "github",

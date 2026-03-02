@@ -39,4 +39,15 @@ class EditorContext {
     func insertBlock(_ block: String) {
         coordinator?.insertBlock(block)
     }
+
+    func indentSelectedLines() { coordinator?.indentSelectedLines() }
+    func dedentSelectedLines() { coordinator?.dedentSelectedLines() }
+    func deleteCurrentLine() { coordinator?.deleteCurrentLine() }
+    func moveLineUp() { coordinator?.moveLineUp() }
+    func moveLineDown() { coordinator?.moveLineDown() }
+    func duplicateLineUp() { coordinator?.duplicateLineUp() }
+    func duplicateLineDown() { coordinator?.duplicateLineDown() }
+    func insertBlankLineBelow() { coordinator?.insertBlankLineBelow() }
+    func insertBlankLineAbove() { coordinator?.insertBlankLineAbove() }
+    func clearLinePrefix() { coordinator?.clearLinePrefix() }
 }

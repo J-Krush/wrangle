@@ -203,6 +203,7 @@ struct TitleBarTabStrip: View {
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
             .help("New Tab")
+            .accessibilityLabel("New tab")
             .padding(.horizontal, 6)
             .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
                 TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini) { name, url, bookmarkID in
@@ -281,6 +282,7 @@ struct TitleBarTabItem: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.borderless)
+                    .accessibilityLabel("Close tab")
                     .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
             }

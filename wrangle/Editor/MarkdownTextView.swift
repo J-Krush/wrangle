@@ -16,6 +16,7 @@ struct MarkdownTextView: NSViewRepresentable {
     var editorContext: EditorContext?
     var editingMode: EditingMode = .writing
     @Environment(\.colorScheme) private var colorScheme
+    @AppStorage("showLineNumbers") private var showLineNumbers: Bool = true
 
     // MARK: - NSViewRepresentable
 
@@ -54,6 +55,11 @@ struct MarkdownTextView: NSViewRepresentable {
         textView.font = theme.editorFont
         textView.textColor = theme.editorForeground
 
+        // Set default paragraph style so empty lines match styled lines (consistent lineSpacing)
+        let baseParagraph = NSMutableParagraphStyle()
+        baseParagraph.lineSpacing = theme.lineSpacing
+        textView.defaultParagraphStyle = baseParagraph
+
         // Enable line wrapping at the scroll view width
         textView.isHorizontallyResizable = false
         textView.isVerticallyResizable = true
@@ -84,6 +90,11 @@ struct MarkdownTextView: NSViewRepresentable {
         // Wire formatting delegate for keyboard shortcuts
         textView.formattingDelegate = context.coordinator
 
+        // Wire XML fold toggle callback
+        textView.onXMLCollapseToggle = { [weak coordinator = context.coordinator] offset in
+            coordinator?.toggleXMLCollapse(at: offset)
+        }
+
         return scrollView
     }
 
@@ -99,6 +110,7 @@ struct MarkdownTextView: NSViewRepresentable {
         if documentChanged {
             context.coordinator.document = document
             context.coordinator.documentID = document?.id
+            context.coordinator.collapsedXMLTagOffsets.removeAll()
         }
 
         // Detect appearance change and update NSTextView colors + restyle
@@ -114,6 +126,16 @@ struct MarkdownTextView: NSViewRepresentable {
         // Sync editing mode and restyle if it changed
         let modeChanged = context.coordinator.editingMode != editingMode
         context.coordinator.editingMode = editingMode
+
+        // Toggle line numbers and sync editing mode
+        if let editorTV = textView as? EditorTextView {
+            editorTV.editingMode = editingMode
+            let shouldShow = editingMode == .dev && showLineNumbers
+            if editorTV.showLineNumbers != shouldShow {
+                editorTV.showLineNumbers = shouldShow
+                editorTV.needsDisplay = true
+            }
+        }
 
         // Only push changes if the source of truth (binding) differs from what the
         // text view currently holds AND the change originated externally (not from typing).
@@ -147,6 +169,9 @@ struct MarkdownTextView: NSViewRepresentable {
 
         /// Guard against re-entrant styling triggered by our own attribute changes.
         private var isStyling = false
+
+        /// Tags currently collapsed by the user (keyed by character offset of opening `<`).
+        var collapsedXMLTagOffsets: Set<Int> = []
 
         /// Incremented on every `setTextViewContent` call so stale async results are discarded.
         private var parseGeneration: Int = 0
@@ -188,9 +213,11 @@ struct MarkdownTextView: NSViewRepresentable {
             let plain = NSAttributedString(string: plainText, attributes: baseAttributes)
 
             let selectedRanges = textView.selectedRanges
+            textView.undoManager?.disableUndoRegistration()
             storage.beginEditing()
             storage.setAttributedString(plain)
             storage.endEditing()
+            textView.undoManager?.enableUndoRegistration()
             restoreSelection(selectedRanges, in: textView)
             isStyling = false
 
@@ -224,6 +251,9 @@ struct MarkdownTextView: NSViewRepresentable {
 
             let selectedRanges = textView.selectedRanges
 
+            textView.undoManager?.disableUndoRegistration()
+            defer { textView.undoManager?.enableUndoRegistration() }
+
             storage.beginEditing()
             // Apply attributes only (same approach as restyleInPlace)
             let fullRange = NSRange(location: 0, length: storage.length)
@@ -233,7 +263,12 @@ struct MarkdownTextView: NSViewRepresentable {
 
             // Layer XML tag rendering on top (not for JSON)
             if !isJSONDoc {
-                XMLTagRenderer.render(in: storage)
+                let foldEnabled = editingMode == .writing
+                XMLTagRenderer.render(
+                    in: storage,
+                    foldingEnabled: foldEnabled,
+                    collapsedOffsets: foldEnabled ? collapsedXMLTagOffsets : []
+                )
             }
 
             // Replace bullet markers with • in the storage
@@ -244,12 +279,25 @@ struct MarkdownTextView: NSViewRepresentable {
 
             restoreSelection(selectedRanges, in: textView)
 
-            // Update code block copy buttons
-            (textView as? EditorTextView)?.updateCopyButtons()
+            // Sync fold state to the text view for triangle drawing
+            if let editorTV = textView as? EditorTextView {
+                editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
+                editorTV.updateCopyButtons()
+            }
         }
 
         /// Publicly accessible restyle, called when editing mode changes.
         func forceRestyle() {
+            restyleInPlace()
+        }
+
+        /// Toggles collapse for the XML tag at the given character offset, then restyles.
+        func toggleXMLCollapse(at offset: Int) {
+            if collapsedXMLTagOffsets.contains(offset) {
+                collapsedXMLTagOffsets.remove(offset)
+            } else {
+                collapsedXMLTagOffsets.insert(offset)
+            }
             restyleInPlace()
         }
 
@@ -272,6 +320,9 @@ struct MarkdownTextView: NSViewRepresentable {
 
             let selectedRanges = textView.selectedRanges
 
+            textView.undoManager?.disableUndoRegistration()
+            defer { textView.undoManager?.enableUndoRegistration() }
+
             storage.beginEditing()
 
             // Replace attributes only, keeping the same string
@@ -282,7 +333,12 @@ struct MarkdownTextView: NSViewRepresentable {
 
             // Layer XML tag rendering on top (not for JSON)
             if !isJSON {
-                XMLTagRenderer.render(in: storage)
+                let foldEnabled = editingMode == .writing
+                XMLTagRenderer.render(
+                    in: storage,
+                    foldingEnabled: foldEnabled,
+                    collapsedOffsets: foldEnabled ? collapsedXMLTagOffsets : []
+                )
             }
 
             // Replace bullet markers with • in the storage
@@ -295,8 +351,11 @@ struct MarkdownTextView: NSViewRepresentable {
             // Restore selection
             restoreSelection(selectedRanges, in: textView)
 
-            // Update code block copy buttons
-            (textView as? EditorTextView)?.updateCopyButtons()
+            // Sync fold state to the text view for triangle drawing
+            if let editorTV = textView as? EditorTextView {
+                editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
+                editorTV.updateCopyButtons()
+            }
         }
 
         private func restoreSelection(_ selectedRanges: [NSValue], in textView: NSTextView) {
@@ -315,12 +374,20 @@ struct MarkdownTextView: NSViewRepresentable {
         }
 
 
+        // MARK: - Undo Helpers
+
+        /// Breaks undo coalescing so the next edit starts a fresh undo group.
+        private func breakUndo() {
+            textView?.breakUndoCoalescing()
+        }
+
         // MARK: - Toolbar Interaction Methods
 
         /// Insert formatting prefix/suffix around the current selection or at cursor.
         /// Used by the EditorToolbar for wrap-style formatting (bold, italic, code, etc.)
         func insertFormatting(prefix: String, suffix: String) {
             guard let textView else { return }
+            breakUndo()
 
             let selectedRange = textView.selectedRange()
             let storage = textView.textStorage?.string ?? ""
@@ -341,31 +408,30 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
+        // Cached regex for heading prefix detection
+        private static let linePrefixHeadingRegex = try! NSRegularExpression(pattern: "^#{1,6}\\s+")
+
         /// Insert a prefix at the start of the current line.
         /// Used by the EditorToolbar for line-level formatting (headings, lists, blockquotes).
         func insertLinePrefix(_ prefix: String) {
             guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
 
             let cursorPos = textView.selectedRange().location
-            let nsString = storage.string as NSString
+            let nsString = rawText(from: storage) as NSString
             let lineRange = nsString.lineRange(for: NSRange(location: min(cursorPos, nsString.length), length: 0))
-
-            // Check if there's already a heading/list prefix on this line
             let lineText = nsString.substring(with: lineRange)
 
             // For heading toggling: if line already starts with # prefix, replace it
             if prefix.hasPrefix("#") {
-                // Remove any existing heading prefix
-                if let headingMatch = try? NSRegularExpression(pattern: "^#{1,6}\\s+").firstMatch(
+                if let headingMatch = Self.linePrefixHeadingRegex.firstMatch(
                     in: lineText, range: NSRange(location: 0, length: lineText.count)
                 ) {
                     let existingPrefix = (lineText as NSString).substring(with: headingMatch.range)
                     if existingPrefix == prefix {
-                        // Same heading level — toggle off (remove prefix)
                         let removeRange = NSRange(location: lineRange.location, length: headingMatch.range.length)
                         textView.insertText("", replacementRange: removeRange)
                     } else {
-                        // Different heading level — replace
                         let removeRange = NSRange(location: lineRange.location, length: headingMatch.range.length)
                         textView.insertText(prefix, replacementRange: removeRange)
                     }
@@ -388,8 +454,270 @@ struct MarkdownTextView: NSViewRepresentable {
         /// Insert a block of text at the cursor position.
         func insertBlock(_ block: String) {
             guard let textView else { return }
+            breakUndo()
             let selectedRange = textView.selectedRange()
             textView.insertText(block, replacementRange: selectedRange)
+        }
+
+        // MARK: - Indent / Dedent
+
+        func indentSelectedLines() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = LineOperations.expandToFullLines(in: nsString, range: sel)
+            let lineText = nsString.substring(with: lineRange)
+            let indented = LineOperations.indentLines(lineText)
+
+            textView.insertText(indented, replacementRange: lineRange)
+
+            // Restore selection to cover all indented lines
+            let newLength = (indented as NSString).length
+            textView.setSelectedRange(NSRange(location: lineRange.location, length: newLength))
+        }
+
+        func dedentSelectedLines() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = LineOperations.expandToFullLines(in: nsString, range: sel)
+            let lineText = nsString.substring(with: lineRange)
+            let dedented = LineOperations.dedentLines(lineText)
+
+            textView.insertText(dedented, replacementRange: lineRange)
+
+            let newLength = (dedented as NSString).length
+            textView.setSelectedRange(NSRange(location: lineRange.location, length: newLength))
+        }
+
+        // MARK: - Line Operations
+
+        func deleteCurrentLine() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            guard nsString.length > 0 else { return }
+
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+
+            textView.insertText("", replacementRange: lineRange)
+        }
+
+        func moveLineUp() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+
+            // Can't move first line up
+            guard lineRange.location > 0 else { return }
+
+            let prevLineRange = nsString.lineRange(for: NSRange(location: lineRange.location - 1, length: 0))
+            let currentText = nsString.substring(with: lineRange)
+            let prevText = nsString.substring(with: prevLineRange)
+
+            // Ensure both end with newline for clean swap
+            let currentHasNewline = currentText.hasSuffix("\n")
+            let prevHasNewline = prevText.hasSuffix("\n")
+
+            var newCurrent = currentHasNewline ? currentText : currentText + "\n"
+            var newPrev = prevHasNewline ? prevText : prevText + "\n"
+
+            // If current was the last line (no trailing newline), strip from moved-up and add to moved-down
+            if !currentHasNewline {
+                newCurrent = String(newCurrent.dropLast())
+                if !newPrev.hasSuffix("\n") {
+                    newPrev += "\n"
+                }
+            }
+
+            let combined = newCurrent + newPrev
+            // If the last line in doc shouldn't end with \n, trim trailing
+            let totalRange = NSRange(location: prevLineRange.location, length: lineRange.location + lineRange.length - prevLineRange.location)
+            let originalText = nsString.substring(with: totalRange)
+            let trimmedCombined = originalText.hasSuffix("\n") ? combined : combined.hasSuffix("\n") ? String(combined.dropLast()) : combined
+
+            textView.insertText(trimmedCombined, replacementRange: totalRange)
+
+            // Place cursor at corresponding position in moved line
+            let offset = sel.location - lineRange.location
+            let newCursorLoc = prevLineRange.location + offset
+            let newSelLength = sel.length
+            textView.setSelectedRange(NSRange(location: newCursorLoc, length: newSelLength))
+        }
+
+        func moveLineDown() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+
+            // Can't move last line down
+            let lineEnd = lineRange.location + lineRange.length
+            guard lineEnd < nsString.length else { return }
+
+            let nextLineRange = nsString.lineRange(for: NSRange(location: lineEnd, length: 0))
+            let currentText = nsString.substring(with: lineRange)
+            let nextText = nsString.substring(with: nextLineRange)
+
+            let currentHasNewline = currentText.hasSuffix("\n")
+            let nextHasNewline = nextText.hasSuffix("\n")
+
+            var newNext = nextHasNewline ? nextText : nextText + "\n"
+            var newCurrent = currentHasNewline ? currentText : currentText + "\n"
+
+            if !nextHasNewline {
+                newNext = String(newNext.dropLast())
+                // Moved-down current might need trailing \n stripped
+            }
+
+            let combined = newNext + newCurrent
+            let totalRange = NSRange(location: lineRange.location, length: nextLineRange.location + nextLineRange.length - lineRange.location)
+            let originalText = nsString.substring(with: totalRange)
+            let trimmedCombined = originalText.hasSuffix("\n") ? combined : combined.hasSuffix("\n") ? String(combined.dropLast()) : combined
+
+            textView.insertText(trimmedCombined, replacementRange: totalRange)
+
+            let offset = sel.location - lineRange.location
+            let newCursorLoc = lineRange.location + (newNext as NSString).length + offset
+            textView.setSelectedRange(NSRange(location: newCursorLoc, length: sel.length))
+        }
+
+        func duplicateLineUp() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+            var lineText = nsString.substring(with: lineRange)
+
+            // Ensure line ends with newline so duplicate goes above
+            if !lineText.hasSuffix("\n") { lineText += "\n" }
+
+            textView.insertText(lineText, replacementRange: NSRange(location: lineRange.location, length: 0))
+            // Cursor stays on original line (which shifted down)
+        }
+
+        func duplicateLineDown() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+            var lineText = nsString.substring(with: lineRange)
+
+            let lineEnd = lineRange.location + lineRange.length
+            // Ensure we insert with a newline separator
+            if !lineText.hasSuffix("\n") { lineText = "\n" + lineText } else {
+                // Insert after the line
+            }
+
+            if lineText.hasSuffix("\n") {
+                textView.insertText(lineText, replacementRange: NSRange(location: lineEnd, length: 0))
+            } else {
+                textView.insertText(lineText, replacementRange: NSRange(location: lineEnd, length: 0))
+            }
+
+            // Move cursor to the duplicated line
+            let offset = sel.location - lineRange.location
+            let newLoc = lineEnd + offset
+            textView.setSelectedRange(NSRange(location: newLoc, length: sel.length))
+        }
+
+        func insertBlankLineBelow() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+            let lineEnd = lineRange.location + lineRange.length
+
+            if lineEnd <= nsString.length && lineEnd > 0 {
+                // Line ends with \n → insert at lineEnd
+                textView.insertText("\n", replacementRange: NSRange(location: lineEnd, length: 0))
+                textView.setSelectedRange(NSRange(location: lineEnd, length: 0))
+            } else {
+                // Last line with no trailing newline
+                textView.insertText("\n", replacementRange: NSRange(location: nsString.length, length: 0))
+                textView.setSelectedRange(NSRange(location: nsString.length + 1, length: 0))
+            }
+        }
+
+        func insertBlankLineAbove() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+
+            textView.insertText("\n", replacementRange: NSRange(location: lineRange.location, length: 0))
+            textView.setSelectedRange(NSRange(location: lineRange.location, length: 0))
+        }
+
+        // MARK: - Clear Line Prefix
+
+        private static let clearLinePrefixRegex = try! NSRegularExpression(pattern: "^#{1,6}\\s+")
+
+        func clearLinePrefix() {
+            guard let textView, let storage = textView.textStorage else { return }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: sel)
+            let lineText = nsString.substring(with: lineRange)
+
+            if let m = Self.clearLinePrefixRegex.firstMatch(in: lineText, range: NSRange(location: 0, length: lineText.count)) {
+                let removeRange = NSRange(location: lineRange.location, length: m.range.length)
+                textView.insertText("", replacementRange: removeRange)
+            }
+        }
+
+        // MARK: - Smart Enter
+
+        func handleSmartEnter() -> Bool {
+            guard let textView, let storage = textView.textStorage else { return false }
+            breakUndo()
+
+            let nsString = rawText(from: storage) as NSString
+            guard nsString.length > 0 else { return false }
+
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: NSRange(location: min(sel.location, nsString.length), length: 0))
+            let lineText = nsString.substring(with: lineRange).replacingOccurrences(of: "\n", with: "")
+
+            // Only trigger when cursor is at end of line content
+            let lineContentEnd = lineRange.location + (lineText as NSString).length
+            let cursorAtEOL = sel.location >= lineContentEnd && sel.length == 0
+
+            let action = LineOperations.detectContinuationPrefix(for: lineText, cursorAtEOL: cursorAtEOL)
+
+            switch action {
+            case .continueWith(let prefix):
+                textView.insertText("\n" + prefix, replacementRange: sel)
+                return true
+            case .exitList(let clearLength):
+                // Replace the empty prefix line content with just a newline
+                let clearRange = NSRange(location: lineRange.location, length: clearLength)
+                textView.insertText("\n", replacementRange: clearRange)
+                return true
+            case .none:
+                return false
+            }
         }
 
         // MARK: - Bullet Marker Helpers
@@ -425,6 +753,9 @@ struct MarkdownTextView: NSViewRepresentable {
             guard let textView = notification.object as? NSTextView else { return }
             guard !isStyling else { return }
 
+            // Clear XML collapse state — offsets are invalidated by edits
+            collapsedXMLTagOffsets.removeAll()
+
             let newText: String
             if let storage = textView.textStorage {
                 newText = rawText(from: storage)
@@ -445,6 +776,11 @@ struct MarkdownTextView: NSViewRepresentable {
 
         func textViewDidChangeSelection(_ notification: Notification) {
             editorContext?.activeFormats = detectActiveFormats()
+
+            // Redraw line numbers so the current line highlight follows the cursor
+            if let editorTV = textView as? EditorTextView, editorTV.showLineNumbers {
+                editorTV.needsDisplay = true
+            }
         }
 
         // MARK: - Active Format Detection

@@ -8,6 +8,8 @@ class AppCoordinator {
     var appearanceMode: AppearanceMode = .system
     var claudeHookService: ClaudeHookService?
     var isSetupComplete: Bool = false
+    var updateChecker = UpdateChecker()
+    var licenseManager = LicenseManager()
 
     // Registry of all window states
     private(set) var windowStates: [UUID: AppState] = [:]
