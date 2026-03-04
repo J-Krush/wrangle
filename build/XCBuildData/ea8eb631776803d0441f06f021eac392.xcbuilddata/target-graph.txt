@@ -1,6 +1,0 @@
-Target dependency graph (3 targets)
-Target 'wrangle' in project 'wrangle'
-➜ Explicit dependency on target 'SwiftTerm' in project 'SwiftTerm'
-Target 'SwiftTerm' in project 'SwiftTerm'
-➜ Explicit dependency on target 'SwiftTerm' in project 'SwiftTerm'
-Target 'SwiftTerm' in project 'SwiftTerm' (no dependencies)
