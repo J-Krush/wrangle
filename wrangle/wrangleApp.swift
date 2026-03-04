@@ -132,10 +132,10 @@ struct WrangleApp: App {
                         attributes: [.font: NSFont.systemFont(ofSize: 11)]
                     ))
                     credits.append(NSAttributedString(
-                        string: "wrangle.dev",
+                        string: "wrangleapp.dev",
                         attributes: [
                             .font: NSFont.systemFont(ofSize: 11),
-                            .link: URL(string: "https://wrangle.dev")! as Any,
+                            .link: URL(string: "https://wrangleapp.dev")! as Any,
                             .foregroundColor: NSColor.linkColor
                         ]
                     ))

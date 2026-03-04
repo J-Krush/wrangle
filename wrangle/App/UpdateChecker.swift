@@ -9,7 +9,7 @@ class UpdateChecker {
     var releaseNotes = ""
     private var downloadURL = ""
 
-    private static let versionEndpoint = "https://wrangle.dev/api/version.json"
+    private static let versionEndpoint = "https://wrangleapp.dev/api/version.json"
     private static let dismissedVersionKey = "UpdateChecker.dismissedVersion"
 
     func checkForUpdate(manual: Bool = false) {
@@ -24,7 +24,7 @@ class UpdateChecker {
     }
 
     func openDownloadPage() {
-        let urlString = downloadURL.isEmpty ? "https://wrangle.dev/download" : downloadURL
+        let urlString = downloadURL.isEmpty ? "https://wrangleapp.dev/download" : downloadURL
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
         }

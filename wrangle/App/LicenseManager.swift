@@ -5,24 +5,18 @@ import Security
 @Observable
 class LicenseManager {
     var licenseKey: String = ""
-    var licenseStatus: LicenseStatus = .unknown
+    var licenseStatus: LicenseStatus = .unlicensed
     var statusMessage: String = ""
     var isValidating: Bool = false
     var customerName: String = ""
 
     enum LicenseStatus: String {
-        case unknown
+        case unlicensed
         case valid
         case invalid
         case expired
-        case trial
-        case trialExpired
     }
 
-    // MARK: - Trial
-
-    private static let firstLaunchKey = "LicenseManager.firstLaunchDate"
-    private static let trialDays = 14
     private static let instanceIDKey = "LicenseManager.instanceID"
     private static let keychainService = "dev.wrangle.license"
     private static let keychainAccount = "license-key"
@@ -41,42 +35,22 @@ class LicenseManager {
         return id
     }
 
-    var trialDaysRemaining: Int {
-        guard let firstLaunch = UserDefaults.standard.object(forKey: Self.firstLaunchKey) as? Date else {
-            // First launch — record now
-            UserDefaults.standard.set(Date(), forKey: Self.firstLaunchKey)
-            return Self.trialDays
-        }
-        let elapsed = Calendar.current.dateComponents([.day], from: firstLaunch, to: Date()).day ?? 0
-        return max(0, Self.trialDays - elapsed)
-    }
-
-    var isTrialExpired: Bool {
-        trialDaysRemaining <= 0
-    }
-
     var isLicensed: Bool {
         licenseStatus == .valid
     }
 
-    var shouldShowNag: Bool {
-        !isLicensed && isTrialExpired
+    var needsLicense: Bool {
+        !isLicensed
     }
 
     // MARK: - Lifecycle
 
     func loadOnLaunch() {
-        // Ensure first-launch date is set
-        if UserDefaults.standard.object(forKey: Self.firstLaunchKey) == nil {
-            UserDefaults.standard.set(Date(), forKey: Self.firstLaunchKey)
-        }
-
-        // Try loading stored license key from Keychain
         if let storedKey = loadKeyFromKeychain() {
             licenseKey = storedKey
             Task { await validate() }
         } else {
-            licenseStatus = isTrialExpired ? .trialExpired : .trial
+            licenseStatus = .unlicensed
         }
     }
 
@@ -177,7 +151,7 @@ class LicenseManager {
         removeKeyFromKeychain()
         licenseKey = ""
         customerName = ""
-        licenseStatus = isTrialExpired ? .trialExpired : .trial
+        licenseStatus = .unlicensed
         isValidating = false
     }
 

@@ -2,11 +2,10 @@ import SwiftUI
 
 struct LicenseGateView: View {
     @Environment(AppCoordinator.self) private var coordinator
-    @State private var dismissed = false
     @State private var licenseKey = ""
 
     var body: some View {
-        if coordinator.licenseManager.shouldShowNag && !dismissed {
+        if coordinator.licenseManager.needsLicense {
             ZStack {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()
@@ -16,11 +15,11 @@ struct LicenseGateView: View {
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary)
 
-                    Text("Your Trial Has Expired")
+                    Text("Welcome to Wrangle")
                         .font(.title2)
                         .fontWeight(.semibold)
 
-                    Text("Thanks for trying Wrangle! To continue using the app, please enter a license key or purchase one.")
+                    Text("Enter your license key to get started. Don't have one yet? Purchase a license to unlock the app.")
                         .font(.body)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -36,15 +35,12 @@ struct LicenseGateView: View {
                                 coordinator.licenseManager.licenseKey = licenseKey
                                 Task {
                                     await coordinator.licenseManager.activate()
-                                    if coordinator.licenseManager.isLicensed {
-                                        dismissed = true
-                                    }
                                 }
                             }
                             .disabled(licenseKey.trimmingCharacters(in: .whitespaces).isEmpty)
                             .buttonStyle(.borderedProminent)
 
-                            Link("Buy License", destination: URL(string: "https://wrangle.dev/buy")!)
+                            Link("Buy License", destination: URL(string: "https://wrangleapp.dev/buy")!)
                                 .buttonStyle(.bordered)
                         }
 
@@ -54,12 +50,6 @@ struct LicenseGateView: View {
                                 .foregroundStyle(.orange)
                         }
                     }
-
-                    Button("Continue Without License") {
-                        dismissed = true
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
                 }
                 .padding(40)
                 .background(.regularMaterial)

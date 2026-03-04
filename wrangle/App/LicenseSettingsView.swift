@@ -58,7 +58,7 @@ struct LicenseSettingsView: View {
             }
 
             Section {
-                Link("Purchase a License", destination: URL(string: "https://wrangle.dev/buy")!)
+                Link("Purchase a License", destination: URL(string: "https://wrangleapp.dev/buy")!)
                     .font(.caption)
             }
         }
@@ -73,20 +73,12 @@ struct LicenseSettingsView: View {
                 Image(systemName: "checkmark.seal.fill")
                     .foregroundStyle(.green)
                     .font(.title2)
-            case .trial:
-                Image(systemName: "clock.fill")
-                    .foregroundStyle(.orange)
-                    .font(.title2)
-            case .trialExpired:
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.red)
-                    .font(.title2)
             case .invalid, .expired:
                 Image(systemName: "xmark.seal.fill")
                     .foregroundStyle(.red)
                     .font(.title2)
-            case .unknown:
-                Image(systemName: "questionmark.circle.fill")
+            case .unlicensed:
+                Image(systemName: "key.fill")
                     .foregroundStyle(.secondary)
                     .font(.title2)
             }
@@ -96,22 +88,18 @@ struct LicenseSettingsView: View {
     private var statusTitle: String {
         switch coordinator.licenseManager.licenseStatus {
         case .valid: "Licensed"
-        case .trial: "Trial"
-        case .trialExpired: "Trial Expired"
         case .invalid: "Invalid License"
         case .expired: "License Expired"
-        case .unknown: "Checking..."
+        case .unlicensed: "No License"
         }
     }
 
     private var statusSubtitle: String {
         switch coordinator.licenseManager.licenseStatus {
         case .valid: "Thank you for purchasing Wrangle!"
-        case .trial: "\(coordinator.licenseManager.trialDaysRemaining) days remaining"
-        case .trialExpired: "Please purchase a license to continue using Wrangle."
         case .invalid: "The license key entered is not valid."
         case .expired: "Your license has expired."
-        case .unknown: "Verifying license status..."
+        case .unlicensed: "Enter a license key to activate Wrangle."
         }
     }
 }

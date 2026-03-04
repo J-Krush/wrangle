@@ -1,27 +1,21 @@
 # Pre-Launch Todo
 
-Remaining tasks before Wrangle v1.0 ships as a paid direct-download product.
+Remaining tasks before Wrangle v1.0.5 ships as a paid direct-download product (pay-upfront, no trial).
 
 ---
 
 ## Licensing (LemonSqueezy)
 
-- [ ] Create LemonSqueezy store and product for Wrangle
-- [ ] Replace placeholder API URLs in `Wrangle/App/LicenseManager.swift` with actual LemonSqueezy endpoints
-- [ ] Test license activation, validation, and deactivation with a real key
-- [ ] Update the "Buy License" link (`https://wrangle.dev/buy`) in `LicenseGateView.swift` and `LicenseSettingsView.swift`
+- [x] Create LemonSqueezy store and product for Wrangle
+- [x] Configure LemonSqueezy API endpoints in `LicenseManager.swift` (standard LS API URLs)
+- [x] Update the "Buy License" link (`https://wrangleapp.dev/buy`) in `LicenseGateView.swift` and `LicenseSettingsView.swift`
+- [x] Hard license gate — app requires valid key on launch (no trial, no dismiss)
+- [ ] Test license activation, validation, and deactivation with a real key (test purchase)
 
 ## Update Endpoint
 
-- [ ] Host `version.json` at `https://wrangle.dev/api/version.json` with this format:
-  ```json
-  {
-    "version": "1.0",
-    "download_url": "https://wrangle.dev/download/Wrangle-1.0.dmg",
-    "release_notes": "Initial release."
-  }
-  ```
-- [ ] Test update checker against the hosted endpoint (set local version to `0.9` and verify the alert appears)
+- [x] `version.json` at `Landing Page/public/api/version.json` with correct format
+- [ ] Verify update checker works against the hosted endpoint after deploy
 
 ## Code Signing & Notarization
 
@@ -33,27 +27,29 @@ Remaining tasks before Wrangle v1.0 ships as a paid direct-download product.
     --team-id 3DEKQ7GUK6 \
     --password APP_SPECIFIC_PASSWORD
   ```
-- [ ] Switch Release build signing identity from "Apple Development" to "Developer ID Application" in Xcode
 - [ ] Run `scripts/build-release.sh` and verify `spctl --assess` passes
 - [ ] Run `scripts/create-dmg.sh` and verify the DMG mounts correctly with app + Applications alias
 
-## Xcode Project Cleanup
+## Distribution
 
-- [ ] Remove `Info.plist` from the "Copy Bundle Resources" build phase in Xcode (it's processed separately as `INFOPLIST_FILE`)
+- [x] Landing page updated with pay-upfront model (buy button + download link)
+- [x] `/buy` redirect configured to LemonSqueezy checkout in `astro.config.mjs`
+- [x] DMG download URLs updated to `https://dl.wrangleapp.dev/Wrangle-1.0.5.dmg`
+- [ ] Upload notarized DMG to Cloudflare R2 at `https://dl.wrangleapp.dev/Wrangle-1.0.5.dmg`
+- [ ] Deploy landing page to hosting
+- [ ] Verify `wrangleapp.dev` loads correctly
+- [ ] Verify `wrangleapp.dev/buy` redirects to LemonSqueezy checkout
+- [ ] Verify download link downloads the DMG
 
-## Website & Distribution
+## Final QA (End-to-End Smoke Test)
 
-- [ ] Set up `wrangle.dev` with download page, purchase flow, and version JSON endpoint
-- [ ] Upload the notarized DMG to the download location referenced in `version.json`
-- [ ] Verify end-to-end: fresh download -> mount DMG -> drag to Applications -> launch -> trial works -> purchase -> activate license
-
-## Final QA
-
-- [ ] **Settings:** Cmd+, opens Settings window with General and License tabs
-- [ ] **Licensing:** Enter a test key -> validates against LemonSqueezy -> shows activated state. Deactivate -> shows trial/expired state.
-- [ ] **Trial:** Fresh install shows 14-day trial. After expiry, dismissable nag appears on launch.
-- [ ] **About:** Wrangle menu -> About Wrangle shows version, copyright, "Made by Krush" credits with website link
-- [ ] **File associations:** Right-click a `.md` file in Finder -> Open With -> Wrangle appears. File opens in the app.
-- [ ] **Update checker:** Host test JSON with a newer version -> app shows update alert with download link
-- [ ] **Accessibility:** Turn on VoiceOver -> navigate sidebar and tabs -> all buttons announced with labels
+- [ ] Clear Keychain entry for `dev.wrangle.license`
+- [ ] Launch freshly built app → license gate appears ("Welcome to Wrangle")
+- [ ] Cannot dismiss without a key (no close button, no "continue" option)
+- [ ] Enter a valid test key → Activate → gate disappears → app fully usable
+- [ ] Settings → License shows "Licensed" with customer name
+- [ ] Deactivate → license gate reappears immediately
+- [ ] Enter invalid key → shows error message, gate stays
+- [ ] **About:** Wrangle menu → About Wrangle shows version 1.0.5
+- [ ] **File associations:** Right-click a `.md` file → Open With → Wrangle appears
 - [ ] **DMG:** Mounts with app + Applications alias, drag-to-install works
