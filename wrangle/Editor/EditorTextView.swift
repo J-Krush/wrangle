@@ -21,6 +21,7 @@ protocol EditorTextViewFormattingDelegate: AnyObject {
     func insertBlankLineAbove()
     func clearLinePrefix()
     func handleSmartEnter() -> Bool
+    func shouldIndentCurrentLine() -> Bool
 }
 
 /// Custom NSTextView subclass that draws rounded-rect card backgrounds behind
@@ -82,15 +83,21 @@ class EditorTextView: NSTextView {
     // MARK: - Tab / Enter Overrides
 
     override func insertTab(_ sender: Any?) {
-        // Multi-line selection → indent all lines; otherwise insert 4 spaces
         let sel = selectedRange()
+        // Multi-line selection → indent all lines
         if sel.length > 0,
            let storage = textStorage,
            (storage.string as NSString).substring(with: sel).contains("\n") {
             formattingDelegate?.indentSelectedLines()
-        } else {
-            insertText("    ", replacementRange: selectedRange())
+            return
         }
+        // Single line: indent if on a list line or cursor is in leading whitespace
+        if formattingDelegate?.shouldIndentCurrentLine() == true {
+            formattingDelegate?.indentSelectedLines()
+            return
+        }
+        // Default: insert 4 spaces
+        insertText("    ", replacementRange: selectedRange())
     }
 
     override func insertBacktab(_ sender: Any?) {
@@ -103,6 +110,9 @@ class EditorTextView: NSTextView {
         let theme = Theme.current
         typingAttributes[.font] = theme.editorFont
         typingAttributes[.foregroundColor] = theme.editorForeground
+        let baseParagraph = NSMutableParagraphStyle()
+        baseParagraph.lineSpacing = theme.lineSpacing
+        typingAttributes[.paragraphStyle] = baseParagraph
     }
 
     // MARK: - Option+Arrow Line Operations

@@ -46,12 +46,13 @@ struct LocationSessionRow: View {
                         .frame(width: 6, height: 6)
                 }
             }
-            .padding(.vertical, 2)
+            .padding(.vertical, 0)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help(session.displaySubtitle ?? session.displayTitle)
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         .listRowBackground(
             isActive ? session.iconColor.opacity(0.12) : Color.clear
         )
@@ -61,12 +62,8 @@ struct LocationSessionRow: View {
                 showRenameSheet = true
             }
             Divider()
-            if session.isRunning {
-                Button("Stop") { session.stop() }
-            } else {
-                Button("Restart") { session.restart() }
-            }
-            Button("Close") {
+            Button("Remove", role: .destructive) {
+                session.stop()
                 if let tab = appState.tabs.first(where: { $0.terminalSession?.id == session.id }) {
                     appState.closeTab(tab)
                 }

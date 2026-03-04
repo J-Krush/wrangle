@@ -43,11 +43,11 @@ final class MarkdownParser: @unchecked Sendable {
         options: .anchorsMatchLines
     )
     private static let bulletListRegex = try! NSRegularExpression(
-        pattern: "^(\\s*)[\\-\\*]\\s+(.+)$",
+        pattern: "^(\\s*)[\\-\\*]\\s+(.*)$",
         options: .anchorsMatchLines
     )
     private static let numberedListRegex = try! NSRegularExpression(
-        pattern: "^(\\s*)\\d+\\.\\s+(.+)$",
+        pattern: "^(\\s*)(?:\\d+|[a-zA-Z]+)\\.\\s+(.*)$",
         options: .anchorsMatchLines
     )
     private static let horizontalRuleRegex = try! NSRegularExpression(

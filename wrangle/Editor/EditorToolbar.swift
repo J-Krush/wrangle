@@ -117,9 +117,36 @@ struct EditorToolbar: View {
             toolbarButton(label: nil, icon: "list.bullet", tooltip: "Bullet List", isActive: formats.bulletList) {
                 context?.insertLinePrefix("- ")
             }
-            toolbarButton(label: nil, icon: "list.number", tooltip: "Numbered List", isActive: formats.numberedList) {
+            Menu {
+                Button("1, 2, 3...") {
+                    context?.insertLinePrefix("1. ")
+                    context?.setOrderedListStyle(.numeric)
+                }
+                Button("a, b, c...") {
+                    context?.insertLinePrefix("a. ")
+                    context?.setOrderedListStyle(.lowerAlpha)
+                }
+                Button("A, B, C...") {
+                    context?.insertLinePrefix("A. ")
+                    context?.setOrderedListStyle(.upperAlpha)
+                }
+                Button("i, ii, iii...") {
+                    context?.insertLinePrefix("i. ")
+                    context?.setOrderedListStyle(.lowerRoman)
+                }
+                Button("I, II, III...") {
+                    context?.insertLinePrefix("I. ")
+                    context?.setOrderedListStyle(.upperRoman)
+                }
+            } label: {
+                Image(systemName: "list.number")
+                    .font(.system(size: 12))
+                    .frame(minWidth: 24, minHeight: 20)
+            } primaryAction: {
                 context?.insertLinePrefix("1. ")
             }
+            .foregroundStyle(formats.numberedList ? Color.accentColor : .primary)
+            .help("Numbered List (click-hold for styles)")
             toolbarButton(label: nil, icon: "text.quote", tooltip: "Blockquote", isActive: formats.blockquote) {
                 context?.insertLinePrefix("> ")
             }

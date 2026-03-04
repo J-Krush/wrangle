@@ -96,7 +96,8 @@ class LicenseManager {
             request.httpMethod = "POST"
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-            let body = "license_key=\(licenseKey.trimmingCharacters(in: .whitespaces))&instance_name=\(instanceID)"
+            let instanceName = ProcessInfo.processInfo.hostName
+            let body = "license_key=\(licenseKey.trimmingCharacters(in: .whitespaces))&instance_name=\(instanceName)"
             request.httpBody = body.data(using: .utf8)
 
             let (data, _) = try await URLSession.shared.data(for: request)

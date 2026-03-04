@@ -38,6 +38,7 @@ struct SidebarView: View {
                 }
             }
             .listStyle(.sidebar)
+            .environment(\.defaultMinListRowHeight, 22)
             .scrollContentBackground(.hidden)
             sidebarBottomBar
         }

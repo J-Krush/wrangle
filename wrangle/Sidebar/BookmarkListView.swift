@@ -13,33 +13,9 @@ struct BookmarkListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
 
-    // H-2: Consolidated sheet state
-    enum SheetState: Equatable {
-        case none
-        case renaming(BookmarkedDirectory, text: String)
-
-        static func == (lhs: SheetState, rhs: SheetState) -> Bool {
-            switch (lhs, rhs) {
-            case (.none, .none): return true
-            case (.renaming(let a, _), .renaming(let b, _)):
-                return a.persistentModelID == b.persistentModelID
-            default: return false
-            }
-        }
-    }
-
-    @State private var activeSheet: SheetState = .none
     @State private var expandedBookmarks: Set<String> = []
-    @State private var renameText: String = ""
     @State private var draggingBookmarkID: String?
     @State private var dropTargetBookmarkID: String?
-
-    private var showRenameSheet: Binding<Bool> {
-        Binding(
-            get: { if case .renaming = activeSheet { return true }; return false },
-            set: { if !$0 { activeSheet = .none } }
-        )
-    }
 
     private func shouldShowFileBookmark(_ bookmark: BookmarkedDirectory) -> Bool {
         guard !activeFileTypeFilters.isEmpty, let url = bookmark.resolveURL() else { return true }
@@ -82,11 +58,11 @@ struct BookmarkListView: View {
                             sessions: sessions,
                             onToggle: { toggleExpansion(bookmarkID: bookmarkID) }
                         )
+                        .contextMenu { directoryContextMenu(bookmark) }
                     }
                     .id(bookmarkID)
                     .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                     .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
-                    .contextMenu { bookmarkContextMenu(bookmark) }
                 }
             } else {
                 // Normal view: sessions + filtered file tree (handles both filters composing)
@@ -101,12 +77,12 @@ struct BookmarkListView: View {
                         sessions: sessions,
                         onToggle: { toggleExpansion(bookmarkID: bookmarkID) }
                     )
+                    .contextMenu { directoryContextMenu(bookmark) }
                 }
                 .id(bookmarkID)
                 .listRowBackground(reorderBackground(isSelected: isSelected, bookmarkID: bookmarkID))
                 .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
                 .opacity(isFinderDragActive ? 0.3 : 1.0)
-                .contextMenu { bookmarkContextMenu(bookmark) }
                 .onDrag {
                     draggingBookmarkID = bookmarkID
                     expandedBookmarks.remove(bookmarkID)
@@ -144,7 +120,6 @@ struct BookmarkListView: View {
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
-            .sheet(isPresented: showRenameSheet) { renameSheet }
             .onChange(of: appState.activeTabIndex) { _, _ in
                 guard let session = appState.activeTab?.terminalSession,
                       let bookmarkID = session.bookmarkID else { return }
@@ -248,53 +223,38 @@ struct BookmarkListView: View {
         .buttonStyle(.plain)
         .opacity(isFinderDragActive ? 0.3 : 1.0)
         .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
-        .contextMenu { bookmarkContextMenu(bookmark) }
+        .contextMenu { fileContextMenu(bookmark) }
     }
 
-    // MARK: - Context Menu
+    // MARK: - Context Menus
 
     @ViewBuilder
-    private func bookmarkContextMenu(_ bookmark: BookmarkedDirectory) -> some View {
-        if !bookmark.isFile {
-            Button("Open Terminal") {
-                openTerminal(for: bookmark)
-            }
+    private func fileContextMenu(_ bookmark: BookmarkedDirectory) -> some View {
+        if let url = bookmark.resolveURL() {
+            OpenInSubmenu(url: url)
+        }
+    }
 
-            Button("Launch Claude Code") {
-                launchClaude(for: bookmark)
-            }
-
-            Button("Launch Gemini Code") {
-                launchGemini(for: bookmark)
-            }
-
-            let editors = ExternalEditorLauncher.availableEditors()
-            if !editors.isEmpty {
-                Menu("Open in...") {
-                    ForEach(editors, id: \.bundleID) { editor in
-                        Button(editor.name) {
-                            if let url = bookmark.resolveURL() {
-                                ExternalEditorLauncher.open(directory: url, withBundleID: editor.bundleID)
-                            }
-                        }
-                    }
-                    Divider()
-                    Button("Finder") {
-                        if let url = bookmark.resolveURL() {
-                            NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
-                        }
-                    }
-                }
-            }
-
-            Divider()
+    @ViewBuilder
+    private func directoryContextMenu(_ bookmark: BookmarkedDirectory) -> some View {
+        Button("Open Terminal") {
+            openTerminal(for: bookmark)
         }
 
-        Button("Rename...") {
-            renameText = bookmark.name
-            activeSheet = .renaming(bookmark, text: bookmark.name)
+        Button("Launch Claude Code") {
+            launchClaude(for: bookmark)
         }
+
+        Button("Launch Gemini Code") {
+            launchGemini(for: bookmark)
+        }
+
+        if let url = bookmark.resolveURL() {
+            OpenInSubmenu(url: url)
+        }
+
         Divider()
+
         Button("Remove", role: .destructive) {
             removeBookmark(bookmark)
         }
@@ -331,34 +291,6 @@ struct BookmarkListView: View {
             bookmarkID: bookmarkID,
             launchGemini: true
         )
-    }
-
-    // MARK: - Rename Sheet
-
-    private var renameSheet: some View {
-        VStack(spacing: 16) {
-            Text("Rename Location")
-                .font(.headline)
-            TextField("Name", text: $renameText)
-                .textFieldStyle(.roundedBorder)
-            HStack {
-                Button("Cancel") {
-                    activeSheet = .none
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button("Rename") {
-                    if case .renaming(let bookmark, _) = activeSheet {
-                        bookmark.name = renameText
-                    }
-                    activeSheet = .none
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(renameText.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
-        .padding()
-        .frame(width: 300)
     }
 
     // MARK: - Drag & Drop Reordering
@@ -636,6 +568,34 @@ private struct RightClickMenuArea: NSViewRepresentable {
 
         @objc func addLocation() {
             onAddLocation()
+        }
+    }
+}
+
+// MARK: - Open In Submenu
+
+/// Reusable "Open in..." context menu submenu for files and directories.
+struct OpenInSubmenu: View {
+    let url: URL
+
+    var body: some View {
+        let editors = ExternalEditorLauncher.availableEditors()
+        if !editors.isEmpty {
+            Menu("Open in...") {
+                ForEach(editors, id: \.bundleID) { editor in
+                    Button(editor.name) {
+                        ExternalEditorLauncher.open(directory: url, withBundleID: editor.bundleID)
+                    }
+                }
+                Divider()
+                Button("Finder") {
+                    if url.hasDirectoryPath {
+                        NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: url.path)
+                    } else {
+                        NSWorkspace.shared.activateFileViewerSelecting([url])
+                    }
+                }
+            }
         }
     }
 }

@@ -12,11 +12,6 @@ struct FileTreeContent: View {
     @State private var isLoading = false
     @State private var loadGeneration = 0
     @State private var loadTask: Task<Void, Never>?
-    @State private var newFileName: String = ""
-    @State private var showNewFileSheet = false
-    @State private var showNewFolderSheet = false
-    @State private var newFolderName: String = ""
-    @State private var targetFolderURL: URL?
 
     private var parentBookmarkID: String {
         bookmark.persistentModelID.hashValue.description
@@ -82,8 +77,6 @@ struct FileTreeContent: View {
                 url.stopAccessingSecurityScopedResource()
             }
         }
-        .sheet(isPresented: $showNewFileSheet) { newFileSheet }
-        .sheet(isPresented: $showNewFolderSheet) { newFolderSheet }
     }
 
     // MARK: - Context Menus
@@ -91,17 +84,6 @@ struct FileTreeContent: View {
     @ViewBuilder
     private func contextMenu(for node: FileNode) -> some View {
         if node.isDirectory {
-            Button("New File Here...") {
-                targetFolderURL = node.url
-                newFileName = ""
-                showNewFileSheet = true
-            }
-            Button("New Folder Here...") {
-                targetFolderURL = node.url
-                newFolderName = ""
-                showNewFolderSheet = true
-            }
-            Divider()
             Button("Open Terminal Here") {
                 appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: parentBookmarkID)
             }
@@ -111,86 +93,10 @@ struct FileTreeContent: View {
             Button("Launch Gemini Code Here") {
                 appState.openTerminal(projectName: node.url.lastPathComponent, directory: node.url, bookmarkID: parentBookmarkID, launchGemini: true)
             }
-            Divider()
-            Button("Reveal in Finder") {
-                NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: node.url.path)
-            }
+            OpenInSubmenu(url: node.url)
         } else {
-            Button("Open") {
-                appState.openFile(url: node.url, scopedURL: resolvedURL)
-            }
-            Divider()
-            Button("Open Terminal Here") {
-                let parentURL = node.url.deletingLastPathComponent()
-                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: parentBookmarkID)
-            }
-            Button("Launch Claude Code Here") {
-                let parentURL = node.url.deletingLastPathComponent()
-                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: parentBookmarkID, launchClaude: true)
-            }
-            Button("Launch Gemini Code Here") {
-                let parentURL = node.url.deletingLastPathComponent()
-                appState.openTerminal(projectName: parentURL.lastPathComponent, directory: parentURL, bookmarkID: parentBookmarkID, launchGemini: true)
-            }
-            Divider()
-            Button("Reveal in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([node.url])
-            }
-            Divider()
-            Button("Delete", role: .destructive) {
-                deleteFile(at: node.url)
-            }
+            OpenInSubmenu(url: node.url)
         }
-    }
-
-    // MARK: - Sheets
-
-    private var newFileSheet: some View {
-        VStack(spacing: 16) {
-            Text("New File")
-                .font(.headline)
-            TextField("File name", text: $newFileName)
-                .textFieldStyle(.roundedBorder)
-            HStack {
-                Button("Cancel") {
-                    showNewFileSheet = false
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button("Create") {
-                    createNewFile()
-                    showNewFileSheet = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(newFileName.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
-        .padding()
-        .frame(width: 300)
-    }
-
-    private var newFolderSheet: some View {
-        VStack(spacing: 16) {
-            Text("New Folder")
-                .font(.headline)
-            TextField("Folder name", text: $newFolderName)
-                .textFieldStyle(.roundedBorder)
-            HStack {
-                Button("Cancel") {
-                    showNewFolderSheet = false
-                }
-                .keyboardShortcut(.cancelAction)
-
-                Button("Create") {
-                    createNewFolder()
-                    showNewFolderSheet = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(newFolderName.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-        }
-        .padding()
-        .frame(width: 300)
     }
 
     // MARK: - File Operations
@@ -242,28 +148,4 @@ struct FileTreeContent: View {
         watcher = newWatcher
     }
 
-    private func createNewFile() {
-        guard let folder = targetFolderURL else { return }
-        var name = newFileName.trimmingCharacters(in: .whitespaces)
-        if !name.contains(".") {
-            name += ".md"
-        }
-        let fileURL = folder.appendingPathComponent(name)
-        FileManager.default.createFile(atPath: fileURL.path, contents: nil)
-        loadTree()
-        appState.openFile(url: fileURL, scopedURL: resolvedURL)
-    }
-
-    private func createNewFolder() {
-        guard let folder = targetFolderURL else { return }
-        let name = newFolderName.trimmingCharacters(in: .whitespaces)
-        let folderURL = folder.appendingPathComponent(name)
-        try? FileManager.default.createDirectory(at: folderURL, withIntermediateDirectories: true)
-        loadTree()
-    }
-
-    private func deleteFile(at url: URL) {
-        try? FileManager.default.trashItem(at: url, resultingItemURL: nil)
-        loadTree()
-    }
 }

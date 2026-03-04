@@ -167,6 +167,9 @@ struct MarkdownTextView: NSViewRepresentable {
         /// text view back to the binding (so `updateNSView` won't re-enter).
         var isUpdatingFromTextView = false
 
+        /// Style hint for ordered list continuation (set via toolbar dropdown).
+        var orderedListStyleHint: OrderedListStyle?
+
         /// Guard against re-entrant styling triggered by our own attribute changes.
         private var isStyling = false
 
@@ -325,6 +328,9 @@ struct MarkdownTextView: NSViewRepresentable {
 
             storage.beginEditing()
 
+            // Restore • back to - so parser regex matches on next restyle
+            restoreBulletMarkers(in: storage)
+
             // Replace attributes only, keeping the same string
             let fullRange = NSRange(location: 0, length: storage.length)
             styled.enumerateAttributes(in: fullRange) { attrs, range, _ in
@@ -411,14 +417,32 @@ struct MarkdownTextView: NSViewRepresentable {
         // Cached regex for heading prefix detection
         private static let linePrefixHeadingRegex = try! NSRegularExpression(pattern: "^#{1,6}\\s+")
 
-        /// Insert a prefix at the start of the current line.
+        /// Insert a prefix at the start of the current line (or all selected lines).
         /// Used by the EditorToolbar for line-level formatting (headings, lists, blockquotes).
         func insertLinePrefix(_ prefix: String) {
             guard let textView, let storage = textView.textStorage else { return }
             breakUndo()
 
-            let cursorPos = textView.selectedRange().location
+            let sel = textView.selectedRange()
             let nsString = rawText(from: storage) as NSString
+
+            // Multi-line selection: apply prefix to every non-empty line
+            if sel.length > 0 {
+                let lineRange = LineOperations.expandToFullLines(in: nsString, range: sel)
+                let lineText = nsString.substring(with: lineRange)
+                let lines = lineText.components(separatedBy: "\n")
+                let nonEmptyCount = lines.filter({ !$0.isEmpty }).count
+
+                if nonEmptyCount > 1 {
+                    let result = LineOperations.toggleLinePrefixes(lines: lines, prefix: prefix)
+                    textView.insertText(result, replacementRange: lineRange)
+                    textView.setSelectedRange(NSRange(location: lineRange.location, length: (result as NSString).length))
+                    return
+                }
+            }
+
+            // Single-line logic
+            let cursorPos = sel.location
             let lineRange = nsString.lineRange(for: NSRange(location: min(cursorPos, nsString.length), length: 0))
             let lineText = nsString.substring(with: lineRange)
 
@@ -439,7 +463,45 @@ struct MarkdownTextView: NSViewRepresentable {
                 }
             }
 
-            // For blockquote/list toggling: if line already has the prefix, remove it
+            // Detect whether the new prefix is ordered or bullet
+            let newIsOrdered = !prefix.hasPrefix("-") && !prefix.hasPrefix("*") && !prefix.hasPrefix("+") && !prefix.hasPrefix(">") && !prefix.hasPrefix("#")
+            let newIsBullet = prefix == "- " || prefix == "* " || prefix == "+ "
+
+            // Check for existing ordered list prefix on the line
+            if let existing = LineOperations.orderedPrefixLength(in: lineText) {
+                if newIsOrdered || newIsBullet {
+                    let trimmed = String(lineText.drop(while: { $0 == " " || $0 == "\t" }))
+                    if trimmed.hasPrefix(prefix) {
+                        // Exact same marker → toggle off (remove marker, keep indent)
+                        let markerRange = NSRange(location: lineRange.location + existing.indent, length: existing.total - existing.indent)
+                        textView.insertText("", replacementRange: markerRange)
+                    } else {
+                        // Different style → replace only the marker portion, preserve indent
+                        let markerRange = NSRange(location: lineRange.location + existing.indent, length: existing.total - existing.indent)
+                        textView.insertText(prefix, replacementRange: markerRange)
+                    }
+                    return
+                }
+            }
+
+            // Check for existing bullet prefix on the line
+            if let existing = LineOperations.bulletPrefixLength(in: lineText) {
+                if newIsOrdered || newIsBullet {
+                    let trimmed = String(lineText.drop(while: { $0 == " " || $0 == "\t" }))
+                    if trimmed.hasPrefix(prefix) {
+                        // Exact same marker → toggle off (remove marker, keep indent)
+                        let markerRange = NSRange(location: lineRange.location + existing.indent, length: existing.total - existing.indent)
+                        textView.insertText("", replacementRange: markerRange)
+                    } else {
+                        // Different style → replace only the marker portion, preserve indent
+                        let markerRange = NSRange(location: lineRange.location + existing.indent, length: existing.total - existing.indent)
+                        textView.insertText(prefix, replacementRange: markerRange)
+                    }
+                    return
+                }
+            }
+
+            // For blockquote/other toggling: if line already has the prefix, remove it
             if lineText.hasPrefix(prefix) {
                 let removeRange = NSRange(location: lineRange.location, length: prefix.count)
                 textView.insertText("", replacementRange: removeRange)
@@ -469,13 +531,39 @@ struct MarkdownTextView: NSViewRepresentable {
             let sel = textView.selectedRange()
             let lineRange = LineOperations.expandToFullLines(in: nsString, range: sel)
             let lineText = nsString.substring(with: lineRange)
-            let indented = LineOperations.indentLines(lineText)
+            let indented = LineOperations.adjustOrderedMarkersForIndent(
+                LineOperations.indentLines(lineText)
+            )
 
             textView.insertText(indented, replacementRange: lineRange)
 
-            // Restore selection to cover all indented lines
-            let newLength = (indented as NSString).length
-            textView.setSelectedRange(NSRange(location: lineRange.location, length: newLength))
+            if sel.length == 0 {
+                let newPos = min(sel.location + 4, lineRange.location + (indented as NSString).length)
+                textView.setSelectedRange(NSRange(location: newPos, length: 0))
+            } else {
+                let newLength = (indented as NSString).length
+                textView.setSelectedRange(NSRange(location: lineRange.location, length: newLength))
+            }
+        }
+
+        func shouldIndentCurrentLine() -> Bool {
+            guard let textView, let storage = textView.textStorage else { return false }
+            let nsString = rawText(from: storage) as NSString
+            let sel = textView.selectedRange()
+            let lineRange = nsString.lineRange(for: NSRange(location: min(sel.location, nsString.length), length: 0))
+            let lineText = nsString.substring(with: lineRange).replacingOccurrences(of: "\n", with: "")
+
+            // Always indent list lines
+            if LineOperations.isListLine(lineText) { return true }
+
+            // Indent if cursor is in leading whitespace (before content)
+            let cursorOffset = sel.location - lineRange.location
+            let clampedOffset = min(cursorOffset, (lineText as NSString).length)
+            let prefix = (lineText as NSString).substring(to: clampedOffset)
+            if prefix.allSatisfy({ $0 == " " || $0 == "\t" }) && !lineText.isEmpty {
+                return true
+            }
+            return false
         }
 
         func dedentSelectedLines() {
@@ -486,12 +574,20 @@ struct MarkdownTextView: NSViewRepresentable {
             let sel = textView.selectedRange()
             let lineRange = LineOperations.expandToFullLines(in: nsString, range: sel)
             let lineText = nsString.substring(with: lineRange)
-            let dedented = LineOperations.dedentLines(lineText)
+            let dedented = LineOperations.adjustOrderedMarkersForIndent(
+                LineOperations.dedentLines(lineText)
+            )
 
+            let removedChars = (lineText as NSString).length - (dedented as NSString).length
             textView.insertText(dedented, replacementRange: lineRange)
 
-            let newLength = (dedented as NSString).length
-            textView.setSelectedRange(NSRange(location: lineRange.location, length: newLength))
+            if sel.length == 0 {
+                let newPos = max(sel.location - removedChars, lineRange.location)
+                textView.setSelectedRange(NSRange(location: newPos, length: 0))
+            } else {
+                let newLength = (dedented as NSString).length
+                textView.setSelectedRange(NSRange(location: lineRange.location, length: newLength))
+            }
         }
 
         // MARK: - Line Operations
@@ -704,13 +800,18 @@ struct MarkdownTextView: NSViewRepresentable {
             let lineContentEnd = lineRange.location + (lineText as NSString).length
             let cursorAtEOL = sel.location >= lineContentEnd && sel.length == 0
 
-            let action = LineOperations.detectContinuationPrefix(for: lineText, cursorAtEOL: cursorAtEOL)
+            let action = LineOperations.detectContinuationPrefix(
+                for: lineText,
+                cursorAtEOL: cursorAtEOL,
+                orderedListStyleHint: orderedListStyleHint
+            )
 
             switch action {
             case .continueWith(let prefix):
                 textView.insertText("\n" + prefix, replacementRange: sel)
                 return true
             case .exitList(let clearLength):
+                orderedListStyleHint = nil
                 // Replace the empty prefix line content with just a newline
                 let clearRange = NSRange(location: lineRange.location, length: clearLength)
                 textView.insertText("\n", replacementRange: clearRange)
@@ -721,6 +822,18 @@ struct MarkdownTextView: NSViewRepresentable {
         }
 
         // MARK: - Bullet Marker Helpers
+
+        /// Restores `•` back to `-` in storage before restyling
+        private func restoreBulletMarkers(in storage: NSTextStorage) {
+            var ranges: [NSRange] = []
+            storage.enumerateAttribute(.bulletMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { ranges.append(range) }
+            }
+            for range in ranges.reversed() {
+                let attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: "-", attributes: attrs))
+            }
+        }
 
         /// Replaces `-`/`*` with `•` at positions marked with .bulletMarker
         private func applyBulletMarkers(in storage: NSTextStorage) {
@@ -789,7 +902,7 @@ struct MarkdownTextView: NSViewRepresentable {
         private static let headingRegex = try! NSRegularExpression(pattern: "^(#{1,6})\\s+", options: .anchorsMatchLines)
         private static let blockquoteRegex = try! NSRegularExpression(pattern: "^>\\s?", options: .anchorsMatchLines)
         private static let bulletRegex = try! NSRegularExpression(pattern: "^\\s*[-*]\\s+", options: .anchorsMatchLines)
-        private static let numberedRegex = try! NSRegularExpression(pattern: "^\\s*\\d+\\.\\s+", options: .anchorsMatchLines)
+        private static let numberedRegex = try! NSRegularExpression(pattern: "^\\s*(?:\\d+|[a-zA-Z]+)\\.\\s+", options: .anchorsMatchLines)
         private static let boldRegex = try! NSRegularExpression(pattern: "\\*\\*(.+?)\\*\\*|__(.+?)__")
         private static let italicStarRegex = try! NSRegularExpression(pattern: "(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")
         private static let italicUnderRegex = try! NSRegularExpression(pattern: "(?<!_)_(?!_)(.+?)(?<!_)_(?!_)")

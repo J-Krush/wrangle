@@ -40,6 +40,11 @@ class EditorContext {
         coordinator?.insertBlock(block)
     }
 
+    /// Set the ordered list style hint for smart continuation.
+    func setOrderedListStyle(_ style: OrderedListStyle) {
+        coordinator?.orderedListStyleHint = style
+    }
+
     func indentSelectedLines() { coordinator?.indentSelectedLines() }
     func dedentSelectedLines() { coordinator?.dedentSelectedLines() }
     func deleteCurrentLine() { coordinator?.deleteCurrentLine() }
