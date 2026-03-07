@@ -126,9 +126,19 @@ class ClaudeHookService {
         // Skip if stop_hook_active (prevents hook loops)
         if event.stopHookActive == true { return }
 
+        // Auto-upgrade: if this event targets a non-Claude session, upgrade it
+        upgradeSessionIfNeeded(for: event.sessionID)
+
         guard shouldNotify(for: event) else { return }
         markSessionNeedsAttention(for: event.sessionID)
         sendNotification(for: event)
+    }
+
+    private func upgradeSessionIfNeeded(for sessionID: String) {
+        guard let coordinator,
+              let result = coordinator.findTerminalSession(bySessionID: sessionID),
+              !result.session.isClaude else { return }
+        result.session.upgradeToClaudeSession()
     }
 
     private func markSessionNeedsAttention(for sessionID: String) {
@@ -140,6 +150,9 @@ class ClaudeHookService {
 
     private func shouldNotify(for event: ClaudeHookEvent) -> Bool {
         guard let coordinator else { return true }
+
+        // Skip if notifications are not enabled
+        if !coordinator.notificationManager.isEnabled { return false }
 
         // If app is in foreground and the session's tab is active in any window, suppress
         if coordinator.isAppForeground {

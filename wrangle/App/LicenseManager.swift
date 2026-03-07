@@ -20,6 +20,7 @@ class LicenseManager {
     private static let instanceIDKey = "LicenseManager.instanceID"
     private static let keychainService = "dev.wrangle.license"
     private static let keychainAccount = "license-key"
+    private static let devBypassKey = "WRANGLE-DEV-PREVIEW"
 
     // Replace with your actual LemonSqueezy store/product IDs
     private static let activateURL = "https://api.lemonsqueezy.com/v1/licenses/activate"
@@ -36,7 +37,11 @@ class LicenseManager {
     }
 
     var isLicensed: Bool {
-        licenseStatus == .valid
+        #if DEBUG
+        return true
+        #else
+        return licenseStatus == .valid
+        #endif
     }
 
     var needsLicense: Bool {
@@ -46,19 +51,33 @@ class LicenseManager {
     // MARK: - Lifecycle
 
     func loadOnLaunch() {
+        #if DEBUG
+        licenseStatus = .valid
+        #else
         if let storedKey = loadKeyFromKeychain() {
             licenseKey = storedKey
             Task { await validate() }
         } else {
             licenseStatus = .unlicensed
         }
+        #endif
     }
 
     // MARK: - License Actions
 
     func activate() async {
-        guard !licenseKey.trimmingCharacters(in: .whitespaces).isEmpty else {
+        let trimmedKey = licenseKey.trimmingCharacters(in: .whitespaces)
+        guard !trimmedKey.isEmpty else {
             statusMessage = "Please enter a license key."
+            return
+        }
+
+        // Dev bypass — no API call needed
+        if trimmedKey == Self.devBypassKey {
+            licenseStatus = .valid
+            customerName = "Developer Preview"
+            statusMessage = "Developer access granted."
+            saveKeyToKeychain(trimmedKey)
             return
         }
 
@@ -95,6 +114,12 @@ class LicenseManager {
 
     func validate() async {
         guard !licenseKey.isEmpty else { return }
+
+        if licenseKey == Self.devBypassKey {
+            licenseStatus = .valid
+            customerName = "Developer Preview"
+            return
+        }
 
         isValidating = true
 

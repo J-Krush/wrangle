@@ -281,6 +281,14 @@ struct SwiftTermView: NSViewRepresentable {
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
             Task { @MainActor in
                 session.emulator.title = title
+
+                // Downgrade auto-detected Claude sessions when title reverts to a shell name
+                if session.wasAutoDetected {
+                    let genericShells: Set<String> = ["bash", "zsh", "sh", "fish", "tcsh", "csh", "ksh", "dash"]
+                    if genericShells.contains(title.lowercased()) {
+                        session.downgradeFromClaudeSession()
+                    }
+                }
             }
         }
 

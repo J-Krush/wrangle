@@ -241,6 +241,7 @@ struct SidebarView: View {
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
         panel.message = "Select a file or directory to add as a location"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }

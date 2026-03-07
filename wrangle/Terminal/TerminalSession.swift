@@ -20,6 +20,9 @@ class TerminalSession: Identifiable {
     var needsAttention: Bool = false
     var sessionContext: SessionContext?
 
+    /// Whether this session was auto-detected as Claude (vs. explicitly launched)
+    var wasAutoDetected: Bool = false
+
     /// Command to send after the shell process initializes (e.g., claude path).
     /// Consumed by SwiftTermView.Coordinator after process start.
     var pendingCommand: String?
@@ -50,6 +53,18 @@ class TerminalSession: Identifiable {
         return projectName
     }
 
+    /// Returns the emulator's title as a subtitle when it differs from the display title
+    /// and isn't a generic shell name. Captures plan names set via OSC escape sequences.
+    var emulatorSubtitle: String? {
+        guard isClaude || isGemini,
+              let emulatorTitle = emulator.title,
+              !emulatorTitle.isEmpty,
+              emulatorTitle != displayTitle else { return nil }
+        let genericShells: Set<String> = ["bash", "zsh", "sh", "fish", "tcsh", "csh", "ksh", "dash"]
+        if genericShells.contains(emulatorTitle.lowercased()) { return nil }
+        return emulatorTitle
+    }
+
     var displaySubtitle: String? {
         guard let path = (workingDirectory ?? emulator.workingDirectory)?.path(percentEncoded: false) else { return nil }
         let home = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
@@ -60,7 +75,7 @@ class TerminalSession: Identifiable {
     }
 
     var iconName: String {
-        if isClaude { return "claude-logo" }
+        if isClaude { return "claude-logo-svg" }
         if isGemini { return "google-g-logo" }
         return "terminal.fill"
     }
@@ -105,6 +120,23 @@ class TerminalSession: Identifiable {
         if sessionContext == nil { sessionContext = SessionContext() }
         let dir = workingDirectory ?? emulator.workingDirectory
         sessionContext?.refresh(for: dir, isClaude: isClaude, isGemini: isGemini)
+    }
+
+    /// Upgrades a raw terminal session to a Claude Code session.
+    func upgradeToClaudeSession() {
+        guard !isClaude else { return }
+        isClaude = true
+        wasAutoDetected = true
+        updateDetectedClaudeFile()
+        refreshSessionContext()
+    }
+
+    /// Reverts an auto-detected Claude session back to a plain terminal.
+    func downgradeFromClaudeSession() {
+        guard wasAutoDetected else { return }
+        isClaude = false
+        wasAutoDetected = false
+        sessionContext = nil
     }
 
     func stop() {

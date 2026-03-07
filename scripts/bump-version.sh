@@ -16,11 +16,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 PBXPROJ="$REPO_ROOT/wrangle.xcodeproj/project.pbxproj"
-INDEX_ASTRO="$REPO_ROOT/../Landing Page/src/pages/index.astro"
-VERSION_JSON="$REPO_ROOT/../Landing Page/public/api/version.json"
+ENV_FILE="$REPO_ROOT/../Landing Page/.env"
 
 # Validate files exist
-for f in "$PBXPROJ" "$INDEX_ASTRO" "$VERSION_JSON"; do
+for f in "$PBXPROJ" "$ENV_FILE"; do
     if [[ ! -f "$f" ]]; then
         echo "Error: File not found: $f"
         exit 1
@@ -41,19 +40,12 @@ sed -i '' "s/MARKETING_VERSION = $OLD_VERSION;/MARKETING_VERSION = $NEW_VERSION;
 sed -i '' "s/CURRENT_PROJECT_VERSION = $OLD_BUILD;/CURRENT_PROJECT_VERSION = $NEW_BUILD;/g" "$PBXPROJ"
 echo "✓ project.pbxproj — MARKETING_VERSION and CURRENT_PROJECT_VERSION updated"
 
-# 2. Update index.astro
-sed -i '' "s/Wrangle-${OLD_VERSION}\.dmg/Wrangle-${NEW_VERSION}.dmg/g" "$INDEX_ASTRO"
-ASTRO_COUNT=$(grep -c "Wrangle-${NEW_VERSION}.dmg" "$INDEX_ASTRO")
-echo "✓ index.astro — $ASTRO_COUNT download links updated"
-
-# 3. Update version.json
-sed -i '' "s/\"version\": \"$OLD_VERSION\"/\"version\": \"$NEW_VERSION\"/" "$VERSION_JSON"
-sed -i '' "s/Wrangle-${OLD_VERSION}\.dmg/Wrangle-${NEW_VERSION}.dmg/" "$VERSION_JSON"
-echo "✓ version.json — version and download_url updated"
+# 2. Update Landing Page .env
+sed -i '' "s/APP_VERSION=.*/APP_VERSION=$NEW_VERSION/" "$ENV_FILE"
+echo "✓ .env — APP_VERSION updated to $NEW_VERSION"
 
 echo ""
 echo "Done! Verify with:"
 echo "  grep MARKETING_VERSION wrangle.xcodeproj/project.pbxproj"
 echo "  grep CURRENT_PROJECT_VERSION wrangle.xcodeproj/project.pbxproj"
-echo "  grep 'Wrangle-' \"../Landing Page/src/pages/index.astro\""
-echo "  cat \"../Landing Page/public/api/version.json\""
+echo "  cat \"../Landing Page/.env\""

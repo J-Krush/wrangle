@@ -145,6 +145,9 @@ struct EditorToolbar: View {
             } primaryAction: {
                 context?.insertLinePrefix("1. ")
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
             .foregroundStyle(formats.numberedList ? Color.accentColor : .primary)
             .help("Numbered List (click-hold for styles)")
             toolbarButton(label: nil, icon: "text.quote", tooltip: "Blockquote", isActive: formats.blockquote) {

@@ -33,6 +33,8 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 400)
         } detail: {
             VStack(spacing: 0) {
+                NotificationBannerView()
+
                 ZStack {
                     // Keep all terminal NSViews alive to preserve process state and scrollback
                     ForEach(appState.tabs) { tab in
@@ -133,6 +135,7 @@ struct ContentView: View {
                 GlobalSearchView()
             }
             LicenseGateView()
+            NotificationPermissionView()
         }
         .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
         .background { TitleBarAccessoryInstaller(appState: appState, modelContainer: modelContext.container) }
@@ -148,6 +151,11 @@ struct ContentView: View {
         }
         .onChange(of: bookmarks.count) { _, _ in
             rebuildBookmarkPathCache()
+        }
+        .onChange(of: coordinator.isAppForeground) { _, isForeground in
+            if isForeground {
+                Task { await coordinator.notificationManager.refreshStatus() }
+            }
         }
         .onAppear {
             appState.coordinator = coordinator

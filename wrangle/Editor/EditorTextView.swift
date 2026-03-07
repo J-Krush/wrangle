@@ -332,7 +332,7 @@ class EditorTextView: NSTextView {
     // MARK: - XML Fold Triangles
 
     private func drawXMLFoldTriangles() {
-        guard let layoutManager, let textContainer, let textStorage else { return }
+        guard let layoutManager, let textStorage else { return }
         guard textStorage.length > 0 else { return }
 
         textStorage.enumerateAttribute(

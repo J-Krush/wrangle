@@ -24,7 +24,7 @@ struct LocationSessionRow: View {
                             .resizable()
                             .renderingMode(.template)
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: 12, height: 12)
+                            .frame(width: 14, height: 14)
                             .foregroundStyle(isActive ? session.iconColor : Color.secondary)
                     } else {
                         Image(systemName: session.iconName)
@@ -32,11 +32,20 @@ struct LocationSessionRow: View {
                             .foregroundStyle(isActive ? session.iconColor : Color.secondary)
                     }
                 }
-                .frame(width: 16, alignment: .center)
+                .frame(width: 18, alignment: .center)
 
-                Text(session.displayTitle)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(session.displayTitle)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    if let subtitle = session.emulatorSubtitle {
+                        Text(subtitle)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
 
                 Spacer()
 
@@ -46,7 +55,7 @@ struct LocationSessionRow: View {
                         .frame(width: 6, height: 6)
                 }
             }
-            .padding(.vertical, 0)
+            .padding(.vertical, session.emulatorSubtitle != nil ? 2 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
@@ -54,7 +63,13 @@ struct LocationSessionRow: View {
         .help(session.displaySubtitle ?? session.displayTitle)
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
         .listRowBackground(
-            isActive ? session.iconColor.opacity(0.12) : Color.clear
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(session.iconColor.opacity(isActive ? 0.9 : 0.4))
+                    .frame(width: 3)
+                Spacer()
+            }
+            .background(isActive ? session.iconColor.opacity(0.12) : Color.clear)
         )
         .contextMenu {
             Button("Rename...") {

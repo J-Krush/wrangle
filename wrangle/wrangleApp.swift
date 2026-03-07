@@ -438,11 +438,8 @@ struct WrangleApp: App {
         notificationDelegate.coordinator = coordinator
         center.delegate = notificationDelegate
 
-        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
-            if let error {
-                print("[Wrangle] Notification auth error: \(error)")
-            }
-        }
+        // Check current notification status (no eager authorization)
+        Task { await coordinator.notificationManager.refreshStatus() }
 
         // Register notification category
         let category = UNNotificationCategory(

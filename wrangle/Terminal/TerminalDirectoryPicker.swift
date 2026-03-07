@@ -107,6 +107,7 @@ struct TerminalDirectoryPicker: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let name = url.lastPathComponent

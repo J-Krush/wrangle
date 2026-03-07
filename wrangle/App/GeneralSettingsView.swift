@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct GeneralSettingsView: View {
     @Environment(AppCoordinator.self) private var coordinator
@@ -33,6 +34,29 @@ struct GeneralSettingsView: View {
 
             Section("Updates") {
                 Toggle("Check for Updates Automatically", isOn: .constant(true))
+            }
+
+            Section("Notifications") {
+                let manager = coordinator.notificationManager
+
+                HStack(spacing: 6) {
+                    Image(systemName: manager.isEnabled ? "bell.fill" : "bell.slash.fill")
+                        .foregroundStyle(manager.isEnabled ? .green : .orange)
+                    Text(manager.isEnabled ? "Enabled" : "Disabled")
+                }
+
+                if manager.authorizationStatus == .denied {
+                    Button("Open Notification Settings...") {
+                        manager.openSystemSettings()
+                    }
+                    Text("Notifications were denied. Enable them in System Settings to receive agent session alerts.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if manager.authorizationStatus == .notDetermined {
+                    Button("Enable Notifications") {
+                        Task { await manager.requestAuthorization() }
+                    }
+                }
             }
         }
         .formStyle(.grouped)

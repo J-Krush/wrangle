@@ -10,6 +10,7 @@ class AppCoordinator {
     var isSetupComplete: Bool = false
     var updateChecker = UpdateChecker()
     var licenseManager = LicenseManager()
+    var notificationManager = NotificationPermissionManager()
 
     // Registry of all window states
     private(set) var windowStates: [UUID: AppState] = [:]

@@ -670,7 +670,7 @@ struct MarkdownTextView: NSViewRepresentable {
             let nextHasNewline = nextText.hasSuffix("\n")
 
             var newNext = nextHasNewline ? nextText : nextText + "\n"
-            var newCurrent = currentHasNewline ? currentText : currentText + "\n"
+            let newCurrent = currentHasNewline ? currentText : currentText + "\n"
 
             if !nextHasNewline {
                 newNext = String(newNext.dropLast())

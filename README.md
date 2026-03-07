@@ -61,9 +61,152 @@ All scripts live in `scripts/` and should be run from the project root.
 | `scripts/bump-version.sh <version>` | Update version number across all files (Xcode project, landing page, version API) |
 | `scripts/build-release.sh` | Archive, code sign, notarize, and staple the app |
 | `scripts/create-dmg.sh` | Package the stapled app into a notarized DMG installer |
-| `scripts/polish-screenshot.py` | Add gradient background, rounded corners, and shadow to a screenshot |
+| `scripts/polish-screenshot.py` | Add rounded corners and optional notification overlay to a screenshot |
 | `scripts/polish-all-screenshots.sh` | Batch process all `screenshots/raw/*.png` into polished marketing images |
-| `scripts/polish-video.sh` | Post-process raw screen recordings into polished MP4 + GIF |
+| `scripts/polish-video.sh` | Post-process raw screen recordings into polished MP4 + GIF with gradient background |
+
+### Marketing Screenshots
+
+#### Prerequisites
+
+```bash
+pip3 install Pillow
+```
+
+#### Window setup
+
+Set the app window to a consistent size before capturing (~1200×750pt produces good @2x images):
+
+```applescript
+tell application "System Events"
+    set frontmost of process "Wrangle" to true
+    tell process "Wrangle"
+        set position of window 1 to {100, 100}
+        set size of window 1 to {1200, 750}
+    end tell
+end tell
+```
+
+Find the window ID with `GetWindowID` or:
+
+```bash
+osascript -e 'tell app "Wrangle" to id of window 1'
+```
+
+#### Capture
+
+```bash
+# -l <windowID> captures specific window; -o suppresses system shadow
+screencapture -l <windowID> -o screenshots/raw/shot-name.png
+```
+
+#### Shot list
+
+| # | Filename | Stage in app | Key feature |
+|---|----------|-------------|-------------|
+| 1 | `editor-markdown.png` | Open a CLAUDE.md with headings, code blocks, lists | Inline markdown rendering |
+| 2 | `editor-xml.png` | Open a system prompt with `<tools>` / `<instructions>` tags | XML-in-markdown highlighting |
+| 3 | `terminal.png` | Terminal panel open running a Claude Code session | Embedded terminal |
+| 4 | `fuzzy-finder.png` | Cmd+P open with partial filename typed | Fuzzy finder overlay |
+| 5 | `file-tree.png` | Sidebar expanded with bookmarked projects, AI file icons visible | File tree + AI file recognition |
+| 6 | `notification.png` | Editor with a notification banner composited | Notification overlay (polish step) |
+
+#### Polish a single screenshot
+
+```bash
+python3 scripts/polish-screenshot.py <input> <output> [options]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--radius N` | `24` | Corner radius in px |
+| `--notification` | off | Add macOS notification banner overlay |
+| `--notification-title TEXT` | `Wrangle` | Notification title |
+| `--notification-body TEXT` | *(empty)* | Notification body text |
+| `--notification-icon PATH` | auto-detect | Icon PNG (falls back to `Assets.xcassets/AppIcon`) |
+
+```bash
+# Basic — rounded corners only
+python3 scripts/polish-screenshot.py screenshots/raw/editor-markdown.png screenshots/polished/editor-markdown.png
+
+# With notification banner
+python3 scripts/polish-screenshot.py screenshots/raw/editor-markdown.png screenshots/polished/notification.png \
+    --notification --notification-body "New version available"
+```
+
+Output is PNG with transparent corners (RGBA), same dimensions as input.
+
+#### Batch processing
+
+```bash
+# Process all screenshots/raw/*.png → screenshots/polished/
+./scripts/polish-all-screenshots.sh
+
+# Custom radius
+./scripts/polish-all-screenshots.sh --radius 16
+```
+
+### Marketing Videos
+
+#### Prerequisites
+
+```bash
+brew install ffmpeg
+pip3 install Pillow
+```
+
+#### Recording
+
+```bash
+# Record window to .mov — press Ctrl+C to stop
+screencapture -v -l <windowID> recordings/raw/feature-name.mov
+```
+
+#### Shot list
+
+| # | Filename | Duration | What to show |
+|---|----------|----------|-------------|
+| 1 | `inline-editing.mov` | 15–20s | Type markdown, watch headings/code blocks render inline |
+| 2 | `xml-highlighting.mov` | 10–15s | Scroll through a prompt file with XML tags expanding/collapsing |
+| 3 | `terminal-session.mov` | 15–20s | Open terminal panel, run a command or Claude Code session |
+| 4 | `fuzzy-finder.mov` | 8–12s | Cmd+P, type partial name, open file |
+| 5 | `file-navigation.mov` | 10–15s | Browse file tree, open different AI file types, show icons |
+| 6 | `full-workflow.mov` | 25–30s | End-to-end: open project, edit prompt, run in terminal |
+
+#### Polish command
+
+```bash
+./scripts/polish-video.sh <input.mov> <output-basename> [options]
+```
+
+| Option | Default | Values | Description |
+|--------|---------|--------|-------------|
+| `--size` | `hero` | `hero` (2560×1600), `blog` (1920×1200), `social` (1280×800), `all` | Canvas size preset |
+| `--gradient` | `dark` | `dark`, `subtle`, `deep` | Background gradient style |
+| `--format` | `both` | `mp4`, `gif`, `both` | Output format |
+| `--radius` | `20` | integer | Corner radius in px |
+| `--fps` | `15` | integer | GIF framerate |
+| `--no-shadow` | *(shadow on)* | flag | Disable drop shadow |
+| `--quality` | `18` | 0–51 | H.264 CRF (lower = better quality, bigger file) |
+
+```bash
+# Default — hero size, dark gradient, MP4 + GIF
+./scripts/polish-video.sh recordings/raw/inline-editing.mov videos/polished/inline-editing
+
+# Social-optimized GIF only
+./scripts/polish-video.sh recordings/raw/fuzzy-finder.mov videos/polished/fuzzy-finder \
+    --size social --format gif --fps 12
+
+# All sizes at once
+./scripts/polish-video.sh recordings/raw/full-workflow.mov videos/polished/full-workflow \
+    --size all --gradient deep
+```
+
+#### Output notes
+
+- **MP4** — Use for website hero, Twitter/X. Expect 2–8 MB for 15–20s clips at hero size.
+- **GIF** — Use for README badges, docs, GitHub PR descriptions. Expect 5–20 MB depending on duration/complexity.
+- `--size all` outputs `<basename>-hero.mp4`, `<basename>-blog.mp4`, `<basename>-social.mp4` (and GIFs).
 
 ---
 
@@ -114,7 +257,7 @@ Falls back to `hdiutil` if not installed, but the Homebrew version produces a ni
 **6. Set up LemonSqueezy**
 
 - Create store and product at [lemonsqueezy.com](https://www.lemonsqueezy.com)
-- Product ID `866499` is configured in `astro.config.mjs` (`/buy` redirect) and in `LicenseGateView.swift`
+- Product ID `8860d1f0-c122-4ab6-8528-ee727d3065e3` is configured in `astro.config.mjs` (`/buy` redirect) and in `LicenseGateView.swift`
 
 **7. Deploy landing page**
 
@@ -200,6 +343,24 @@ This publishes the updated download links and `version.json` so the in-app updat
 git tag v1.0.6
 git push origin main --tags
 ```
+
+---
+
+## Dev & Internal Builds
+
+### Debug builds (Xcode)
+
+The license gate is automatically bypassed in Debug builds. Just hit Cmd+R — no license key needed.
+
+### Signed builds for colleagues
+
+For Release/Archive builds shared with colleagues, enter this key in the activation screen:
+
+```
+WRANGLE-DEV-PREVIEW
+```
+
+This activates the app locally without calling the LemonSqueezy API. Share this key privately with trusted colleagues. If it leaks, update the `devBypassKey` constant in `LicenseManager.swift` and distribute a new build.
 
 ---
 

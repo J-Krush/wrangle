@@ -410,6 +410,7 @@ private struct LocationHeaderLabel: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .layoutPriority(1)
 
             if !sessions.isEmpty {
                 let hasAttention = sessions.contains { $0.needsAttention }
@@ -423,9 +424,11 @@ private struct LocationHeaderLabel: View {
                             .fill(hasAttention ? Color.green.opacity(0.25) : Color.secondary.opacity(0.15))
                     )
                     .foregroundStyle(hasAttention ? .green : .secondary)
+                    .fixedSize()
             }
 
-            SessionAddButton(bookmark: bookmark, hasActiveSessions: !sessions.isEmpty)
+            SessionAddButton(bookmark: bookmark, sessions: sessions)
+                .fixedSize()
                 .opacity(isHovering || !sessions.isEmpty ? 1 : 0)
                 .allowsHitTesting(isHovering || !sessions.isEmpty)
                 .animation(.easeInOut(duration: 0.15), value: isHovering)
@@ -438,7 +441,7 @@ private struct LocationHeaderLabel: View {
 
 private struct SessionAddButton: View {
     let bookmark: BookmarkedDirectory
-    let hasActiveSessions: Bool
+    let sessions: [TerminalSession]
     @Environment(AppState.self) private var appState
 
     var body: some View {
@@ -459,14 +462,15 @@ private struct SessionAddButton: View {
             .help("Runs claude --dangerously-skip-permissions. Use with caution — this bypasses all permission prompts.")
         } label: {
             Image(systemName: "brain.head.profile")
+                .frame(width: 20)
                 .foregroundStyle(.secondary)
                 .contentShape(Rectangle())
         }
         .menuStyle(.borderlessButton)
         .contentShape(Rectangle())
-        .tint(hasActiveSessions
-            ? Color.purple
-            : Color(red: 0.578, green: 0.578, blue: 0.578, opacity: 1.0))
+        .tint(sessions.isEmpty
+            ? Color(red: 0.578, green: 0.578, blue: 0.578, opacity: 1.0)
+            : sessions.first!.iconColor)
         .menuIndicator(.hidden)
         .help("New Session")
     }
@@ -598,8 +602,4 @@ struct OpenInSubmenu: View {
             }
         }
     }
-}
-
-#Preview{
-    SessionAddButton(bookmark: BookmarkedDirectory(name: "Wrangle", bookmarkData: Data()), hasActiveSessions: false)
 }

@@ -123,30 +123,29 @@ struct TitleBarTabStrip: View {
                         )
                     }
                 }
+                .fixedSize(horizontal: true, vertical: false)
             }
-
-            Spacer(minLength: 0)
-                .contentShape(Rectangle())
-                .overlay(alignment: .leading) {
-                    if isEndDropTargeted && draggingTabID != nil {
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(Color.accentColor)
-                            .frame(width: 2)
-                            .padding(.vertical, 2)
+            .contentShape(Rectangle())
+            .overlay(alignment: .trailing) {
+                if isEndDropTargeted && draggingTabID != nil {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.accentColor)
+                        .frame(width: 2)
+                        .padding(.vertical, 2)
+                }
+            }
+            .onDrop(of: [UTType.text], isTargeted: $isEndDropTargeted) { providers in
+                guard let provider = providers.first else { return false }
+                _ = provider.loadObject(ofClass: NSString.self) { string, _ in
+                    guard let idString = string as? String,
+                          let sourceID = UUID(uuidString: idString) else { return }
+                    Task { @MainActor in
+                        appState.moveTabToEnd(sourceID: sourceID)
+                        draggingTabID = nil
                     }
                 }
-                .onDrop(of: [UTType.text], isTargeted: $isEndDropTargeted) { providers in
-                    guard let provider = providers.first else { return false }
-                    _ = provider.loadObject(ofClass: NSString.self) { string, _ in
-                        guard let idString = string as? String,
-                              let sourceID = UUID(uuidString: idString) else { return }
-                        Task { @MainActor in
-                            appState.moveTabToEnd(sourceID: sourceID)
-                            draggingTabID = nil
-                        }
-                    }
-                    return true
-                }
+                return true
+            }
 
             // "+" menu for new tab options
             Menu {
@@ -202,6 +201,7 @@ struct TitleBarTabStrip: View {
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
+            .fixedSize()
             .help("New Tab")
             .accessibilityLabel("New tab")
             .padding(.horizontal, 6)
