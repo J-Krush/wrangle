@@ -12,7 +12,7 @@ enum FeedbackHelper {
     }
 
     static func openFeedback(_ type: FeedbackType) {
-        let base = "https://github.com/J-Krush/Wrangle/issues/new"
+        let base = "https://github.com/J-Krush/wrangle-feedback/issues/new"
 
         let title: String
         let labels: String
