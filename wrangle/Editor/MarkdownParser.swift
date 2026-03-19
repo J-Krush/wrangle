@@ -9,6 +9,9 @@ import Foundation
 /// characters remain visible.
 extension NSAttributedString.Key {
     static let bulletMarker = NSAttributedString.Key("com.Wrangle.bulletMarker")
+    /// Marks a `- [ ]` or `- [x]` checkbox prefix for replacement in writing mode.
+    /// Value is `true` (checked) or `false` (unchecked).
+    static let checkboxMarker = NSAttributedString.Key("com.Wrangle.checkboxMarker")
 }
 
 final class MarkdownParser: @unchecked Sendable {
@@ -42,8 +45,12 @@ final class MarkdownParser: @unchecked Sendable {
         pattern: "^(>\\s?)(.*)$",
         options: .anchorsMatchLines
     )
+    private static let checkboxRegex = try! NSRegularExpression(
+        pattern: "^(\\s*)(- \\[)([ xX])(\\]\\s+)(.*)$",
+        options: .anchorsMatchLines
+    )
     private static let bulletListRegex = try! NSRegularExpression(
-        pattern: "^(\\s*)[\\-\\*]\\s+(.*)$",
+        pattern: "^(\\s*)[\\-\\*]\\s+(?!\\[[ xX]\\]\\s)(.*)$",
         options: .anchorsMatchLines
     )
     private static let numberedListRegex = try! NSRegularExpression(
@@ -103,7 +110,10 @@ final class MarkdownParser: @unchecked Sendable {
         // 7. Blockquotes
         applyBlockquotes(in: result, fullRange: fullRange, theme: theme)
 
-        // 8. Bullet lists
+        // 8a. Checkboxes (before bullet lists so `- [ ]` isn't caught as a plain bullet)
+        applyCheckboxes(in: result, fullRange: fullRange, theme: theme)
+
+        // 8b. Bullet lists
         applyBulletLists(in: result, fullRange: fullRange, theme: theme)
 
         // 9. Numbered lists
@@ -400,7 +410,52 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 8. Bullet Lists
+    // 8a. Checkboxes (task lists)
+    private func applyCheckboxes(
+        in attrStr: NSMutableAttributedString,
+        fullRange: NSRange,
+        theme: Theme
+    ) {
+        let matches = Self.checkboxRegex.matches(in: attrStr.string, range: fullRange)
+
+        for match in matches.reversed() {
+            let range = match.range
+            if isProtected(range) { continue }
+
+            let style = NSMutableParagraphStyle()
+            style.lineSpacing = theme.lineSpacing
+            style.paragraphSpacing = theme.paragraphSpacing / 2
+            style.headIndent = 28
+            style.firstLineHeadIndent = 12
+            style.tabStops = [NSTextTab(textAlignment: .left, location: 28)]
+
+            attrStr.addAttribute(.paragraphStyle, value: style, range: range)
+
+            if shouldHideMarkdownSyntax {
+                // Groups: 1=indent, 2="- [", 3=state char, 4="] ", 5=text
+                let stateRange = match.range(at: 3)
+                let stateChar = (attrStr.string as NSString).substring(with: stateRange)
+                let isChecked = stateChar == "x" || stateChar == "X"
+
+                // Mark the entire "- [x] " prefix (groups 2+3+4) for replacement
+                let prefixStart = match.range(at: 2).location
+                let prefixEnd = match.range(at: 4).location + match.range(at: 4).length
+                let prefixRange = NSRange(location: prefixStart, length: prefixEnd - prefixStart)
+                attrStr.addAttribute(.checkboxMarker, value: isChecked, range: prefixRange)
+
+                // Apply strikethrough to checked items
+                if isChecked {
+                    let textRange = match.range(at: 5)
+                    attrStr.addAttributes([
+                        .strikethroughStyle: NSUnderlineStyle.single.rawValue,
+                        .foregroundColor: NSColor.secondaryLabelColor,
+                    ], range: textRange)
+                }
+            }
+        }
+    }
+
+    // 8b. Bullet Lists
     private func applyBulletLists(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,

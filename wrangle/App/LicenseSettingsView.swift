@@ -20,13 +20,24 @@ struct LicenseSettingsView: View {
                 }
             }
 
+            if manager.isInTrial {
+                Section("Trial") {
+                    if !manager.trialEmail.isEmpty {
+                        LabeledContent("Email", value: manager.trialEmail)
+                    }
+                    Link("Buy License — $24", destination: URL(string: "https://wrangleapp.dev/buy")!)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.teal)
+                }
+            }
+
             Section("License Key") {
                 TextField("XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX", text: $manager.licenseKey)
                     .textFieldStyle(.roundedBorder)
-                    .disabled(manager.isLicensed || manager.isValidating)
+                    .disabled(manager.licenseStatus == .valid || manager.isValidating)
 
                 HStack {
-                    if manager.isLicensed {
+                    if manager.licenseStatus == .valid {
                         Button("Deactivate") {
                             Task { await coordinator.licenseManager.deactivate() }
                         }
@@ -57,10 +68,6 @@ struct LicenseSettingsView: View {
                 }
             }
 
-            Section {
-                Link("Purchase a License", destination: URL(string: "https://wrangleapp.dev/buy")!)
-                    .font(.caption)
-            }
         }
         .formStyle(.grouped)
         .frame(width: 450)
@@ -77,6 +84,10 @@ struct LicenseSettingsView: View {
                 Image(systemName: "xmark.seal.fill")
                     .foregroundStyle(.red)
                     .font(.title2)
+            case .trial:
+                Image(systemName: "clock.fill")
+                    .foregroundStyle(.blue)
+                    .font(.title2)
             case .unlicensed:
                 Image(systemName: "key.fill")
                     .foregroundStyle(.secondary)
@@ -90,16 +101,20 @@ struct LicenseSettingsView: View {
         case .valid: "Licensed"
         case .invalid: "Invalid License"
         case .expired: "License Expired"
+        case .trial: "Trial Active"
         case .unlicensed: "No License"
         }
     }
 
     private var statusSubtitle: String {
         switch coordinator.licenseManager.licenseStatus {
-        case .valid: "Thank you for purchasing Wrangle!"
-        case .invalid: "The license key entered is not valid."
-        case .expired: "Your license has expired."
-        case .unlicensed: "Enter a license key to activate Wrangle."
+        case .valid: return "Thank you for purchasing Wrangle!"
+        case .invalid: return "The license key entered is not valid."
+        case .expired: return "Your license has expired."
+        case .trial:
+            let days = coordinator.licenseManager.trialDaysRemaining
+            return days == 1 ? "1 day remaining in your trial." : "\(days) days remaining in your trial."
+        case .unlicensed: return "Enter a license key to activate Wrangle."
         }
     }
 }

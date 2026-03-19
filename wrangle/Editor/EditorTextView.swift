@@ -247,9 +247,36 @@ class EditorTextView: NSTextView {
 
     // MARK: - Mouse Handling
 
+    /// Callback when a checkbox marker is clicked. Passes the character index of the checkbox.
+    var onCheckboxToggle: ((Int) -> Void)?
+
     override func mouseDown(with event: NSEvent) {
         if handleXMLFoldClick(event) { return }
+        if handleCheckboxClick(event) { return }
         super.mouseDown(with: event)
+    }
+
+    private func handleCheckboxClick(_ event: NSEvent) -> Bool {
+        guard editingMode == .writing else { return false }
+        guard let textStorage, let layoutManager, let textContainer else { return false }
+        guard textStorage.length > 0 else { return false }
+
+        let point = convert(event.locationInWindow, from: nil)
+        let textPoint = NSPoint(
+            x: point.x - textContainerInset.width,
+            y: point.y - textContainerInset.height
+        )
+        let glyphIndex = layoutManager.glyphIndex(for: textPoint, in: textContainer, fractionOfDistanceThroughGlyph: nil)
+        let charIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
+        guard charIndex < textStorage.length else { return false }
+
+        // Check if the clicked character has a checkboxMarker attribute
+        let attrs = textStorage.attributes(at: charIndex, effectiveRange: nil)
+        if attrs[.checkboxMarker] != nil {
+            onCheckboxToggle?(charIndex)
+            return true
+        }
+        return false
     }
 
     private func handleXMLFoldClick(_ event: NSEvent) -> Bool {

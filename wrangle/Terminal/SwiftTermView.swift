@@ -24,6 +24,9 @@ protocol TerminalProcessController: AnyObject {
 /// paths as shell-escaped text into the terminal process.
 class TerminalContainerView: NSView {
     let terminalView: LocalProcessTerminalView
+    /// Called once when the container first receives a non-zero frame, so the
+    /// shell process can start with the correct terminal column/row count.
+    var onFirstLayout: (() -> Void)?
     var isActive: Bool = false {
         didSet {
             guard isActive != oldValue else { return }
@@ -48,6 +51,14 @@ class TerminalContainerView: NSView {
             terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
         // Drag type registration is managed dynamically via isActive didSet
+    }
+
+    override func layout() {
+        super.layout()
+        if bounds.width > 0, let callback = onFirstLayout {
+            onFirstLayout = nil
+            callback()
+        }
     }
 
     @available(*, unavailable)
@@ -121,15 +132,24 @@ struct SwiftTermView: NSViewRepresentable {
         // Apply theme
         context.coordinator.configureAppearance(terminalView)
 
-        // Start the shell process
-        context.coordinator.startProcess(in: terminalView)
-
         // Shift+Return handling for TUI apps (e.g., Claude Code multi-line input)
         context.coordinator.installKeyboardMonitor(for: terminalView)
 
         let container = TerminalContainerView(terminalView: terminalView)
         container.isActive = isActive
         context.coordinator.isActive = isActive
+
+        // Defer process start until the container has a valid frame so SwiftTerm
+        // calculates the correct terminal column/row count. Starting with frame
+        // .zero causes misaligned cursor positioning in TUI banners (e.g., Claude
+        // Code's startup header overlapping text).
+        let coordinator = context.coordinator
+        container.onFirstLayout = { [weak coordinator] in
+            guard let coordinator else { return }
+            coordinator.processStarted = true
+            coordinator.startProcess(in: terminalView)
+        }
+
         return container
     }
 
@@ -167,6 +187,7 @@ struct SwiftTermView: NSViewRepresentable {
         weak var terminalView: LocalProcessTerminalView?
         var lastColorScheme: ColorScheme?
         var isActive: Bool = false
+        var processStarted: Bool = false
         fileprivate var keyboardMonitor: Any?
 
         init(session: TerminalSession) {

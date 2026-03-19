@@ -202,6 +202,8 @@ class EditorDocument: Identifiable {
     /// The security-scoped directory URL granting access to this file, if any.
     /// Excluded from observation — only used internally for security-scoped access lifecycle.
     @ObservationIgnored private var accessURL: URL?
+    /// Weak reference to the NSTextView displaying this document.
+    @ObservationIgnored weak var textView: NSTextView?
 
     // Cached stats — updated via debounced `updateCachedStats()`
     var cachedTokenCount: Int = 0

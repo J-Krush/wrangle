@@ -77,6 +77,7 @@ struct MarkdownTextView: NSViewRepresentable {
 
         // Store a reference for later updates
         context.coordinator.textView = textView
+        document?.textView = textView
 
         scrollView.documentView = textView
 
@@ -95,6 +96,11 @@ struct MarkdownTextView: NSViewRepresentable {
             coordinator?.toggleXMLCollapse(at: offset)
         }
 
+        // Wire checkbox toggle callback
+        textView.onCheckboxToggle = { [weak coordinator = context.coordinator] charIndex in
+            coordinator?.toggleCheckbox(at: charIndex)
+        }
+
         return scrollView
     }
 
@@ -111,6 +117,7 @@ struct MarkdownTextView: NSViewRepresentable {
             context.coordinator.document = document
             context.coordinator.documentID = document?.id
             context.coordinator.collapsedXMLTagOffsets.removeAll()
+            document?.textView = context.coordinator.textView
         }
 
         // Detect appearance change and update NSTextView colors + restyle
@@ -274,8 +281,9 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet markers with • in the storage
+            // Replace bullet/checkbox markers with visual symbols in the storage
             if !isJSONDoc {
+                applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
             }
             storage.endEditing()
@@ -304,6 +312,50 @@ struct MarkdownTextView: NSViewRepresentable {
             restyleInPlace()
         }
 
+        /// Toggles a checkbox at the given character index between checked/unchecked.
+        func toggleCheckbox(at charIndex: Int) {
+            guard let textView, let storage = textView.textStorage else { return }
+
+            // First restore all markers to raw markdown
+            isStyling = true
+            storage.beginEditing()
+            restoreCheckboxMarkers(in: storage)
+            restoreBulletMarkers(in: storage)
+            storage.endEditing()
+            isStyling = false
+
+            // Find the line containing this character
+            let nsString = storage.string as NSString
+            let lineRange = nsString.lineRange(for: NSRange(location: min(charIndex, nsString.length - 1), length: 0))
+            let line = nsString.substring(with: lineRange)
+
+            // Toggle [ ] ↔ [x] in this line
+            let newLine: String
+            if line.contains("- [ ] ") {
+                newLine = line.replacingOccurrences(of: "- [ ] ", with: "- [x] ")
+            } else if line.contains("- [x] ") || line.contains("- [X] ") {
+                newLine = line.replacingOccurrences(of: "- [x] ", with: "- [ ] ")
+                    .replacingOccurrences(of: "- [X] ", with: "- [ ] ")
+            } else {
+                // Not a checkbox line, restyle and bail
+                restyleInPlace()
+                return
+            }
+
+            // Replace the line in storage
+            isStyling = true
+            storage.beginEditing()
+            storage.replaceCharacters(in: lineRange, with: newLine)
+            storage.endEditing()
+            isStyling = false
+
+            // Update the document content and restyle
+            let rawText = storage.string
+            document?.content = rawText
+            document?.markDirty()
+            restyleInPlace()
+        }
+
         /// Re-styles the current content in-place, preserving the cursor.
         private func restyleInPlace() {
             guard let textView, let storage = textView.textStorage else { return }
@@ -328,7 +380,8 @@ struct MarkdownTextView: NSViewRepresentable {
 
             storage.beginEditing()
 
-            // Restore • back to - so parser regex matches on next restyle
+            // Restore visual markers back to markdown so parser regex matches on next restyle
+            restoreCheckboxMarkers(in: storage)
             restoreBulletMarkers(in: storage)
 
             // Replace attributes only, keeping the same string
@@ -347,8 +400,9 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet markers with • in the storage
+            // Replace bullet/checkbox markers with visual symbols in the storage
             if !isJSON {
+                applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
             }
 
@@ -821,7 +875,7 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        // MARK: - Bullet Marker Helpers
+        // MARK: - Bullet & Checkbox Marker Helpers
 
         /// Restores `•` back to `-` in storage before restyling
         private func restoreBulletMarkers(in storage: NSTextStorage) {
@@ -832,6 +886,19 @@ struct MarkdownTextView: NSViewRepresentable {
             for range in ranges.reversed() {
                 let attrs = storage.attributes(at: range.location, effectiveRange: nil)
                 storage.replaceCharacters(in: range, with: NSAttributedString(string: "-", attributes: attrs))
+            }
+        }
+
+        /// Restores checkbox symbols back to `- [ ]` / `- [x]` before restyling
+        private func restoreCheckboxMarkers(in storage: NSTextStorage) {
+            var replacements: [(NSRange, Bool)] = []
+            storage.enumerateAttribute(.checkboxMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if let checked = value as? Bool { replacements.append((range, checked)) }
+            }
+            for (range, checked) in replacements.reversed() {
+                let original = checked ? "- [x] " : "- [ ] "
+                let attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: original, attributes: attrs))
             }
         }
 
@@ -847,9 +914,37 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        /// Reads raw text from storage, reversing any bullet marker replacements
+        /// Replaces `- [ ]` / `- [x]` prefix with ☐ / ☑ at positions marked with .checkboxMarker
+        private func applyCheckboxMarkers(in storage: NSTextStorage) {
+            var replacements: [(NSRange, Bool)] = []
+            storage.enumerateAttribute(.checkboxMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if let checked = value as? Bool { replacements.append((range, checked)) }
+            }
+            for (range, checked) in replacements.reversed() {
+                var attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                // Make the checkbox symbol visible and clickable-looking
+                attrs[.foregroundColor] = checked ? NSColor.systemGreen : NSColor.tertiaryLabelColor
+                attrs[.font] = NSFont.systemFont(ofSize: 18)
+                attrs[.checkboxMarker] = checked  // Preserve marker for click detection
+                attrs[.cursor] = NSCursor.pointingHand
+                let symbol = checked ? "☑︎ " : "☐ "
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: symbol, attributes: attrs))
+            }
+        }
+
+        /// Reads raw text from storage, reversing any bullet/checkbox marker replacements
         func rawText(from storage: NSTextStorage) -> String {
             let mutable = NSMutableString(string: storage.string)
+            // Restore checkboxes (reverse order since replacements change lengths)
+            var checkboxRanges: [(NSRange, Bool)] = []
+            storage.enumerateAttribute(.checkboxMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if let checked = value as? Bool { checkboxRanges.append((range, checked)) }
+            }
+            for (range, checked) in checkboxRanges.reversed() {
+                let original = checked ? "- [x] " : "- [ ] "
+                mutable.replaceCharacters(in: range, with: original)
+            }
+            // Restore bullets
             var positions: [Int] = []
             storage.enumerateAttribute(.bulletMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
                 if value != nil { positions.append(range.location) }

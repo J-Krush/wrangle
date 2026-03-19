@@ -7,12 +7,10 @@ struct SidebarView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
-    @State private var filterText: String = ""
     @State private var activeFileTypeFilters: Set<FileTypeFilter> = []
     @State private var showFilterPopover = false
     @State private var rawDropTargeted = false
     @State private var dropState: DropState = .idle
-    @State private var showActiveSessionsOnly = false
     @State private var dropDebounceTask: Task<Void, Never>?
     @State private var isSearchExpanded = false
     @FocusState private var isSearchFieldFocused: Bool
@@ -23,6 +21,7 @@ struct SidebarView: View {
     }
 
     var body: some View {
+        @Bindable var appState = appState
         VStack(spacing: 0) {
             ScrollViewReader { scrollProxy in
                 List {
@@ -31,7 +30,7 @@ struct SidebarView: View {
                     }
 
                     Section("Locations") {
-                        BookmarkListView(scrollProxy: scrollProxy, filterText: filterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: showActiveSessionsOnly, onAddLocation: addLocation)
+                        BookmarkListView(scrollProxy: scrollProxy, filterText: appState.sidebarFilterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: appState.showActiveSessionsOnly, onAddLocation: addLocation)
                     }
 
                     OrphanedSessionsSection()
@@ -73,7 +72,8 @@ struct SidebarView: View {
     // MARK: - Bottom Bar
 
     private var sidebarBottomBar: some View {
-        VStack(spacing: 0) {
+        @Bindable var appState = appState
+        return VStack(spacing: 0) {
             Divider()
 
             if isSearchExpanded {
@@ -81,13 +81,13 @@ struct SidebarView: View {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(.secondary)
                         .font(.system(size: 12))
-                    TextField("Filter files", text: $filterText)
+                    TextField("Filter files", text: $appState.sidebarFilterText)
                         .textFieldStyle(.plain)
                         .font(.body)
                         .focused($isSearchFieldFocused)
-                    if !filterText.isEmpty {
+                    if !appState.sidebarFilterText.isEmpty {
                         Button {
-                            filterText = ""
+                            appState.sidebarFilterText = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
@@ -141,7 +141,7 @@ struct SidebarView: View {
                 if !isSearchExpanded {
                     toolbarButton(
                         icon: "magnifyingglass",
-                        isActive: !filterText.isEmpty,
+                        isActive: !appState.sidebarFilterText.isEmpty,
                         activeColor: .accentColor
                     ) {
                         toggleSearch()
@@ -166,11 +166,11 @@ struct SidebarView: View {
                 .accessibilityLabel("Filter by file type")
 
                 toolbarButton(
-                    icon: showActiveSessionsOnly ? "terminal.fill" : "terminal",
-                    isActive: showActiveSessionsOnly,
+                    icon: appState.showActiveSessionsOnly ? "terminal.fill" : "terminal",
+                    isActive: appState.showActiveSessionsOnly,
                     activeColor: .accentColor
                 ) {
-                    showActiveSessionsOnly.toggle()
+                    appState.showActiveSessionsOnly.toggle()
                 }
                 .help("Show Active Sessions")
                 .accessibilityLabel("Show active sessions")
@@ -225,7 +225,7 @@ struct SidebarView: View {
 
     private func toggleSearch() {
         if isSearchExpanded {
-            filterText = ""
+            appState.sidebarFilterText = ""
             isSearchExpanded = false
         } else {
             isSearchExpanded = true

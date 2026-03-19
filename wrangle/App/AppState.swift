@@ -24,9 +24,10 @@ class AppState {
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
     var searchQuery: String = ""
-    var sidebarWidth: CGFloat = 240
     var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing
+    var sidebarFilterText: String = ""
+    var showActiveSessionsOnly: Bool = false
     var selectedFileTreeURL: URL? = nil
     var revealFileURL: URL? = nil
     // Preview tab tracking — only one preview tab at a time

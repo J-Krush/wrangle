@@ -28,7 +28,6 @@ struct TitleBarAccessoryInstaller: NSViewRepresentable {
             // Make titlebar transparent so tabs sit flush at top
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .visible
-            window.toolbar?.isVisible = false
             window.backgroundColor = Theme.chromeBackground
 
             let tabStrip = TitleBarTabStrip().environment(appState).modelContainer(modelContainer)

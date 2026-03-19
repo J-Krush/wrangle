@@ -33,6 +33,7 @@ struct ContentView: View {
                 .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 400)
         } detail: {
             VStack(spacing: 0) {
+                TrialBannerView()
                 NotificationBannerView()
 
                 ZStack {

@@ -42,7 +42,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 @main
 struct WrangleApp: App {
     @State private var coordinator = AppCoordinator()
-    @FocusedValue(\.appState) private var focusedAppState
+@FocusedValue(\.appState) private var focusedAppState
     @State private var resolvedSystemScheme: ColorScheme = {
         guard let app = NSApp else { return .dark }
         return app.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
@@ -94,7 +94,8 @@ struct WrangleApp: App {
                     updateSystemScheme()
                     coordinator.updateChecker.checkForUpdate()
                     coordinator.licenseManager.loadOnLaunch()
-                    // Listen for macOS appearance changes
+
+// Listen for macOS appearance changes
                     DistributedNotificationCenter.default().addObserver(
                         forName: Notification.Name("AppleInterfaceThemeChangedNotification"),
                         object: nil,
@@ -231,13 +232,12 @@ struct WrangleApp: App {
 
             CommandGroup(replacing: .sidebar) {
                 Button("Toggle Sidebar") {
-                    guard let state = focusedAppState else { return }
-                    withAnimation {
-                        state.sidebarWidth = state.sidebarWidth > 0 ? 0 : 240
-                    }
+                    NSApp.keyWindow?.firstResponder?.tryToPerform(
+                        #selector(NSSplitViewController.toggleSidebar(_:)),
+                        with: nil
+                    )
                 }
                 .keyboardShortcut("\\", modifiers: [.command])
-                .disabled(focusedAppState == nil)
             }
 
             // Edit menu additions
