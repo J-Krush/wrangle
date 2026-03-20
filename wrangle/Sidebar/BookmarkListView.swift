@@ -16,6 +16,8 @@ struct BookmarkListView: View {
     @State private var expandedBookmarks: Set<String> = []
     @State private var draggingBookmarkID: String?
     @State private var dropTargetBookmarkID: String?
+    @State private var renamingBookmark: BookmarkedDirectory?
+    @State private var renameText: String = ""
 
     private func shouldShowFileBookmark(_ bookmark: BookmarkedDirectory) -> Bool {
         guard !activeFileTypeFilters.isEmpty, let url = bookmark.resolveURL() else { return true }
@@ -135,6 +137,22 @@ struct BookmarkListView: View {
                     }
                 }
             }
+            .alert("Rename Location", isPresented: Binding(
+                get: { renamingBookmark != nil },
+                set: { if !$0 { renamingBookmark = nil } }
+            )) {
+                TextField("Display name", text: $renameText)
+                Button("Rename") {
+                    guard let bookmark = renamingBookmark else { return }
+                    let trimmed = renameText.trimmingCharacters(in: .whitespaces)
+                    bookmark.customName = trimmed.isEmpty || trimmed == bookmark.name ? nil : trimmed
+                    try? modelContext.save()
+                    renamingBookmark = nil
+                }
+                Button("Cancel", role: .cancel) { renamingBookmark = nil }
+            } message: {
+                Text("Enter a custom display name for this location.")
+            }
             .onChange(of: appState.revealFileURL) { oldValue, newValue in
                 if let revealURL = newValue {
                     // New reveal request: expand bookmark and select, but don't scroll yet
@@ -210,7 +228,7 @@ struct BookmarkListView: View {
             }
         } label: {
             Label {
-                Text(bookmark.name)
+                Text(bookmark.displayName)
                     .lineLimit(1)
                     .truncationMode(.tail)
             } icon: {
@@ -230,6 +248,11 @@ struct BookmarkListView: View {
 
     @ViewBuilder
     private func fileContextMenu(_ bookmark: BookmarkedDirectory) -> some View {
+        Button("Rename...") {
+            renameText = bookmark.displayName
+            renamingBookmark = bookmark
+        }
+
         if let url = bookmark.resolveURL() {
             OpenInSubmenu(url: url)
         }
@@ -254,6 +277,11 @@ struct BookmarkListView: View {
         }
 
         Divider()
+
+        Button("Rename...") {
+            renameText = bookmark.displayName
+            renamingBookmark = bookmark
+        }
 
         Button("Remove", role: .destructive) {
             removeBookmark(bookmark)
@@ -399,7 +427,7 @@ private struct LocationHeaderLabel: View {
         HStack(spacing: 4) {
             Button(action: onToggle) {
                 Label {
-                    Text(bookmark.name)
+                    Text(bookmark.displayName)
                         .lineLimit(1)
                         .truncationMode(.tail)
                 } icon: {

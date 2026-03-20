@@ -9,6 +9,9 @@ final class BookmarkedDirectory {
     var iconColorHex: String
     var dateAdded: Date
     var isFile: Bool
+    var customName: String?
+
+    var displayName: String { customName ?? name }
 
     init(
         name: String,

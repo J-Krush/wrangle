@@ -71,12 +71,7 @@ class LicenseManager {
     }
 
     var isLicensed: Bool {
-        // Temporarily disabled for trial testing:
-        // #if DEBUG
-        // return true
-        // #else
         return licenseStatus == .valid || licenseStatus == .trial
-        // #endif
     }
 
     var needsLicense: Bool {
@@ -86,10 +81,6 @@ class LicenseManager {
     // MARK: - Lifecycle
 
     func loadOnLaunch() {
-        // Temporarily disabled for trial testing:
-        // #if DEBUG
-        // licenseStatus = .valid
-        // #else
         if let storedKey = loadKeyFromKeychain() {
             licenseKey = storedKey
             licenseStatus = .valid
@@ -104,7 +95,6 @@ class LicenseManager {
         } else {
             licenseStatus = .unlicensed
         }
-        // #endif
     }
 
     // MARK: - License Actions
@@ -134,23 +124,48 @@ class LicenseManager {
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
             let instanceName = ProcessInfo.processInfo.hostName
-            let body = "license_key=\(licenseKey.trimmingCharacters(in: .whitespaces))&instance_name=\(instanceName)"
+            let encodedKey = trimmedKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trimmedKey
+            let encodedName = instanceName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? instanceName
+            let body = "license_key=\(encodedKey)&instance_name=\(encodedName)"
             request.httpBody = body.data(using: .utf8)
 
-            let (data, _) = try await URLSession.shared.data(for: request)
+            let (data, urlResponse) = try await URLSession.shared.data(for: request)
+            let httpResponse = urlResponse as? HTTPURLResponse
+
+            #if DEBUG
+            print("[License] Activate HTTP \(httpResponse?.statusCode ?? -1): \(String(data: data, encoding: .utf8) ?? "no body")")
+            #endif
+
+            guard let statusCode = httpResponse?.statusCode, (200...299).contains(statusCode) else {
+                // Non-2xx — try to decode error from response body
+                if let errorResponse = try? JSONDecoder().decode(LemonSqueezyResponse.self, from: data),
+                   let errorMessage = errorResponse.error {
+                    statusMessage = errorMessage
+                } else {
+                    statusMessage = "License server returned an error (HTTP \(httpResponse?.statusCode ?? 0))."
+                }
+                licenseStatus = .invalid
+                isValidating = false
+                return
+            }
+
             let response = try JSONDecoder().decode(LemonSqueezyResponse.self, from: data)
 
             if response.activated || response.valid {
                 licenseStatus = .valid
                 customerName = response.meta?.customerName ?? ""
                 statusMessage = "License activated successfully."
-                saveKeyToKeychain(licenseKey.trimmingCharacters(in: .whitespaces))
+                saveKeyToKeychain(trimmedKey)
             } else {
                 licenseStatus = .invalid
                 statusMessage = response.error ?? "Activation failed. Please check your license key."
             }
-        } catch {
+        } catch is URLError {
             statusMessage = "Could not reach license server. Please check your connection."
+        } catch is DecodingError {
+            statusMessage = "Unexpected response from license server."
+        } catch {
+            statusMessage = "Activation failed: \(error.localizedDescription)"
         }
 
         isValidating = false
@@ -172,10 +187,26 @@ class LicenseManager {
             request.httpMethod = "POST"
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-            let body = "license_key=\(licenseKey)&instance_id=\(instanceID)"
+            let encodedKey = licenseKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? licenseKey
+            let encodedID = instanceID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? instanceID
+            let body = "license_key=\(encodedKey)&instance_id=\(encodedID)"
             request.httpBody = body.data(using: .utf8)
 
-            let (data, _) = try await URLSession.shared.data(for: request)
+            let (data, urlResponse) = try await URLSession.shared.data(for: request)
+            let httpResponse = urlResponse as? HTTPURLResponse
+
+            #if DEBUG
+            print("[License] Validate HTTP \(httpResponse?.statusCode ?? -1): \(String(data: data, encoding: .utf8) ?? "no body")")
+            #endif
+
+            guard let statusCode = httpResponse?.statusCode, (200...299).contains(statusCode) else {
+                if licenseStatus != .valid {
+                    statusMessage = "License server returned an error (HTTP \(httpResponse?.statusCode ?? 0))."
+                }
+                isValidating = false
+                return
+            }
+
             let response = try JSONDecoder().decode(LemonSqueezyResponse.self, from: data)
 
             if response.valid {
@@ -185,10 +216,17 @@ class LicenseManager {
                 licenseStatus = .invalid
                 statusMessage = response.error ?? "License is no longer valid."
             }
-        } catch {
-            // Network error during validation — keep current status if previously valid
+        } catch is URLError {
             if licenseStatus != .valid {
-                statusMessage = "Could not verify license. Will retry later."
+                statusMessage = "Could not verify license. Please check your connection."
+            }
+        } catch is DecodingError {
+            if licenseStatus != .valid {
+                statusMessage = "Unexpected response from license server."
+            }
+        } catch {
+            if licenseStatus != .valid {
+                statusMessage = "Could not verify license: \(error.localizedDescription)"
             }
         }
 
@@ -204,7 +242,9 @@ class LicenseManager {
             request.httpMethod = "POST"
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
 
-            let body = "license_key=\(licenseKey)&instance_id=\(instanceID)"
+            let encodedKey = licenseKey.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? licenseKey
+            let encodedID = instanceID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? instanceID
+            let body = "license_key=\(encodedKey)&instance_id=\(encodedID)"
             request.httpBody = body.data(using: .utf8)
 
             let (data, _) = try await URLSession.shared.data(for: request)
@@ -295,8 +335,8 @@ class LicenseManager {
                     statusMessage = ""
                 }
             } else if httpResponse.statusCode == 409 {
-                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                statusMessage = json?["error"] as? String ?? "Trial already used."
+                let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                statusMessage = json?["error"] as? String ?? "A trial has already been activated with this email or machine."
             } else {
                 #if DEBUG
                 let bodyString = String(data: data, encoding: .utf8) ?? "no body"
@@ -304,11 +344,16 @@ class LicenseManager {
                 #endif
                 statusMessage = "Could not start trial. Please try again."
             }
+        } catch let urlError as URLError {
+            #if DEBUG
+            print("[Trial] Activation network error: \(urlError)")
+            #endif
+            statusMessage = "Could not reach server. Please check your connection."
         } catch {
             #if DEBUG
             print("[Trial] Activation error: \(error)")
             #endif
-            statusMessage = "Could not reach server. Please check your connection."
+            statusMessage = "Trial activation failed: \(error.localizedDescription)"
         }
 
         isValidating = false

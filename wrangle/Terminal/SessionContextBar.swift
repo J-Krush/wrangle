@@ -143,6 +143,7 @@ struct SessionContextBar: View {
                 .font(.caption.bold())
                 .foregroundStyle(.secondary)
 
+            ScrollView {
             ForEach(skills) { skill in
                 Button {
                     NSPasteboard.general.clearContents()
@@ -176,6 +177,8 @@ struct SessionContextBar: View {
                 .buttonStyle(.plain)
                 .help("Copy skill name")
             }
+            }
+            .frame(maxHeight: 300)
         }
         .padding(10)
         .frame(minWidth: 200)
@@ -211,6 +214,7 @@ struct SessionContextBar: View {
                 .font(.caption.bold())
                 .foregroundStyle(.secondary)
 
+            ScrollView {
             ForEach(servers) { server in
                 Button {
                     NSPasteboard.general.clearContents()
@@ -246,6 +250,8 @@ struct SessionContextBar: View {
                 .buttonStyle(.plain)
                 .help("Copy server name")
             }
+            }
+            .frame(maxHeight: 300)
         }
         .padding(10)
         .frame(minWidth: 200)
