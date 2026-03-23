@@ -136,7 +136,7 @@ struct TerminalDirectoryPicker: View {
 
 // MARK: - Color hex init helper
 
-private extension Color {
+extension Color {
     init?(hex: String) {
         var hexString = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         if hexString.hasPrefix("#") { hexString.removeFirst() }

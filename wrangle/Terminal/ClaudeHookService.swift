@@ -220,6 +220,11 @@ class ClaudeHookService {
         guard let coordinator,
               let result = coordinator.findTerminalSession(bySessionID: sessionID) else { return }
 
+        // Switch to the tab's room first so the tab strip shows the right tabs
+        let tab = result.appState.tabs[result.tabIndex]
+        if let roomID = tab.roomID, result.appState.selectedRoomID != roomID {
+            result.appState.switchToRoom(roomID)
+        }
         result.appState.selectTab(at: result.tabIndex)
         result.appState.nsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

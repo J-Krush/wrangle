@@ -23,48 +23,86 @@ struct ContentView: View {
     @State private var editorContext = EditorContext()
 
     /// Cached map: directory path -> (bookmarkID, bookmarkName)
-    @State private var bookmarkPathCache: [(path: String, id: String, name: String)] = []
+    @State private var bookmarkPathCache: [(path: String, id: String, name: String, roomID: String?)] = []
+    @Query private var rooms: [Room]
+
+    private var windowTitle: String {
+        if let roomID = appState.selectedRoomID,
+           let room = rooms.first(where: { $0.id == roomID }) {
+            return room.name
+        }
+        return "Wrangle"
+    }
 
     var body: some View {
         @Bindable var appState = appState
 
-        NavigationSplitView {
-            SidebarView()
-                .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 400)
-        } detail: {
-            VStack(spacing: 0) {
-                TrialBannerView()
-                NotificationBannerView()
+        VStack(spacing: 0) {
+            TrialBannerView()
+
+            HStack(spacing: 0) {
+                SidebarView()
+
+                // Right side: tabs + detail
+                VStack(spacing: 0) {
+                    if appState.selectedRoomID != nil {
+                        TitleBarTabStrip()
+                    }
+                    NotificationBannerView()
 
                 ZStack {
-                    // Keep all terminal NSViews alive to preserve process state and scrollback
-                    ForEach(appState.tabs) { tab in
-                        if let session = tab.terminalSession {
-                            TerminalTabContentView(session: session)
-                                .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
-                                .allowsHitTesting(appState.activeTab?.id == tab.id)
-                                .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
-                        }
-                    }
-
-                    // Document or empty view (renders on top when active tab is not a terminal)
-                    if let tab = appState.activeTab {
-                        switch tab.content {
-                        case .document(let doc):
-                            VStack(spacing: 0) {
-                                documentContentView(doc)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-                                handleFileDrop(providers)
-                            }
-                        case .terminal:
-                            EmptyView()
-                        }
+                    if appState.selectedRoomID == nil {
+                        // No room selected — show project overview
+                        DashboardView()
                     } else {
-                        emptyEditorView
+                    switch appState.viewMode {
+                    case .dashboard:
+                        DashboardView()
+                    case .canvas:
+                        CanvasView()
+                    case .editor:
+                        // Keep all terminal NSViews alive to preserve process state and scrollback
+                        ForEach(appState.tabs) { tab in
+                            if let session = tab.terminalSession {
+                                TerminalTabContentView(session: session)
+                                    .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
+                                    .allowsHitTesting(appState.activeTab?.id == tab.id)
+                                    .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
+                            }
+                        }
+
+                        // Keep all browser WKWebViews alive to preserve page state
+                        ForEach(appState.tabs) { tab in
+                            if let session = tab.browserSession {
+                                BrowserTabContentView(session: session)
+                                    .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
+                                    .allowsHitTesting(appState.activeTab?.id == tab.id)
+                                    .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
+                            }
+                        }
+
+                        // Document or empty view (renders on top when active tab is not a terminal/browser)
+                        if let tab = appState.activeTab {
+                            switch tab.content {
+                            case .document(let doc):
+                                VStack(spacing: 0) {
+                                    documentContentView(doc)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                                    handleFileDrop(providers)
+                                }
+                                .transition(.identity)
+                            case .terminal, .browser:
+                                EmptyView()
+                            }
+                        } else {
+                            emptyEditorView
+                        }
                     }
+                    } // end if selectedRoomID != nil
                 }
+                .animation(nil, value: appState.activeTabIndex)
             }
             .background(
                 GeometryReader { geo in
@@ -122,12 +160,12 @@ struct ContentView: View {
                 let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
                 Text("Wrangle v\(current) is the latest version.")
             }
-        }
+        } // HStack
+        } // outer VStack (trial banner + content)
         .coordinateSpace(name: "root")
         .onPreferenceChange(DetailLeadingKey.self) { value in
             appState.detailAreaLeading = value
         }
-        .toolbarBackground(.hidden, for: .windowToolbar)
         .overlay {
             if appState.showFuzzyFinder {
                 FuzzyFinderView()
@@ -138,9 +176,9 @@ struct ContentView: View {
             LicenseGateView()
             NotificationPermissionView()
         }
-        .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
-        .background { TitleBarAccessoryInstaller(appState: appState, modelContainer: modelContext.container) }
-        .frame(minWidth: 800, minHeight: 500)
+        .navigationTitle(windowTitle)
+        .background { WindowChromeConfigurator(appState: appState) }
+        .frame(minWidth: 140, minHeight: 500)
         .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
                 recordRecentFile(url: url, in: modelContext)
@@ -161,6 +199,7 @@ struct ContentView: View {
         .onAppear {
             appState.coordinator = coordinator
             coordinator.register(appState)
+            RoomMigration.runIfNeeded(modelContext: modelContext)
             rebuildBookmarkPathCache()
         }
         .onDisappear {
@@ -257,18 +296,50 @@ struct ContentView: View {
     }
 
     private var emptyEditorView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "doc.text")
+        VStack(spacing: 20) {
+            Image(systemName: "rectangle.split.3x1")
                 .font(.system(size: 48))
                 .foregroundStyle(.tertiary)
-            Text("Open a file to get started")
-                .font(.title2)
-                .foregroundStyle(.secondary)
-            Text("Cmd+O to open \u{2022} Cmd+N for new file \u{2022} Cmd+P to quick open")
+
+            if appState.selectedRoomID != nil {
+                Text("No files open")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                Text("Open a file from the sidebar or start a terminal session")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+            } else {
+                Text("Select a room")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                Text("Choose a room from the left rail, or create a new one with +")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+            }
+
+            HStack(spacing: 16) {
+                keyboardHint("Cmd+O", "Open")
+                keyboardHint("Cmd+N", "New File")
+                keyboardHint("Cmd+P", "Quick Open")
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func keyboardHint(_ shortcut: String, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(shortcut)
+                .font(.caption)
+                .fontWeight(.medium)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(.quaternary)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+            Text(label)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
@@ -278,7 +349,7 @@ struct ContentView: View {
             guard !bookmark.isFile, let dirURL = bookmark.resolveURL() else { return nil }
             let dirPath = dirURL.path(percentEncoded: false)
             let id = bookmark.persistentModelID.hashValue.description
-            return (path: dirPath, id: id, name: bookmark.name)
+            return (path: dirPath, id: id, name: bookmark.name, roomID: bookmark.roomID)
         }
 
         // Also populate the scoped URL cache on AppState for fallback resolution
@@ -295,6 +366,9 @@ struct ContentView: View {
             if filePath.hasPrefix(entry.path) {
                 appState.selectedBookmarkID = entry.id
                 appState.activeProjectName = entry.name
+                if let roomID = entry.roomID {
+                    appState.selectedRoomID = roomID
+                }
                 return
             }
         }

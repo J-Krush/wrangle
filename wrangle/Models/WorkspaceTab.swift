@@ -9,6 +9,7 @@ import SwiftUI
 enum TabContent {
     case document(EditorDocument)
     case terminal(TerminalSession)
+    case browser(BrowserSession)
 }
 
 @MainActor
@@ -18,6 +19,7 @@ class WorkspaceTab: Identifiable {
     let content: TabContent
     var isPinned: Bool = false
     var customName: String?
+    var roomID: String?
 
     init(content: TabContent) {
         self.content = content
@@ -30,6 +32,8 @@ class WorkspaceTab: Identifiable {
             return document!.fileName
         case .terminal(let session):
             return session.displayTitle
+        case .browser(let session):
+            return session.displayTitle
         }
     }
 
@@ -37,7 +41,7 @@ class WorkspaceTab: Identifiable {
         switch content {
         case .document(let doc):
             return doc.isDirty
-        case .terminal:
+        case .terminal, .browser:
             return false
         }
     }
@@ -47,6 +51,8 @@ class WorkspaceTab: Identifiable {
         case .document(let doc):
             return doc.fileType.iconName
         case .terminal(let session):
+            return session.iconName
+        case .browser(let session):
             return session.iconName
         }
     }
@@ -64,11 +70,18 @@ class WorkspaceTab: Identifiable {
             return doc.fileType.iconColor
         case .terminal(let session):
             return session.iconColor
+        case .browser(let session):
+            return session.iconColor
         }
     }
 
     var isTerminal: Bool {
         if case .terminal = content { return true }
+        return false
+    }
+
+    var isBrowser: Bool {
+        if case .browser = content { return true }
         return false
     }
 
@@ -79,6 +92,11 @@ class WorkspaceTab: Identifiable {
 
     var terminalSession: TerminalSession? {
         if case .terminal(let session) = content { return session }
+        return nil
+    }
+
+    var browserSession: BrowserSession? {
+        if case .browser(let session) = content { return session }
         return nil
     }
 

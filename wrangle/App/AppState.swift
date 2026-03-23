@@ -7,6 +7,12 @@ enum EditingMode: String, CaseIterable {
     case dev
 }
 
+enum ViewMode: String, CaseIterable {
+    case editor
+    case dashboard
+    case canvas
+}
+
 enum AppearanceMode: String, CaseIterable {
     case system, light, dark
 }
@@ -20,12 +26,20 @@ class AppState {
 
     var tabs: [WorkspaceTab]
     var activeTabIndex: Int
+    var selectedRoomID: String?
+    var activeIntentID: String?
     var selectedBookmarkID: String?
+    var isSidebarVisible: Bool = true
+    var sidebarWidth: CGFloat = 200
+    var roomTabIndexes: [String: Int] = [:]
+    /// Per-room expanded location state so sidebar hierarchy survives room switches
+    var roomExpandedBookmarks: [String: Set<String>] = [:]
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
     var searchQuery: String = ""
     var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing
+    var viewMode: ViewMode = .dashboard
     var sidebarFilterText: String = ""
     var showActiveSessionsOnly: Bool = false
     var selectedFileTreeURL: URL? = nil
@@ -60,6 +74,73 @@ class AppState {
     // Cached resolved bookmark URLs for scoped-access fallback
     var resolvedBookmarkURLs: [(directoryPath: String, resolvedURL: URL)] = []
 
+    // MARK: - Room Tab Scoping
+
+    /// Tabs visible for the currently selected room
+    var visibleTabs: [WorkspaceTab] {
+        guard let roomID = selectedRoomID else { return tabs }
+        return tabs.filter { $0.roomID == roomID || $0.roomID == nil }
+    }
+
+    /// Index of the active tab within visibleTabs
+    var visibleActiveIndex: Int {
+        guard let active = activeTab else { return -1 }
+        return visibleTabs.firstIndex(where: { $0.id == active.id }) ?? -1
+    }
+
+    /// Select a tab by its index in the visibleTabs array
+    func selectVisibleTab(at visibleIndex: Int) {
+        let visible = visibleTabs
+        guard visibleIndex >= 0, visibleIndex < visible.count else { return }
+        let tab = visible[visibleIndex]
+        if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
+            selectTab(at: globalIndex)
+        }
+    }
+
+    /// Close a tab by its index in the visibleTabs array
+    func closeVisibleTab(at visibleIndex: Int) {
+        let visible = visibleTabs
+        guard visibleIndex >= 0, visibleIndex < visible.count else { return }
+        let tab = visible[visibleIndex]
+        if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
+            closeTab(at: globalIndex)
+        }
+    }
+
+    /// Called when switching rooms — saves current room's active tab, restores new room's
+    func switchToRoom(_ newRoomID: String) {
+        // Save current room's active tab and browser state
+        if let currentRoom = selectedRoomID {
+            if let activeID = activeTab?.id {
+                if let visIdx = visibleTabs.firstIndex(where: { $0.id == activeID }) {
+                    roomTabIndexes[currentRoom] = visIdx
+                }
+            }
+            saveBrowserState(forRoom: currentRoom)
+        }
+
+        selectedRoomID = newRoomID
+        activeIntentID = nil
+        viewMode = .editor
+
+        // Restore browser sessions for the new room if none exist
+        restoreBrowserState(forRoom: newRoomID)
+
+        // Restore new room's active tab
+        let newVisible = visibleTabs
+        if newVisible.isEmpty {
+            activeTabIndex = -1
+        } else {
+            let savedIndex = roomTabIndexes[newRoomID] ?? 0
+            let clampedIndex = min(savedIndex, newVisible.count - 1)
+            let tab = newVisible[max(0, clampedIndex)]
+            if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
+                activeTabIndex = globalIndex
+            }
+        }
+    }
+
     // MARK: - Computed Properties
 
     var activeTab: WorkspaceTab? {
@@ -83,7 +164,10 @@ class AppState {
 
     /// Terminal sessions belonging to a specific bookmark location
     func terminalSessions(for bookmarkID: String) -> [TerminalSession] {
-        tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == bookmarkID }
+        let all = tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == bookmarkID }
+        guard let intentID = activeIntentID else { return all }
+        // Show sessions tagged to the active intent + unscoped sessions
+        return all.filter { $0.intentID == intentID || $0.intentID == nil }
     }
 
     /// Terminal sessions with no associated bookmark (opened via Browse, etc.)
@@ -92,10 +176,8 @@ class AppState {
     }
 
     init() {
-        let blank = EditorDocument()
-        let tab = WorkspaceTab(content: .document(blank))
-        self.tabs = [tab]
-        self.activeTabIndex = 0
+        self.tabs = []
+        self.activeTabIndex = -1
     }
 
     // MARK: - Scratch Pads
@@ -126,6 +208,9 @@ class AppState {
     // MARK: - Document Methods
 
     func openFile(url: URL, scopedURL: URL? = nil) {
+        // Switch to editor when opening a file
+        viewMode = .editor
+
         // Check if this file is already open in a tab
         if let existingIndex = tabs.firstIndex(where: { $0.document?.fileURL == url }) {
             activeTabIndex = existingIndex
@@ -139,6 +224,7 @@ class AppState {
         }
         document.isLoading = true
         let tab = WorkspaceTab(content: .document(document))
+        tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
 
@@ -146,6 +232,7 @@ class AppState {
     }
 
     func openFileAsPreview(url: URL, scopedURL: URL? = nil) {
+        viewMode = .editor
         print("[AppState] openFileAsPreview: \(url.lastPathComponent), scopedURL: \(scopedURL?.path ?? "nil")")
 
         // If already open, just select it
@@ -162,6 +249,7 @@ class AppState {
         }
         document.isLoading = true
         let tab = WorkspaceTab(content: .document(document))
+        tab.roomID = selectedRoomID
 
         // Replace existing preview tab if one exists
         if let previewID = previewTabID,
@@ -233,6 +321,7 @@ class AppState {
 
         let document = EditorDocument(fileURL: url)
         let tab = WorkspaceTab(content: .document(document))
+        tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
     }
@@ -291,11 +380,10 @@ class AppState {
         tabs.remove(at: index)
 
         if tabs.isEmpty {
-            // Always keep at least one tab open
-            let blank = EditorDocument()
-            let tab = WorkspaceTab(content: .document(blank))
-            tabs.append(tab)
-            activeTabIndex = 0
+            activeTabIndex = -1
+        } else if visibleTabs.isEmpty {
+            // No visible tabs in this room — nothing to select
+            activeTabIndex = -1
         } else if activeTabIndex >= tabs.count {
             activeTabIndex = tabs.count - 1
         } else if activeTabIndex > index {
@@ -304,17 +392,16 @@ class AppState {
     }
 
     func closeAllTabs() {
-        for tab in tabs {
+        // Close only visible tabs (current room)
+        let visible = visibleTabs
+        for tab in visible {
             if let session = tab.terminalSession {
                 session.stop()
             }
+            tabs.removeAll { $0.id == tab.id }
         }
-        tabs.removeAll()
         previewTabID = nil
-        let blank = EditorDocument()
-        let tab = WorkspaceTab(content: .document(blank))
-        tabs.append(tab)
-        activeTabIndex = 0
+        activeTabIndex = -1
     }
 
     func closeTab(_ tab: WorkspaceTab) {
@@ -374,6 +461,7 @@ class AppState {
     }
 
     func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false, launchGemini: Bool = false, dangerousMode: Bool = false) {
+        viewMode = .editor
         let emulator = TerminalEmulator()
         // Don't start the process here — SwiftTermView will start it when rendered
 
@@ -385,6 +473,7 @@ class AppState {
             isClaude: launchClaude,
             isGemini: launchGemini
         )
+        session.intentID = activeIntentID
 
         if launchClaude {
             session.pendingCommand = ClaudeCodeLauncher.launchCommand(dangerousMode: dangerousMode)
@@ -400,6 +489,7 @@ class AppState {
         }
 
         let tab = WorkspaceTab(content: .terminal(session))
+        tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
     }
@@ -431,5 +521,144 @@ class AppState {
         var n = 2
         while existingNames.contains("\(baseName) \(n)") { n += 1 }
         return "\(baseName) \(n)"
+    }
+
+    // MARK: - Browser Methods
+
+    func openBrowser(url: URL? = nil, bookmarkID: String? = nil) {
+        viewMode = .editor
+
+        let session = BrowserSession(
+            url: url,
+            bookmarkID: bookmarkID ?? selectedBookmarkID,
+            intentID: activeIntentID,
+            roomID: selectedRoomID
+        )
+
+        let tab = WorkspaceTab(content: .browser(session))
+        tab.roomID = selectedRoomID
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
+    }
+
+    func openBrowserForActiveProject(url: URL? = nil) {
+        openBrowser(url: url, bookmarkID: selectedBookmarkID)
+    }
+
+    /// All open browser sessions across tabs
+    var openBrowserSessions: [BrowserSession] {
+        tabs.compactMap(\.browserSession)
+    }
+
+    /// Browser sessions belonging to a specific bookmark location
+    func browserSessions(for bookmarkID: String) -> [BrowserSession] {
+        let all = tabs.compactMap(\.browserSession).filter { $0.bookmarkID == bookmarkID }
+        guard let intentID = activeIntentID else { return all }
+        return all.filter { $0.intentID == intentID || $0.intentID == nil }
+    }
+
+    /// Browser sessions for the currently selected room
+    var roomBrowserSessions: [BrowserSession] {
+        guard let roomID = selectedRoomID else { return [] }
+        return tabs.compactMap(\.browserSession).filter { $0.roomID == roomID }
+    }
+
+    /// Browser sessions with no associated room
+    var orphanedBrowserSessions: [BrowserSession] {
+        tabs.compactMap(\.browserSession).filter { $0.roomID == nil }
+    }
+
+    /// Find the tab index for a given browser session
+    func tabIndex(for session: BrowserSession) -> Int? {
+        tabs.firstIndex(where: { $0.browserSession?.id == session.id })
+    }
+
+    // MARK: - Browser Hybrid Tab Operations
+
+    /// Pop an internal browser tab out into its own workspace tab
+    func popOutBrowserTab(_ browserTab: BrowserTab, from session: BrowserSession) {
+        guard let tabIndex = session.tabs.firstIndex(where: { $0.id == browserTab.id }) else { return }
+
+        // Remove from source session
+        session.tabs.remove(at: tabIndex)
+        if session.tabs.isEmpty {
+            session.tabs.append(BrowserTab())
+        }
+        if session.activeTabIndex >= session.tabs.count {
+            session.activeTabIndex = session.tabs.count - 1
+        }
+
+        // Create new session with just the popped tab
+        let newSession = BrowserSession(
+            bookmarkID: session.bookmarkID,
+            intentID: session.intentID,
+            roomID: session.roomID
+        )
+        newSession.tabs = [browserTab]
+        newSession.activeTabIndex = 0
+
+        let tab = WorkspaceTab(content: .browser(newSession))
+        tab.roomID = selectedRoomID
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
+    }
+
+    /// Merge a solo browser session's tab into another browser session
+    func mergeBrowserTab(from sourceSession: BrowserSession, into targetSession: BrowserSession) {
+        guard let sourceTab = sourceSession.activeTab else { return }
+
+        // Move tab to target
+        targetSession.tabs.append(sourceTab)
+        targetSession.activeTabIndex = targetSession.tabs.count - 1
+
+        // Remove source tab from its session
+        sourceSession.tabs.removeAll { $0.id == sourceTab.id }
+
+        // If source session is now empty, close its workspace tab
+        if sourceSession.tabs.isEmpty {
+            if let wsIndex = tabs.firstIndex(where: { $0.browserSession?.id == sourceSession.id }) {
+                closeTab(at: wsIndex)
+            }
+        }
+    }
+
+    // MARK: - Browser Persistence
+
+    func saveBrowserState(forRoom roomID: String) {
+        let roomBrowserSessions = openBrowserSessions.filter { $0.roomID == roomID }
+        BrowserStateStore.save(sessions: roomBrowserSessions, forRoom: roomID)
+    }
+
+    func restoreBrowserState(forRoom roomID: String) {
+        // Only restore if no browser tabs exist for this room
+        let existing = openBrowserSessions.filter { $0.roomID == roomID }
+        guard existing.isEmpty else { return }
+
+        let states = BrowserStateStore.restore(forRoom: roomID)
+        for state in states {
+            let session = BrowserSession(
+                bookmarkID: state.bookmarkID,
+                intentID: state.intentID,
+                roomID: roomID
+            )
+            session.isDevToolsVisible = state.isDevToolsVisible
+
+            // Restore tabs
+            session.tabs.removeAll()
+            for tabState in state.tabs {
+                let url = tabState.url.flatMap { URL(string: $0) }
+                let tab = BrowserTab(url: url)
+                tab.title = tabState.title
+                session.tabs.append(tab)
+            }
+            if session.tabs.isEmpty {
+                session.tabs.append(BrowserTab())
+            }
+            session.activeTabIndex = min(state.activeIndex, session.tabs.count - 1)
+
+            let wsTab = WorkspaceTab(content: .browser(session))
+            wsTab.roomID = roomID
+            tabs.append(wsTab)
+        }
     }
 }

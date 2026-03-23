@@ -84,6 +84,10 @@ struct MarkdownTextView: NSViewRepresentable {
         // Apply initial content
         context.coordinator.setTextViewContent(text)
 
+        // Initialize color scheme tracking so the first updateNSView
+        // doesn't detect a spurious appearance change and trigger forceRestyle
+        context.coordinator.lastColorScheme = colorScheme
+
         // Publish coordinator to the editor context so toolbars can interact
         editorContext?.coordinator = context.coordinator
         context.coordinator.editorContext = editorContext
@@ -152,10 +156,11 @@ struct MarkdownTextView: NSViewRepresentable {
         } else {
             currentPlain = ""
         }
-        if modeChanged || appearanceChanged {
-            context.coordinator.forceRestyle()
-        } else if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
+        // Update content first if it changed, then restyle if mode/appearance changed
+        if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
             context.coordinator.setTextViewContent(text)
+        } else if modeChanged || appearanceChanged {
+            context.coordinator.forceRestyle()
         }
     }
 
@@ -202,49 +207,58 @@ struct MarkdownTextView: NSViewRepresentable {
 
         // MARK: - Content Management
 
-        /// Replaces the text view's content and re-applies styling.
-        ///
-        /// Phase 1 (immediate): set plain text with base styling so the user sees content instantly.
-        /// Phase 2 (async): parse on a background thread, then apply attributes on main thread.
+        /// Replaces the text view's content and re-applies styled formatting synchronously
+        /// to avoid a flash of unstyled (dev mode) content when switching documents.
         func setTextViewContent(_ plainText: String) {
             guard let textView, let storage = textView.textStorage else { return }
 
             // Bump generation so any in-flight async parse is discarded
             parseGeneration += 1
-            let currentGeneration = parseGeneration
 
-            // --- Phase 1: Immediate plain-text display ---
             isStyling = true
+            defer { isStyling = false }
+
+            let hidesSyntax = editingMode == .writing
             let theme = Theme.current
-            let baseAttributes: [NSAttributedString.Key: Any] = [
-                .font: theme.editorFont,
-                .foregroundColor: theme.editorForeground,
-            ]
-            let plain = NSAttributedString(string: plainText, attributes: baseAttributes)
+
+            let styled: NSAttributedString
+            if isJSON {
+                styled = JsonSyntaxHighlighter().highlight(plainText, theme: theme)
+            } else {
+                styled = parser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: theme)
+            }
 
             let selectedRanges = textView.selectedRanges
+
             textView.undoManager?.disableUndoRegistration()
+            defer { textView.undoManager?.enableUndoRegistration() }
+
             storage.beginEditing()
-            storage.setAttributedString(plain)
+            storage.setAttributedString(styled)
+
+            // Layer XML tag rendering on top (not for JSON)
+            if !isJSON {
+                let foldEnabled = editingMode == .writing
+                XMLTagRenderer.render(
+                    in: storage,
+                    foldingEnabled: foldEnabled,
+                    collapsedOffsets: foldEnabled ? collapsedXMLTagOffsets : []
+                )
+            }
+
+            // Replace bullet/checkbox markers with visual symbols
+            if !isJSON {
+                applyCheckboxMarkers(in: storage)
+                applyBulletMarkers(in: storage)
+            }
             storage.endEditing()
-            textView.undoManager?.enableUndoRegistration()
+
             restoreSelection(selectedRanges, in: textView)
-            isStyling = false
 
-            // --- Phase 2: Async styled parse ---
-            let hidesSyntax = editingMode == .writing
-            let isJSONDoc = isJSON
-
-            Task {
-                let styled = await Task.detached {
-                    if isJSONDoc {
-                        return await JsonSyntaxHighlighter().highlight(plainText, theme: theme)
-                    } else {
-                        let bgParser = await MarkdownParser()
-                        return await bgParser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: theme)
-                    }
-                }.value
-                self.applyParsedStyling(styled, isJSON: isJSONDoc, generation: currentGeneration)
+            // Sync fold state to the text view for triangle drawing
+            if let editorTV = textView as? EditorTextView {
+                editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
+                editorTV.updateCopyButtons()
             }
         }
 

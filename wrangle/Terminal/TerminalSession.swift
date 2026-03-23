@@ -14,6 +14,7 @@ class TerminalSession: Identifiable {
     let projectName: String
     let workingDirectory: URL?
     let bookmarkID: String?
+    var intentID: String?
     var isClaude: Bool
     var isGemini: Bool
     var customTitle: String?

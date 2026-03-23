@@ -61,6 +61,8 @@ struct WrangleApp: App {
         let schema = Schema([
             BookmarkedDirectory.self,
             RecentFile.self,
+            Room.self,
+            Intent.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
