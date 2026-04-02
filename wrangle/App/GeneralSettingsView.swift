@@ -6,6 +6,7 @@ struct GeneralSettingsView: View {
     @AppStorage("editorFontSize") private var editorFontSize: Double = 14
     @AppStorage("showLineNumbers") private var showLineNumbers: Bool = true
     @AppStorage("autoSaveEnabled") private var autoSaveEnabled: Bool = false
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -30,6 +31,10 @@ struct GeneralSettingsView: View {
 
                 Toggle("Show Line Numbers", isOn: $showLineNumbers)
                 Toggle("Auto-save on Focus Loss", isOn: $autoSaveEnabled)
+            }
+
+            Section("Title Bar") {
+                Toggle("Show System Metrics", isOn: $showSystemMetrics)
             }
 
             Section("Updates") {

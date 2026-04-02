@@ -21,10 +21,12 @@ struct ContentView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var modelContext
     @State private var editorContext = EditorContext()
+    @State private var systemMetrics = SystemMetrics()
 
     /// Cached map: directory path -> (bookmarkID, bookmarkName)
     @State private var bookmarkPathCache: [(path: String, id: String, name: String, roomID: String?)] = []
     @Query private var rooms: [Room]
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
 
     private var windowTitle: String {
         if let roomID = appState.selectedRoomID,
@@ -210,7 +212,7 @@ struct ContentView: View {
             }
 
         }
-        .background { WindowChromeConfigurator(appState: appState) }
+        .background { WindowChromeConfigurator(appState: appState, systemMetrics: systemMetrics) }
         .frame(minWidth: 140, minHeight: 500)
         .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
@@ -228,6 +230,10 @@ struct ContentView: View {
             if isForeground {
                 Task { await coordinator.notificationManager.refreshStatus() }
             }
+        }
+        .task {
+            systemMetrics.coordinator = coordinator
+            systemMetrics.startMonitoring()
         }
         .onAppear {
             appState.coordinator = coordinator
