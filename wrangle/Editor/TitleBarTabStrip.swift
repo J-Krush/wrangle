@@ -14,6 +14,8 @@ import UniformTypeIdentifiers
 /// No longer installs a tab strip accessory — tabs are now in the regular SwiftUI layout.
 struct WindowChromeConfigurator: NSViewRepresentable {
     let appState: AppState
+    let isInPlayback: Bool
+    let systemMetrics: SystemMetrics
 
     func makeNSView(context: Context) -> NSView {
         let view = WindowAccessorView()
@@ -22,12 +24,34 @@ struct WindowChromeConfigurator: NSViewRepresentable {
             window.titleVisibility = .visible
             window.backgroundColor = Theme.chromeBackground
             appState.nsWindow = window
+            installMetricsAccessory(in: window)
         }
         return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        appState.nsWindow?.backgroundColor = Theme.chromeBackground
+        appState.nsWindow?.backgroundColor = isInPlayback
+            ? Theme.playbackChromeBackground
+            : Theme.chromeBackground
+    }
+
+    private func installMetricsAccessory(in window: NSWindow) {
+        let hostingView = NSHostingView(rootView: SystemMetricsView(metrics: systemMetrics))
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 28))
+        container.addSubview(hostingView)
+
+        NSLayoutConstraint.activate([
+            hostingView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            hostingView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+        ])
+
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = container
+        accessory.layoutAttribute = .trailing
+
+        window.addTitlebarAccessoryViewController(accessory)
     }
 }
 

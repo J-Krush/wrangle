@@ -98,6 +98,9 @@ struct WrangleApp: App {
                     updateSystemScheme()
                     coordinator.updateChecker.checkForUpdate()
                     coordinator.licenseManager.loadOnLaunch()
+                    coordinator.engineClient.start()
+                    coordinator.snapshotCollector.coordinator = coordinator
+                    coordinator.snapshotCollector.start(engineClient: coordinator.engineClient)
                     removeSystemCloseMenuItems()
 
 // Listen for macOS appearance changes

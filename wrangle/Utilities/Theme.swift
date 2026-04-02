@@ -132,6 +132,24 @@ struct Theme {
             )
     }
 
+    /// Blue tint color for playback mode chrome (title bar, right-side chrome).
+    static let playbackChromeBackground = NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+            return NSColor(srgbRed: 20/255, green: 28/255, blue: 48/255, alpha: 1)
+        } else {
+            return NSColor(srgbRed: 215/255, green: 225/255, blue: 245/255, alpha: 1)
+        }
+    }
+
+    /// Blue tint for playback mode sidebar.
+    static let playbackSidebarBackground = NSColor(name: nil) { appearance in
+        if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+            return NSColor(srgbRed: 26/255, green: 34/255, blue: 56/255, alpha: 1)
+        } else {
+            return NSColor(srgbRed: 220/255, green: 230/255, blue: 248/255, alpha: 1)
+        }
+    }
+
     /// Returns the appropriate theme based on the current system appearance.
     static var current: Theme {
         let appearance = NSApp.effectiveAppearance

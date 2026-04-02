@@ -11,7 +11,7 @@ enum ViewMode: String, CaseIterable {
     case editor
     case dashboard
     case canvas
-
+    case roomOverview
 }
 
 enum AppearanceMode: String, CaseIterable {
@@ -29,6 +29,15 @@ struct NavigationEntry: Equatable {
     static func == (lhs: NavigationEntry, rhs: NavigationEntry) -> Bool {
         lhs.roomID == rhs.roomID && lhs.tabID == rhs.tabID && lhs.viewMode == rhs.viewMode
     }
+}
+
+// MARK: - Timeline Playback
+
+struct TimelinePlayback {
+    let snapshot: SnapshotQueryResult
+    let roomName: String
+    let roomColorHex: String?
+    let formattedTime: String
 }
 
 @MainActor
@@ -71,6 +80,10 @@ class AppState {
     private var isNavigatingHistory = false
     var canGoBack: Bool { navIndex > 0 }
     var canGoForward: Bool { navIndex < navHistory.count - 1 }
+
+    // Timeline playback (read-only preview of past workspace)
+    var timelinePlayback: TimelinePlayback?
+    var isInPlayback: Bool { timelinePlayback != nil }
 
     // Terminal session manager (retained for stopAll on quit)
     var terminalSessionManager = TerminalSessionManager()
@@ -161,7 +174,70 @@ class AppState {
             }
         }
 
+        // Record navigation + timeline snapshot for room switch
         pushNavigation()
+        coordinator?.snapshotCollector.capture(from: self, eventType: "room_switch")
+    }
+
+    // MARK: - Timeline Restore
+
+    /// Restore workspace state from a timeline snapshot.
+    /// Switches to the snapshot's room and reopens the tabs that were present.
+    func restoreFromSnapshot(_ workspace: WorkspaceState, roomID: String) {
+        // Switch room if different
+        if selectedRoomID != roomID {
+            switchToRoom(roomID)
+        }
+
+        // Close existing tabs in this room
+        let currentVisible = visibleTabs
+        for tab in currentVisible {
+            if let session = tab.terminalSession { session.stop() }
+            tabs.removeAll { $0.id == tab.id }
+        }
+        previewTabID = nil
+
+        // Reopen tabs from snapshot
+        for tabSnap in workspace.tabs {
+            switch tabSnap.kind {
+            case "document":
+                if let path = tabSnap.filePath {
+                    let url = URL(fileURLWithPath: path)
+                    if FileManager.default.fileExists(atPath: path) {
+                        openFile(url: url)
+                    }
+                }
+            case "browser":
+                if let urlString = tabSnap.url, let url = URL(string: urlString) {
+                    openBrowser(url: url)
+                }
+            case "terminal":
+                let isClaude = tabSnap.metadata["agent_type"] == "claude"
+                let isGemini = tabSnap.metadata["agent_type"] == "gemini"
+                let dir = tabSnap.workingDir.map { URL(fileURLWithPath: $0) }
+                openTerminal(
+                    projectName: tabSnap.title ?? "Terminal",
+                    directory: dir,
+                    bookmarkID: nil,
+                    launchClaude: isClaude,
+                    launchGemini: isGemini
+                )
+            default:
+                break
+            }
+        }
+
+        // Select the tab that was active
+        if let activeID = workspace.activeTabID {
+            // Try to match by position since IDs won't match
+            let vis = visibleTabs
+            if !vis.isEmpty {
+                if let idx = workspace.tabs.firstIndex(where: { $0.id == activeID }) {
+                    let clampedIdx = min(idx, vis.count - 1)
+                    selectVisibleTab(at: clampedIdx)
+                }
+            }
+        }
     }
 
     // MARK: - Navigation History
@@ -169,6 +245,7 @@ class AppState {
     /// Record the current view state as a history entry.
     func pushNavigation() {
         guard !isNavigatingHistory else { return }
+        guard !isInPlayback else { return }
 
         // Skip recording if the active tab is a preview tab (clicking through files in sidebar)
         if let activeID = activeTab?.id, activeID == previewTabID {
@@ -243,6 +320,23 @@ class AppState {
                 activeTabIndex = index
             }
         }
+    }
+
+    // MARK: - Timeline Playback
+
+    func enterPlayback(_ playback: TimelinePlayback) {
+        timelinePlayback = playback
+    }
+
+    func exitPlayback() {
+        timelinePlayback = nil
+    }
+
+    func restoreFromPlayback() {
+        guard let playback = timelinePlayback else { return }
+        // Clear playback first, then restore -- this puts us back to "now"
+        timelinePlayback = nil
+        restoreFromSnapshot(playback.snapshot.workspace, roomID: playback.snapshot.roomID)
     }
 
     // MARK: - Computed Properties
@@ -333,6 +427,7 @@ class AppState {
         activeTabIndex = tabs.count - 1
 
         loadDocumentAsync(for: document, from: url)
+        coordinator?.snapshotCollector.capture(from: self, eventType: "tab_open", notes: "Opened \(url.lastPathComponent)")
     }
 
     func openFileAsPreview(url: URL, scopedURL: URL? = nil) {
@@ -496,6 +591,7 @@ class AppState {
             activeTabIndex -= 1
         }
 
+        coordinator?.snapshotCollector.capture(from: self, eventType: "tab_close", notes: "Closed \(closedName)")
     }
 
     func closeAllTabs() {
@@ -599,6 +695,7 @@ class AppState {
         tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        coordinator?.snapshotCollector.capture(from: self, eventType: "tab_open", notes: "Opened terminal: \(projectName)")
     }
 
     /// Opens a terminal (or AI session) using the active project's context.
@@ -646,6 +743,7 @@ class AppState {
         tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        coordinator?.snapshotCollector.capture(from: self, eventType: "tab_open", notes: "Opened browser")
     }
 
     func openBrowserForActiveProject(url: URL? = nil) {

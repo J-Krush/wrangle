@@ -21,10 +21,13 @@ struct ContentView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var modelContext
     @State private var editorContext = EditorContext()
+    @State private var systemMetrics = SystemMetrics()
 
     /// Cached map: directory path -> (bookmarkID, bookmarkName)
     @State private var bookmarkPathCache: [(path: String, id: String, name: String, roomID: String?)] = []
     @Query private var rooms: [Room]
+    @AppStorage("showTimeline") private var showTimeline: Bool = true
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
 
     private var windowTitle: String {
         if let roomID = appState.selectedRoomID,
@@ -45,10 +48,24 @@ struct ContentView: View {
 
                 // Right side: tabs + detail
                 VStack(spacing: 0) {
-                    if appState.selectedRoomID != nil {
+                    if appState.selectedRoomID != nil, !appState.isInPlayback {
                         TitleBarTabStrip()
                     }
                     NotificationBannerView()
+
+                if let playback = appState.timelinePlayback {
+                    // Timeline playback: show room or dashboard in read-only mode
+                    PlaybackBannerView(playback: playback)
+                    if appState.selectedRoomID != nil {
+                        RoomOverviewView()
+                            .allowsHitTesting(false)
+                            .opacity(0.85)
+                    } else {
+                        DashboardView()
+                            .allowsHitTesting(false)
+                            .opacity(0.85)
+                    }
+                } else {
 
                 ZStack {
                     // Keep all terminal NSViews alive to preserve process state and scrollback
@@ -88,6 +105,8 @@ struct ContentView: View {
                         DashboardView()
                     case .canvas:
                         CanvasView()
+                    case .roomOverview:
+                        RoomOverviewView()
                     case .editor:
                         // Document or empty view (renders on top when active tab is not a terminal/browser)
                         if let tab = appState.activeTab {
@@ -105,12 +124,13 @@ struct ContentView: View {
                                 EmptyView()
                             }
                         } else {
-                            DashboardView()
+                            RoomOverviewView()
                         }
                     }
                     } // end if selectedRoomID != nil
                 }
                 .animation(nil, value: appState.activeTabIndex)
+                } // end else (not in playback)
             }
             .background(
                 GeometryReader { geo in
@@ -121,7 +141,7 @@ struct ContentView: View {
                 }
             )
             .background(
-                Color(nsColor: Theme.chromeBackground),
+                Color(nsColor: appState.isInPlayback ? Theme.playbackChromeBackground : Theme.chromeBackground),
                 ignoresSafeAreaEdges: .all
             )
             .alert(
@@ -174,7 +194,7 @@ struct ContentView: View {
         } // HStack
         } // outer VStack (trial banner + content)
         .background(
-            Color(nsColor: Theme.chromeBackground),
+            Color(nsColor: appState.isInPlayback ? Theme.playbackChromeBackground : Theme.chromeBackground),
             ignoresSafeAreaEdges: .all
         )
         .coordinateSpace(name: "root")
@@ -210,7 +230,7 @@ struct ContentView: View {
             }
 
         }
-        .background { WindowChromeConfigurator(appState: appState) }
+        .background { WindowChromeConfigurator(appState: appState, isInPlayback: appState.isInPlayback, systemMetrics: systemMetrics) }
         .frame(minWidth: 140, minHeight: 500)
         .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
@@ -229,11 +249,19 @@ struct ContentView: View {
                 Task { await coordinator.notificationManager.refreshStatus() }
             }
         }
+        .task {
+            systemMetrics.coordinator = coordinator
+            systemMetrics.startMonitoring()
+        }
         .onAppear {
             appState.coordinator = coordinator
             coordinator.register(appState)
             RoomMigration.runIfNeeded(modelContext: modelContext)
             rebuildBookmarkPathCache()
+            // Sync all room colors to the timeline engine
+            for room in rooms {
+                coordinator.engineClient.updateRoomIndex(roomID: room.id, name: room.name, colorHex: room.colorHex)
+            }
         }
         .onDisappear {
             // Stop all terminal sessions for this window
@@ -243,6 +271,11 @@ struct ContentView: View {
             coordinator.unregister(appState)
         }
         .environment(appState)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showTimeline {
+                TimelineHUDView(appState: appState)
+            }
+        }
         .focusedSceneValue(\.appState, appState)
     }
 

@@ -58,7 +58,7 @@ struct RoomListSection: View {
                     room.colorHex = sheetColorHex
                     try? modelContext.save()
                     editingRoom = nil
-
+                    appState.coordinator?.engineClient.updateRoomIndex(roomID: room.id, name: room.name, colorHex: room.colorHex)
                 }
             }
     }

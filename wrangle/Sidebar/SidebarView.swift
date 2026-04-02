@@ -113,7 +113,7 @@ struct SidebarView: View {
             }
         }
         .clipped()
-        .background(Color(nsColor: Theme.chromeBackground))
+        .background(Color(nsColor: appState.isInPlayback ? Theme.playbackChromeBackground : Theme.chromeBackground))
         .fixedSize(horizontal: true, vertical: false)
         .animation(.smooth(duration: 0.2), value: dropState == .hovering)
         .onChange(of: rawDropTargeted) { _, newValue in

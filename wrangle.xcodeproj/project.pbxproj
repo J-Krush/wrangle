@@ -57,6 +57,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 01DE76DB2F4A086B0046C9A7 /* Build configuration list for PBXNativeTarget "Wrangle" */;
 			buildPhases = (
+				01F9069A2F74E5CC00A50A0F /* Build Rust Engine */,
 				01DE76CA2F4A086A0046C9A7 /* Sources */,
 				01DE76CB2F4A086A0046C9A7 /* Frameworks */,
 				01DE76CC2F4A086A0046C9A7 /* Resources */,
@@ -123,6 +124,34 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		01F9069A2F74E5CC00A50A0F /* Build Rust Engine */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/engine/Cargo.toml",
+				"$(SRCROOT)/engine/src/main.rs",
+				"$(SRCROOT)/engine/src/db.rs",
+				"$(SRCROOT)/engine/src/protocol.rs",
+				"$(SRCROOT)/engine/src/timeline.rs",
+				"$(SRCROOT)/engine/src/snapshot.rs",
+			);
+			name = "Build Rust Engine";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(PRODUCT_NAME).app/Contents/Resources/wrangle-engine",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n\"${SRCROOT}/scripts/build-engine.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		01DE76CA2F4A086A0046C9A7 /* Sources */ = {

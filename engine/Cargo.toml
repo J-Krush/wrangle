@@ -1,0 +1,16 @@
+[package]
+name = "wrangle-engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+nix = { version = "0.28", features = ["signal"] }
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "s"

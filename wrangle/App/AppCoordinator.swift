@@ -12,6 +12,9 @@ class AppCoordinator {
     var licenseManager = LicenseManager()
     var notificationManager = NotificationPermissionManager()
     var selectedSettingsTab: SettingsTab = .general
+    var engineClient = EngineClient()
+    var snapshotCollector = SnapshotCollector()
+
     // Registry of all window states
     private(set) var windowStates: [UUID: AppState] = [:]
 

@@ -39,7 +39,7 @@ struct RoomRailView: View {
             Spacer()
         }
         .frame(width: 52)
-        .background(Color(nsColor: Theme.chromeBackground))
+        .background(Color(nsColor: appState.isInPlayback ? Theme.playbackChromeBackground : Theme.chromeBackground))
         .sheet(isPresented: $showNewRoomSheet) {
             RoomEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: true) {
                 commitNewRoom()
@@ -98,7 +98,10 @@ struct RoomRailView: View {
         let hasRunning = roomTabs.contains { $0.terminalSession?.isRunning == true }
 
         return Button {
-            if appState.selectedRoomID != room.id {
+            if appState.selectedRoomID == room.id {
+                // Toggle between editor and room overview
+                appState.viewMode = appState.viewMode == .roomOverview ? .editor : .roomOverview
+            } else {
                 appState.switchToRoom(room.id)
             }
         } label: {
@@ -199,7 +202,7 @@ struct RoomRailView: View {
         modelContext.insert(room)
         try? modelContext.save()
         appState.switchToRoom(room.id)
-
+        appState.coordinator?.engineClient.updateRoomIndex(roomID: room.id, name: name, colorHex: sheetColorHex)
     }
 
     private func commitEditRoom() {
@@ -209,7 +212,7 @@ struct RoomRailView: View {
         room.colorHex = sheetColorHex
         try? modelContext.save()
         editingRoom = nil
-
+        appState.coordinator?.engineClient.updateRoomIndex(roomID: room.id, name: name, colorHex: sheetColorHex)
     }
 
     private func deleteRoom(_ room: Room) {
