@@ -129,6 +129,18 @@ class AppState {
         }
     }
 
+    /// Navigate to the All Projects dashboard view.
+    func showAllProjects() {
+        if let currentRoom = selectedRoomID {
+            saveBrowserState(forRoom: currentRoom)
+            saveTerminalState(forRoom: currentRoom)
+        }
+        selectedRoomID = nil
+        activeIntentID = nil
+        viewMode = .dashboard
+        pushNavigation()
+    }
+
     /// Called when switching rooms — saves current room's active tab, restores new room's
     func switchToRoom(_ newRoomID: String) {
         // Save current room's active tab and browser state
@@ -139,14 +151,19 @@ class AppState {
                 }
             }
             saveBrowserState(forRoom: currentRoom)
+            saveTerminalState(forRoom: currentRoom)
         }
 
         selectedRoomID = newRoomID
         activeIntentID = nil
         viewMode = .editor
 
-        // Restore browser sessions for the new room if none exist
+        // Ensure room overview tab exists
+        ensureRoomOverviewTab(forRoom: newRoomID)
+
+        // Restore browser and terminal sessions for the new room if none exist
         restoreBrowserState(forRoom: newRoomID)
+        restoreTerminalState(forRoom: newRoomID)
 
         // Restore new room's active tab
         let newVisible = visibleTabs
@@ -282,6 +299,8 @@ class AppState {
     init() {
         self.tabs = []
         self.activeTabIndex = -1
+        // Seed the initial "All Projects" entry so back button works from first room
+        pushNavigation()
     }
 
     // MARK: - Scratch Pads
@@ -289,9 +308,9 @@ class AppState {
     func newScratchPad(name: String? = nil) {
         let url: URL
         if let name, !name.trimmingCharacters(in: .whitespaces).isEmpty {
-            url = scratchPadManager.createScratchPad(name: name)
+            url = scratchPadManager.createScratchPad(name: name, roomID: selectedRoomID)
         } else {
-            url = scratchPadManager.createScratchPadWithTimestamp()
+            url = scratchPadManager.createScratchPadWithTimestamp(roomID: selectedRoomID)
         }
         openFile(url: url)
     }
@@ -318,6 +337,7 @@ class AppState {
         // Check if this file is already open in a tab
         if let existingIndex = tabs.firstIndex(where: { $0.document?.fileURL == url }) {
             activeTabIndex = existingIndex
+            pushNavigation()
             return
         }
 
@@ -331,6 +351,7 @@ class AppState {
         tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
 
         loadDocumentAsync(for: document, from: url)
     }
@@ -428,6 +449,7 @@ class AppState {
         tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
     }
 
     // MARK: - Tab Management
@@ -465,12 +487,20 @@ class AppState {
         guard index >= 0, index < tabs.count else { return }
         activeTabIndex = index
         tabs[index].terminalSession?.needsAttention = false
+        // Deselect sidebar location when overview tab is active
+        if tabs[index].isRoomOverview {
+            selectedBookmarkID = nil
+        }
         pushNavigation()
     }
 
     func closeTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }
         let closedTab = tabs[index]
+
+        // Room overview tabs cannot be closed
+        if closedTab.isRoomOverview { return }
+
         let closedName = closedTab.displayName
 
         // Clear preview if this was the preview tab
@@ -499,16 +529,22 @@ class AppState {
     }
 
     func closeAllTabs() {
-        // Close only visible tabs (current room)
+        // Close only visible tabs (current room), preserving room overview tabs
         let visible = visibleTabs
         for tab in visible {
+            if tab.isRoomOverview { continue }
             if let session = tab.terminalSession {
                 session.stop()
             }
             tabs.removeAll { $0.id == tab.id }
         }
         previewTabID = nil
-        activeTabIndex = -1
+        // Select the overview tab if it exists
+        if let overviewIndex = tabs.firstIndex(where: { $0.isRoomOverview && $0.roomID == selectedRoomID }) {
+            activeTabIndex = overviewIndex
+        } else {
+            activeTabIndex = -1
+        }
     }
 
     func closeTab(_ tab: WorkspaceTab) {
@@ -544,6 +580,9 @@ class AppState {
     func requestCloseTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }
         let tab = tabs[index]
+
+        // Room overview tabs cannot be closed
+        if tab.isRoomOverview { return }
 
         // If it's a running terminal, show confirmation
         if let session = tab.terminalSession, session.isRunning {
@@ -599,6 +638,7 @@ class AppState {
         tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
     }
 
     /// Opens a terminal (or AI session) using the active project's context.
@@ -646,6 +686,7 @@ class AppState {
         tab.roomID = selectedRoomID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
     }
 
     func openBrowserForActiveProject(url: URL? = nil) {
@@ -729,6 +770,29 @@ class AppState {
         }
     }
 
+    // MARK: - Room Overview Tab
+
+    /// Ensures a room overview tab exists as the first tab for the given room.
+    func ensureRoomOverviewTab(forRoom roomID: String) {
+        let hasOverview = tabs.contains { $0.roomOverviewID == roomID }
+        guard !hasOverview else { return }
+
+        let tab = WorkspaceTab(content: .roomOverview(roomID))
+        tab.roomID = roomID
+        tab.isPinned = true
+
+        // Insert before any other tabs for this room
+        if let firstRoomIndex = tabs.firstIndex(where: { $0.roomID == roomID }) {
+            tabs.insert(tab, at: firstRoomIndex)
+            // Adjust activeTabIndex if it shifted
+            if activeTabIndex >= firstRoomIndex {
+                activeTabIndex += 1
+            }
+        } else {
+            tabs.append(tab)
+        }
+    }
+
     // MARK: - Browser Persistence
 
     func saveBrowserState(forRoom roomID: String) {
@@ -764,6 +828,61 @@ class AppState {
             session.activeTabIndex = min(state.activeIndex, session.tabs.count - 1)
 
             let wsTab = WorkspaceTab(content: .browser(session))
+            wsTab.roomID = roomID
+            tabs.append(wsTab)
+        }
+    }
+
+    // MARK: - Terminal Persistence
+
+    func saveTerminalState(forRoom roomID: String) {
+        let roomTerminalSessions = tabs
+            .compactMap { tab -> TerminalSession? in
+                guard tab.roomID == roomID else { return nil }
+                return tab.terminalSession
+            }
+        TerminalStateStore.save(sessions: roomTerminalSessions, forRoom: roomID)
+    }
+
+    func saveAllTerminalState() {
+        // Collect all unique room IDs from terminal tabs
+        let roomIDs = Set(tabs.compactMap { tab -> String? in
+            guard tab.terminalSession != nil else { return nil }
+            return tab.roomID
+        })
+        for roomID in roomIDs {
+            saveTerminalState(forRoom: roomID)
+        }
+    }
+
+    func restoreTerminalState(forRoom roomID: String) {
+        // Only restore if no terminal tabs exist for this room
+        let existing = tabs.filter { $0.roomID == roomID && $0.terminalSession != nil }
+        guard existing.isEmpty else { return }
+
+        let states = TerminalStateStore.restore(forRoom: roomID)
+        for state in states {
+            // Only restore Claude/Gemini sessions (plain terminals aren't useful without scrollback)
+            guard state.isClaude || state.isGemini else { continue }
+
+            let dir = state.workingDirectoryPath.map { URL(fileURLWithPath: $0) }
+            let emulator = TerminalEmulator()
+            emulator.workingDirectory = dir
+
+            let session = TerminalSession(
+                emulator: emulator,
+                projectName: state.projectName,
+                workingDirectory: dir,
+                bookmarkID: state.bookmarkID,
+                isClaude: state.isClaude,
+                isGemini: state.isGemini
+            )
+            session.intentID = state.intentID
+            session.customTitle = state.customTitle
+            session.claudeSessionID = state.claudeSessionID
+            session.isRestored = true
+
+            let wsTab = WorkspaceTab(content: .terminal(session))
             wsTab.roomID = roomID
             tabs.append(wsTab)
         }

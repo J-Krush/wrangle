@@ -9,6 +9,7 @@ import SwiftData
 struct TerminalDirectoryPicker: View {
     let launchClaude: Bool
     let launchGemini: Bool
+    var roomID: String? = nil
     let onSelect: (String, URL, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -16,7 +17,14 @@ struct TerminalDirectoryPicker: View {
     @Query(
         filter: #Predicate<BookmarkedDirectory> { !$0.isFile },
         sort: \BookmarkedDirectory.displayOrder
-    ) private var bookmarks: [BookmarkedDirectory]
+    ) private var allBookmarks: [BookmarkedDirectory]
+
+    private var bookmarks: [BookmarkedDirectory] {
+        if let roomID {
+            return allBookmarks.filter { $0.roomID == roomID }
+        }
+        return allBookmarks
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

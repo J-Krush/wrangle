@@ -16,9 +16,15 @@ struct TerminalTabContentView: View {
             // SwiftTerm handles both rendering and keyboard input.
             // Padding is applied inside TerminalContainerView via layout margins
             // so SwiftTerm's frame matches the reported terminal dimensions exactly.
-            SwiftTermView(session: session, isActive: appState.activeTab?.terminalSession?.id == session.id)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(Theme.current.terminalBackground))
+            ZStack {
+                SwiftTermView(session: session, isActive: appState.activeTab?.terminalSession?.id == session.id)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(Theme.current.terminalBackground))
+
+                if session.isRestored && !session.isRunning {
+                    restoredSessionOverlay
+                }
+            }
 
             terminalStatusBar
         }
@@ -85,6 +91,45 @@ struct TerminalTabContentView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
         .background(Color(nsColor: Theme.chromeBackground))
+    }
+
+    // MARK: - Restored Session Overlay
+
+    private var restoredSessionOverlay: some View {
+        VStack(spacing: 16) {
+            Image(systemName: session.isClaude ? "arrow.clockwise.circle.fill" : "terminal.fill")
+                .font(.system(size: 36))
+                .foregroundStyle(.secondary)
+
+            Text("Previous Session")
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            if let claudeSID = session.claudeSessionID, session.isClaude {
+                Button("Resume Claude Session") {
+                    session.isRestored = false
+                    session.pendingCommand = ClaudeCodeLauncher.resumeCommand(sessionID: claudeSID)
+                    session.emulator.restart(in: session.workingDirectory)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            Button(session.isClaude ? "Start New Session" : "Start New Terminal") {
+                session.isRestored = false
+                if session.isClaude {
+                    session.pendingCommand = ClaudeCodeLauncher.launchCommand()
+                } else if session.isGemini {
+                    session.pendingCommand = GeminiCodeLauncher.launchCommand()
+                }
+                session.emulator.restart(in: session.workingDirectory)
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(32)
+        .background {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.ultraThinMaterial)
+        }
     }
 
     private var appearanceIcon: String {

@@ -198,6 +198,11 @@ struct MarkdownTextView: NSViewRepresentable {
             document?.fileURL?.pathExtension.lowercased() == "json"
         }
 
+        /// Whether the document's file type should receive markdown rendering.
+        var isMarkdownRendered: Bool {
+            document?.fileType.isMarkdownRendered ?? true
+        }
+
         init(text: Binding<String>, document: EditorDocument?, editingMode: EditingMode = .writing) {
             self.text = text
             self.document = document
@@ -224,6 +229,8 @@ struct MarkdownTextView: NSViewRepresentable {
             let styled: NSAttributedString
             if isJSON {
                 styled = JsonSyntaxHighlighter().highlight(plainText, theme: theme)
+            } else if !isMarkdownRendered {
+                styled = ConfigSyntaxHighlighter().highlight(plainText, theme: theme)
             } else {
                 styled = parser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: theme)
             }
@@ -236,8 +243,8 @@ struct MarkdownTextView: NSViewRepresentable {
             storage.beginEditing()
             storage.setAttributedString(styled)
 
-            // Layer XML tag rendering on top (not for JSON)
-            if !isJSON {
+            // Layer XML tag rendering on top (not for JSON or config files)
+            if !isJSON && isMarkdownRendered {
                 let foldEnabled = editingMode == .writing
                 XMLTagRenderer.render(
                     in: storage,
@@ -386,6 +393,8 @@ struct MarkdownTextView: NSViewRepresentable {
             let styled: NSAttributedString
             if isJSON {
                 styled = JsonSyntaxHighlighter().highlight(plainText, theme: .current)
+            } else if !isMarkdownRendered {
+                styled = ConfigSyntaxHighlighter().highlight(plainText, theme: .current)
             } else {
                 styled = parser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: .current)
             }
@@ -398,9 +407,11 @@ struct MarkdownTextView: NSViewRepresentable {
             storage.beginEditing()
 
             // Restore visual markers back to markdown so parser regex matches on next restyle
-            restoreTableMarkers(in: storage)
-            restoreCheckboxMarkers(in: storage)
-            restoreBulletMarkers(in: storage)
+            if isMarkdownRendered {
+                restoreTableMarkers(in: storage)
+                restoreCheckboxMarkers(in: storage)
+                restoreBulletMarkers(in: storage)
+            }
 
             // Replace attributes only, keeping the same string
             let fullRange = NSRange(location: 0, length: storage.length)
@@ -408,8 +419,8 @@ struct MarkdownTextView: NSViewRepresentable {
                 storage.setAttributes(attrs, range: range)
             }
 
-            // Layer XML tag rendering on top (not for JSON)
-            if !isJSON {
+            // Layer XML tag rendering on top (only for markdown files)
+            if !isJSON && isMarkdownRendered {
                 let foldEnabled = editingMode == .writing
                 XMLTagRenderer.render(
                     in: storage,
@@ -419,7 +430,7 @@ struct MarkdownTextView: NSViewRepresentable {
             }
 
             // Replace bullet/checkbox/table markers with visual symbols in the storage
-            if !isJSON {
+            if !isJSON && isMarkdownRendered {
                 applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
                 applyTableMarkers(in: storage)

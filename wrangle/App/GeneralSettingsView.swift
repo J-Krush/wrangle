@@ -7,6 +7,7 @@ struct GeneralSettingsView: View {
     @AppStorage("showLineNumbers") private var showLineNumbers: Bool = true
     @AppStorage("autoSaveEnabled") private var autoSaveEnabled: Bool = false
     @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
+    @AppStorage("showHiddenFiles") private var showHiddenFiles: Bool = false
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -31,6 +32,13 @@ struct GeneralSettingsView: View {
 
                 Toggle("Show Line Numbers", isOn: $showLineNumbers)
                 Toggle("Auto-save on Focus Loss", isOn: $autoSaveEnabled)
+            }
+
+            Section("File Tree") {
+                Toggle("Show Hidden Files", isOn: $showHiddenFiles)
+                Text("When off, only common developer dotfiles (.env, .gitignore, etc.) are shown.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Title Bar") {

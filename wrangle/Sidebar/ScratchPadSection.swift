@@ -5,8 +5,16 @@ struct ScratchPadSection: View {
     @State private var renamingURL: URL?
     @State private var renameText: String = ""
 
+    private var visiblePads: [ScratchPadItem] {
+        if let roomID = appState.selectedRoomID {
+            return appState.scratchPadManager.scratchPads(forRoom: roomID)
+        }
+        // Show unscoped (legacy) pads when no room is selected
+        return appState.scratchPadManager.scratchPads.filter { $0.roomID == nil }
+    }
+
     var body: some View {
-        ForEach(appState.scratchPadManager.scratchPads) { pad in
+        ForEach(visiblePads) { pad in
             if renamingURL == pad.url {
                 renameRow(pad: pad)
             } else {
@@ -55,9 +63,6 @@ struct ScratchPadSection: View {
         .textFieldStyle(.roundedBorder)
         .onExitCommand {
             renamingURL = nil
-        }
-        .onAppear {
-            // Focus happens automatically via TextField appearing
         }
     }
 

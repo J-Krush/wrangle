@@ -21,6 +21,12 @@ class TerminalSession: Identifiable {
     var needsAttention: Bool = false
     var sessionContext: SessionContext?
 
+    /// Whether this session was restored from a previous app launch (not yet running).
+    var isRestored: Bool = false
+
+    /// Claude Code's internal session ID, captured from hook events. Used for `claude --resume`.
+    var claudeSessionID: String?
+
     /// Whether this session was auto-detected as Claude (vs. explicitly launched)
     var wasAutoDetected: Bool = false
 
@@ -46,8 +52,17 @@ class TerminalSession: Identifiable {
         refreshSessionContext()
     }
 
+    private static let genericShells: Set<String> = ["bash", "zsh", "sh", "fish", "tcsh", "csh", "ksh", "dash"]
+
     var displayTitle: String {
         if let customTitle { return customTitle }
+        // For Claude/Gemini sessions, prefer the OSC-set title (plan name)
+        if (isClaude || isGemini),
+           let oscTitle = emulator.title,
+           !oscTitle.isEmpty,
+           !Self.genericShells.contains(oscTitle.lowercased()) {
+            return oscTitle
+        }
         if let dir = workingDirectory ?? emulator.workingDirectory {
             return dir.lastPathComponent
         }
@@ -61,8 +76,7 @@ class TerminalSession: Identifiable {
               let emulatorTitle = emulator.title,
               !emulatorTitle.isEmpty,
               emulatorTitle != displayTitle else { return nil }
-        let genericShells: Set<String> = ["bash", "zsh", "sh", "fish", "tcsh", "csh", "ksh", "dash"]
-        if genericShells.contains(emulatorTitle.lowercased()) { return nil }
+        if Self.genericShells.contains(emulatorTitle.lowercased()) { return nil }
         return emulatorTitle
     }
 

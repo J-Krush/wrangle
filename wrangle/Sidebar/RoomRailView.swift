@@ -56,8 +56,7 @@ struct RoomRailView: View {
 
     private var projectOverviewButton: some View {
         Button {
-            appState.selectedRoomID = nil
-            appState.activeIntentID = nil
+            appState.showAllProjects()
         } label: {
             Image(systemName: "square.grid.2x2")
                 .font(.system(size: 14, weight: .medium))

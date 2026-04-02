@@ -44,6 +44,29 @@ struct ProjectCardView: View {
                     }
                 }
 
+                // Todo progress
+                if let total = project.todoTotal, total > 0 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checklist")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text("\(project.todoDone ?? 0)/\(total) tasks")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        // Progress capsule
+                        GeometryReader { geo in
+                            Capsule()
+                                .fill(Color.secondary.opacity(0.15))
+                                .overlay(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.green.opacity(0.6))
+                                        .frame(width: geo.size.width * Double(project.todoDone ?? 0) / Double(total))
+                                }
+                        }
+                        .frame(width: 40, height: 4)
+                    }
+                }
+
                 // Agent status
                 HStack(spacing: 6) {
                     Circle()

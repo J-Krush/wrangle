@@ -48,6 +48,14 @@ enum ClaudeCodeLauncher {
         }
     }
 
+    /// Returns the command string to resume a Claude Code session (including trailing newline).
+    static func resumeCommand(sessionID: String) -> String {
+        if let path = claudePath() {
+            return "\(path) --resume \(sessionID)\n"
+        }
+        return launchCommand()
+    }
+
     /// Launches Claude Code in an already-running session by sending the command directly.
     static func launch(in session: TerminalSession) {
         session.emulator.send(launchCommand())

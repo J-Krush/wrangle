@@ -43,6 +43,13 @@ struct SidebarView: View {
                                 BrowserSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
+                                if !appState.scratchPadManager.scratchPads(forRoom: roomID).isEmpty {
+                                    Section("Scratch Pads") {
+                                        ScratchPadSection()
+                                    }
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                                }
+
                                 Section("Locations") {
                                     RoomBookmarkListView(
                                         roomID: roomID,

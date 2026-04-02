@@ -49,6 +49,8 @@ struct ProjectInfo: Identifiable {
     var agentStatus: AgentStatus
     var gitBranch: String?
     var uncommittedCount: Int?
+    var todoTotal: Int?
+    var todoDone: Int?
     var lastActivity: Date?
 
     var hasRunningAgent: Bool {

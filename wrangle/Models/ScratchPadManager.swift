@@ -5,6 +5,7 @@ struct ScratchPadItem: Identifiable, Sendable {
     let url: URL
     let name: String
     let modificationDate: Date
+    let roomID: String?
 }
 
 @MainActor
@@ -13,6 +14,7 @@ class ScratchPadManager {
     var scratchPads: [ScratchPadItem] = []
 
     private var fileWatcher: FileWatcher?
+    private var roomWatchers: [String: FileWatcher] = [:]
 
     static var scratchPadDirectory: URL {
         URL.applicationSupportDirectory
@@ -20,21 +22,27 @@ class ScratchPadManager {
     }
 
     init() {
-        ensureDirectoryExists()
+        ensureDirectoryExists(Self.scratchPadDirectory)
         loadScratchPads()
         startWatching()
+    }
+
+    /// Scratch pads for a specific room
+    func scratchPads(forRoom roomID: String) -> [ScratchPadItem] {
+        scratchPads.filter { $0.roomID == roomID }
     }
 
     // MARK: - CRUD
 
     @discardableResult
-    func createScratchPad(name: String) -> URL {
+    func createScratchPad(name: String, roomID: String? = nil) -> URL {
         let sanitized = name
             .trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
         let baseName = sanitized.isEmpty ? "Scratch" : sanitized
-        let url = uniqueURL(for: baseName)
+        let dir = directoryForRoom(roomID)
+        let url = uniqueURL(for: baseName, in: dir)
 
         FileManager.default.createFile(atPath: url.path, contents: nil)
         loadScratchPads()
@@ -42,11 +50,11 @@ class ScratchPadManager {
     }
 
     @discardableResult
-    func createScratchPadWithTimestamp() -> URL {
+    func createScratchPadWithTimestamp(roomID: String? = nil) -> URL {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
         let name = "Scratch \(formatter.string(from: Date()))"
-        return createScratchPad(name: name)
+        return createScratchPad(name: name, roomID: roomID)
     }
 
     func renameScratchPad(at url: URL, to newName: String) -> URL? {
@@ -56,7 +64,8 @@ class ScratchPadManager {
             .replacingOccurrences(of: ":", with: "-")
         guard !sanitized.isEmpty else { return nil }
 
-        let newURL = uniqueURL(for: sanitized, excluding: url)
+        let dir = url.deletingLastPathComponent()
+        let newURL = uniqueURL(for: sanitized, in: dir, excluding: url)
         do {
             try FileManager.default.moveItem(at: url, to: newURL)
             loadScratchPads()
@@ -76,31 +85,60 @@ class ScratchPadManager {
     }
 
     func loadScratchPads() {
-        let dir = Self.scratchPadDirectory
+        var items: [ScratchPadItem] = []
+
+        // Load legacy global scratch pads (no room)
+        items.append(contentsOf: loadPadsFromDirectory(Self.scratchPadDirectory, roomID: nil))
+
+        // Load room-scoped scratch pads from subdirectories
+        let fm = FileManager.default
+        if let subdirs = try? fm.contentsOfDirectory(at: Self.scratchPadDirectory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
+            for subdir in subdirs {
+                let isDir = (try? subdir.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                guard isDir else { continue }
+                let roomID = subdir.lastPathComponent
+                items.append(contentsOf: loadPadsFromDirectory(subdir, roomID: roomID))
+                ensureRoomWatcher(roomID: roomID, directory: subdir)
+            }
+        }
+
+        scratchPads = items.sorted { $0.modificationDate > $1.modificationDate }
+    }
+
+    /// Ensures a room subdirectory exists and starts watching it.
+    func ensureRoomDirectory(for roomID: String) {
+        let dir = directoryForRoom(roomID)
+        ensureDirectoryExists(dir)
+        ensureRoomWatcher(roomID: roomID, directory: dir)
+    }
+
+    // MARK: - Private
+
+    private func directoryForRoom(_ roomID: String?) -> URL {
+        guard let roomID else { return Self.scratchPadDirectory }
+        let dir = Self.scratchPadDirectory.appending(path: roomID, directoryHint: .isDirectory)
+        ensureDirectoryExists(dir)
+        return dir
+    }
+
+    private func loadPadsFromDirectory(_ dir: URL, roomID: String?) -> [ScratchPadItem] {
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.contentModificationDateKey],
             options: [.skipsHiddenFiles]
-        ) else {
-            scratchPads = []
-            return
-        }
+        ) else { return [] }
 
-        scratchPads = contents
+        return contents
             .filter { $0.pathExtension.lowercased() == "md" }
             .compactMap { url -> ScratchPadItem? in
                 let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
                 let modDate = values?.contentModificationDate ?? Date.distantPast
                 let name = url.deletingPathExtension().lastPathComponent
-                return ScratchPadItem(url: url, name: name, modificationDate: modDate)
+                return ScratchPadItem(url: url, name: name, modificationDate: modDate, roomID: roomID)
             }
-            .sorted { $0.modificationDate > $1.modificationDate }
     }
 
-    // MARK: - Private
-
-    private func ensureDirectoryExists() {
-        let dir = Self.scratchPadDirectory
+    private func ensureDirectoryExists(_ dir: URL) {
         if !FileManager.default.fileExists(atPath: dir.path) {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
@@ -114,8 +152,16 @@ class ScratchPadManager {
         fileWatcher = watcher
     }
 
-    private func uniqueURL(for baseName: String, excluding: URL? = nil) -> URL {
-        let dir = Self.scratchPadDirectory
+    private func ensureRoomWatcher(roomID: String, directory: URL) {
+        guard roomWatchers[roomID] == nil else { return }
+        let watcher = FileWatcher(url: directory) { [weak self] in
+            self?.loadScratchPads()
+        }
+        watcher.start()
+        roomWatchers[roomID] = watcher
+    }
+
+    private func uniqueURL(for baseName: String, in dir: URL, excluding: URL? = nil) -> URL {
         let candidate = dir.appending(path: "\(baseName).md")
         if candidate != excluding, !FileManager.default.fileExists(atPath: candidate.path) {
             return candidate

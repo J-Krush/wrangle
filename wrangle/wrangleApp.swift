@@ -112,6 +112,19 @@ struct WrangleApp: App {
                             updateSystemScheme()
                         }
                     }
+
+                    // Save terminal state before app terminates
+                    NotificationCenter.default.addObserver(
+                        forName: NSApplication.willTerminateNotification,
+                        object: nil,
+                        queue: .main
+                    ) { _ in
+                        Task { @MainActor in
+                            for state in coordinator.windowStates.values {
+                                state.saveAllTerminalState()
+                            }
+                        }
+                    }
                 }
                 .onChange(of: coordinator.appearanceMode) { _, mode in
                     switch mode {

@@ -190,7 +190,7 @@ struct TitleBarTabStrip: View {
             .accessibilityLabel("New tab")
             .padding(.horizontal, 6)
             .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
-                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini) { name, url, bookmarkID in
+                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini, roomID: appState.selectedRoomID) { name, url, bookmarkID in
                     appState.openTerminal(
                         projectName: name,
                         directory: url,
@@ -260,7 +260,7 @@ struct TitleBarTabItem: View {
                         .frame(width: 5, height: 5)
                 }
 
-                if isHovering || isActive {
+                if (isHovering || isActive) && !tab.isRoomOverview {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 7, weight: .bold))
@@ -357,12 +357,14 @@ struct TitleBarTabItem: View {
                 renameText = tab.terminalSession?.customTitle ?? tab.customName ?? tab.displayName
                 isRenaming = true
             }
-            Divider()
-            Button("Close") { onClose() }
-            Button("Close Others") {
-                // Close all tabs except this one
+            if !tab.isRoomOverview {
+                Divider()
+                Button("Close") { onClose() }
+                Button("Close Others") {
+                    // Close all tabs except this one
+                }
+                Button("Close All") { onCloseAll() }
             }
-            Button("Close All") { onCloseAll() }
         }
         .popover(isPresented: $isRenaming, arrowEdge: .bottom) {
             VStack(spacing: 8) {

@@ -52,6 +52,16 @@ enum FileType: String, CaseIterable {
         }
     }
 
+    /// Whether this file type should get markdown rendering (syntax hiding, heading styles, etc.)
+    var isMarkdownRendered: Bool {
+        switch self {
+        case .claudeMD, .skillMD, .agentsMD, .systemPrompt, .markdown:
+            return true
+        default:
+            return false
+        }
+    }
+
     var iconColor: Color {
         switch self {
         case .claudeMD: .orange

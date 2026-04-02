@@ -17,6 +17,7 @@ struct ClaudeHookEvent: Codable {
     let title: String?
     let cwd: String?
     let stopHookActive: Bool?
+    let claudeSessionID: String?
 }
 
 // MARK: - Service
@@ -126,12 +127,23 @@ class ClaudeHookService {
         // Skip if stop_hook_active (prevents hook loops)
         if event.stopHookActive == true { return }
 
+        // Capture Claude's internal session ID for resume support
+        if let claudeSID = event.claudeSessionID, !claudeSID.isEmpty {
+            storeClaudeSessionID(claudeSID, forWrangleSessionID: event.sessionID)
+        }
+
         // Auto-upgrade: if this event targets a non-Claude session, upgrade it
         upgradeSessionIfNeeded(for: event.sessionID)
 
         guard shouldNotify(for: event) else { return }
         markSessionNeedsAttention(for: event.sessionID)
         sendNotification(for: event)
+    }
+
+    private func storeClaudeSessionID(_ claudeSessionID: String, forWrangleSessionID wrangleSessionID: String) {
+        guard let coordinator,
+              let result = coordinator.findTerminalSession(bySessionID: wrangleSessionID) else { return }
+        result.session.claudeSessionID = claudeSessionID
     }
 
     private func upgradeSessionIfNeeded(for sessionID: String) {
@@ -258,7 +270,8 @@ class ClaudeHookService {
             "message": d.get("message", ""),
             "title": d.get("title", ""),
             "cwd": d.get("cwd", ""),
-            "stopHookActive": False
+            "stopHookActive": False,
+            "claudeSessionID": d.get("session_id", "")
         }
         ts = str(int(time.time() * 1000))
         path = os.path.join(events_dir, sid + "_" + ts + ".json")

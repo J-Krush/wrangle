@@ -20,8 +20,7 @@ struct RoomDetailSection: View {
     var body: some View {
         Section {
             Button {
-                appState.selectedRoomID = nil
-                appState.activeIntentID = nil
+                appState.showAllProjects()
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")

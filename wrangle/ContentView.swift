@@ -105,6 +105,8 @@ struct ContentView: View {
                                 .transition(.identity)
                             case .terminal, .browser:
                                 EmptyView()
+                            case .roomOverview(let roomID):
+                                RoomOverviewView(roomID: roomID)
                             }
                         } else {
                             DashboardView()
@@ -285,7 +287,7 @@ struct ContentView: View {
             .background(Color(nsColor: Theme.chromeBackground))
 
             Divider()
-        } else {
+        } else if doc.fileType.isMarkdownRendered {
             EditorToolbar(context: editorContext, editingMode: Binding(
                 get: { appState.editingMode },
                 set: { appState.editingMode = $0 }

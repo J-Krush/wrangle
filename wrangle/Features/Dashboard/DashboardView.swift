@@ -168,9 +168,12 @@ struct DashboardView: View {
                 guard !Task.isCancelled else { return }
                 guard let url = projectInfos[i].url else { continue }
                 let (branch, changes) = await fetchGitInfo(for: url)
+                let (todoTotal, todoDone) = await fetchTodoInfo(for: url)
                 guard !Task.isCancelled else { return }
                 projectInfos[i].gitBranch = branch
                 projectInfos[i].uncommittedCount = changes
+                projectInfos[i].todoTotal = todoTotal
+                projectInfos[i].todoDone = todoDone
             }
         }
     }
@@ -182,6 +185,57 @@ struct DashboardView: View {
             let status = try? shellOutput("git -C \"\(path)\" status --porcelain 2>/dev/null")
             let changeCount = status?.components(separatedBy: "\n").filter { !$0.isEmpty }.count
             return (branch?.trimmingCharacters(in: .whitespacesAndNewlines), changeCount)
+        }.value
+    }
+
+    private static let todoPattern = try! NSRegularExpression(pattern: #"^\s*-\s*\[( |x|X)\]"#, options: .anchorsMatchLines)
+
+    private func fetchTodoInfo(for url: URL) async -> (Int?, Int?) {
+        let pattern = Self.todoPattern
+        return await Task.detached {
+            let fm = FileManager.default
+            var files: [URL] = []
+
+            // Scan root-level .md files
+            if let rootContents = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
+                for fileURL in rootContents {
+                    let isDir = (try? fileURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+                    if !isDir && fileURL.pathExtension.lowercased() == "md" {
+                        files.append(fileURL)
+                    }
+                }
+            }
+
+            // Scan .planning/ directory if it exists
+            let planningDir = url.appendingPathComponent(".planning")
+            if let planningContents = try? fm.contentsOfDirectory(at: planningDir, includingPropertiesForKeys: nil, options: []) {
+                for fileURL in planningContents where fileURL.pathExtension.lowercased() == "md" {
+                    files.append(fileURL)
+                }
+            }
+
+            var total = 0
+            var done = 0
+            let maxSize: UInt64 = 100_000
+
+            for file in files {
+                guard let attrs = try? fm.attributesOfItem(atPath: file.path),
+                      let size = attrs[.size] as? UInt64,
+                      size <= maxSize,
+                      let content = try? String(contentsOf: file, encoding: .utf8) else { continue }
+
+                let range = NSRange(content.startIndex..., in: content)
+                let matches = pattern.matches(in: content, range: range)
+                total += matches.count
+                for match in matches {
+                    if let checkRange = Range(match.range(at: 1), in: content) {
+                        let check = content[checkRange]
+                        if check == "x" || check == "X" { done += 1 }
+                    }
+                }
+            }
+
+            return total > 0 ? (total, done) : (nil, nil)
         }.value
     }
 

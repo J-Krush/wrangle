@@ -10,6 +10,7 @@ enum TabContent {
     case document(EditorDocument)
     case terminal(TerminalSession)
     case browser(BrowserSession)
+    case roomOverview(String) // roomID
 }
 
 @MainActor
@@ -34,6 +35,8 @@ class WorkspaceTab: Identifiable {
             return session.displayTitle
         case .browser(let session):
             return session.displayTitle
+        case .roomOverview:
+            return customName ?? "Overview"
         }
     }
 
@@ -41,7 +44,7 @@ class WorkspaceTab: Identifiable {
         switch content {
         case .document(let doc):
             return doc.isDirty
-        case .terminal, .browser:
+        case .terminal, .browser, .roomOverview:
             return false
         }
     }
@@ -54,6 +57,8 @@ class WorkspaceTab: Identifiable {
             return session.iconName
         case .browser(let session):
             return session.iconName
+        case .roomOverview:
+            return "square.grid.2x2"
         }
     }
 
@@ -72,6 +77,8 @@ class WorkspaceTab: Identifiable {
             return session.iconColor
         case .browser(let session):
             return session.iconColor
+        case .roomOverview:
+            return .secondary
         }
     }
 
@@ -102,5 +109,15 @@ class WorkspaceTab: Identifiable {
 
     var isRunningTerminal: Bool {
         terminalSession?.isRunning ?? false
+    }
+
+    var isRoomOverview: Bool {
+        if case .roomOverview = content { return true }
+        return false
+    }
+
+    var roomOverviewID: String? {
+        if case .roomOverview(let id) = content { return id }
+        return nil
     }
 }
