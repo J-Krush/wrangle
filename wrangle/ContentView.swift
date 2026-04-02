@@ -51,6 +51,34 @@ struct ContentView: View {
                     NotificationBannerView()
 
                 ZStack {
+                    // Keep all terminal NSViews alive to preserve process state and scrollback
+                    // These must live outside the room/viewMode conditionals so switching
+                    // rooms or going to project overview doesn't destroy the NSView hierarchy.
+                    ForEach(appState.tabs) { tab in
+                        if let session = tab.terminalSession {
+                            let isActive = appState.selectedRoomID != nil
+                                && appState.viewMode == .editor
+                                && appState.activeTab?.id == tab.id
+                            TerminalTabContentView(session: session)
+                                .opacity(isActive ? 1 : 0)
+                                .allowsHitTesting(isActive)
+                                .zIndex(isActive ? 1 : 0)
+                        }
+                    }
+
+                    // Keep all browser WKWebViews alive to preserve page state
+                    ForEach(appState.tabs) { tab in
+                        if let session = tab.browserSession {
+                            let isActive = appState.selectedRoomID != nil
+                                && appState.viewMode == .editor
+                                && appState.activeTab?.id == tab.id
+                            BrowserTabContentView(session: session)
+                                .opacity(isActive ? 1 : 0)
+                                .allowsHitTesting(isActive)
+                                .zIndex(isActive ? 1 : 0)
+                        }
+                    }
+
                     if appState.selectedRoomID == nil {
                         // No room selected — show project overview
                         DashboardView()
@@ -61,26 +89,6 @@ struct ContentView: View {
                     case .canvas:
                         CanvasView()
                     case .editor:
-                        // Keep all terminal NSViews alive to preserve process state and scrollback
-                        ForEach(appState.tabs) { tab in
-                            if let session = tab.terminalSession {
-                                TerminalTabContentView(session: session)
-                                    .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
-                                    .allowsHitTesting(appState.activeTab?.id == tab.id)
-                                    .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
-                            }
-                        }
-
-                        // Keep all browser WKWebViews alive to preserve page state
-                        ForEach(appState.tabs) { tab in
-                            if let session = tab.browserSession {
-                                BrowserTabContentView(session: session)
-                                    .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
-                                    .allowsHitTesting(appState.activeTab?.id == tab.id)
-                                    .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
-                            }
-                        }
-
                         // Document or empty view (renders on top when active tab is not a terminal/browser)
                         if let tab = appState.activeTab {
                             switch tab.content {
@@ -97,7 +105,7 @@ struct ContentView: View {
                                 EmptyView()
                             }
                         } else {
-                            emptyEditorView
+                            DashboardView()
                         }
                     }
                     } // end if selectedRoomID != nil
@@ -112,7 +120,10 @@ struct ContentView: View {
                     )
                 }
             )
-            .background(Color(nsColor: Theme.chromeBackground), ignoresSafeAreaEdges: .all)
+            .background(
+                Color(nsColor: Theme.chromeBackground),
+                ignoresSafeAreaEdges: .all
+            )
             .alert(
                 "Close Terminal?",
                 isPresented: Binding(
@@ -162,6 +173,10 @@ struct ContentView: View {
             }
         } // HStack
         } // outer VStack (trial banner + content)
+        .background(
+            Color(nsColor: Theme.chromeBackground),
+            ignoresSafeAreaEdges: .all
+        )
         .coordinateSpace(name: "root")
         .onPreferenceChange(DetailLeadingKey.self) { value in
             appState.detailAreaLeading = value
@@ -177,6 +192,24 @@ struct ContentView: View {
             NotificationPermissionView()
         }
         .navigationTitle(windowTitle)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                Button { appState.goBack() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .disabled(!appState.canGoBack)
+                .help("Back (⌘[)")
+
+                Button { appState.goForward() } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .disabled(!appState.canGoForward)
+                .help("Forward (⌘])")
+            }
+
+        }
         .background { WindowChromeConfigurator(appState: appState) }
         .frame(minWidth: 140, minHeight: 500)
         .onChange(of: appState.activeTabIndex) { _, _ in
@@ -293,53 +326,6 @@ struct ContentView: View {
 
         // Status bar
         StatusBarView(document: doc)
-    }
-
-    private var emptyEditorView: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "rectangle.split.3x1")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
-
-            if appState.selectedRoomID != nil {
-                Text("No files open")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                Text("Open a file from the sidebar or start a terminal session")
-                    .font(.callout)
-                    .foregroundStyle(.tertiary)
-            } else {
-                Text("Select a room")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                Text("Choose a room from the left rail, or create a new one with +")
-                    .font(.callout)
-                    .foregroundStyle(.tertiary)
-            }
-
-            HStack(spacing: 16) {
-                keyboardHint("Cmd+O", "Open")
-                keyboardHint("Cmd+N", "New File")
-                keyboardHint("Cmd+P", "Quick Open")
-            }
-            .padding(.top, 4)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func keyboardHint(_ shortcut: String, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Text(shortcut)
-                .font(.caption)
-                .fontWeight(.medium)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(.quaternary)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
     }
 
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]

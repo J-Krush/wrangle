@@ -13,10 +13,10 @@ struct TerminalTabContentView: View {
         VStack(spacing: 0) {
             SessionContextBar(session: session)
 
-            // SwiftTerm handles both rendering and keyboard input
+            // SwiftTerm handles both rendering and keyboard input.
+            // Padding is applied inside TerminalContainerView via layout margins
+            // so SwiftTerm's frame matches the reported terminal dimensions exactly.
             SwiftTermView(session: session, isActive: appState.activeTab?.terminalSession?.id == session.id)
-                .padding(.horizontal, 8)
-                .padding(.top, 6)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(Theme.current.terminalBackground))
 

@@ -1,13 +1,17 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct DashboardView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
     @Query(sort: \Room.displayOrder) private var rooms: [Room]
 
     @State private var projectInfos: [ProjectInfo] = []
     @State private var refreshTask: Task<Void, Never>?
+    @State private var draggingRoomID: String?
+    @State private var dropTargetRoomID: String?
 
     private let columns = [
         GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)
@@ -44,6 +48,28 @@ struct DashboardView: View {
                             ProjectCardView(project: project)
                                 .onTapGesture {
                                     navigateToProject(project)
+                                }
+                                .overlay(alignment: .leading) {
+                                    if let roomID = project.roomID,
+                                       dropTargetRoomID == roomID,
+                                       draggingRoomID != nil,
+                                       draggingRoomID != roomID {
+                                        Color.accentColor
+                                            .frame(width: 3)
+                                            .clipShape(Capsule())
+                                            .offset(x: -8)
+                                    }
+                                }
+                                .onDrag {
+                                    if let roomID = project.roomID {
+                                        draggingRoomID = roomID
+                                        return NSItemProvider(object: roomID as NSString)
+                                    }
+                                    return NSItemProvider()
+                                }
+                                .onDrop(of: [UTType.text], isTargeted: dropBinding(for: project.roomID)) { providers in
+                                    guard let targetID = project.roomID else { return false }
+                                    return handleReorderDrop(providers: providers, targetID: targetID)
                                 }
                         }
                     }
@@ -157,6 +183,47 @@ struct DashboardView: View {
             let changeCount = status?.components(separatedBy: "\n").filter { !$0.isEmpty }.count
             return (branch?.trimmingCharacters(in: .whitespacesAndNewlines), changeCount)
         }.value
+    }
+
+    // MARK: - Reordering
+
+    private func dropBinding(for roomID: String?) -> Binding<Bool> {
+        Binding(
+            get: { roomID != nil && dropTargetRoomID == roomID },
+            set: { targeted in
+                if targeted { dropTargetRoomID = roomID }
+                else if dropTargetRoomID == roomID { dropTargetRoomID = nil }
+            }
+        )
+    }
+
+    private func handleReorderDrop(providers: [NSItemProvider], targetID: String) -> Bool {
+        guard let provider = providers.first else { return false }
+        provider.loadObject(ofClass: NSString.self) { item, _ in
+            guard let sourceID = item as? String else { return }
+            Task { @MainActor in
+                reorderRoom(sourceID: sourceID, beforeTargetID: targetID)
+                draggingRoomID = nil
+                dropTargetRoomID = nil
+            }
+        }
+        return true
+    }
+
+    private func reorderRoom(sourceID: String, beforeTargetID: String) {
+        var ordered = Array(rooms)
+        guard let sourceIndex = ordered.firstIndex(where: { $0.id == sourceID }) else { return }
+        let source = ordered.remove(at: sourceIndex)
+        if let targetIndex = ordered.firstIndex(where: { $0.id == beforeTargetID }) {
+            ordered.insert(source, at: targetIndex)
+        } else {
+            ordered.append(source)
+        }
+        for (index, room) in ordered.enumerated() {
+            room.displayOrder = index
+        }
+        try? modelContext.save()
+        buildProjectInfos()
     }
 
     // MARK: - Navigation

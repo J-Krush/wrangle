@@ -26,7 +26,9 @@ struct WindowChromeConfigurator: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ nsView: NSView, context: Context) {
+        appState.nsWindow?.backgroundColor = Theme.chromeBackground
+    }
 }
 
 private class WindowAccessorView: NSView {

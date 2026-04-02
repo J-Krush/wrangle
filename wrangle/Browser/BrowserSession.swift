@@ -28,9 +28,6 @@ class BrowserSession: Identifiable {
     var devToolsHeight: CGFloat = 250
     var activeDevTool: DevToolType = .console
 
-    /// Shared across all internal tabs so they share cookies
-    let processPool = WKProcessPool()
-
     /// Set by the BrowserWebView Coordinator
     weak var controller: BrowserController?
 

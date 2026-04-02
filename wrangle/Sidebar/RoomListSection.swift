@@ -7,8 +7,10 @@ struct RoomListSection: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.displayOrder) private var rooms: [Room]
     @Query private var intents: [Intent]
-    @State private var renamingRoom: Room?
-    @State private var renameText = ""
+    @State private var editingRoom: Room?
+    @State private var showEditSheet = false
+    @State private var sheetName = ""
+    @State private var sheetColorHex = "#007AFF"
     @State private var draggingRoomID: String?
     @State private var dropTargetRoomID: String?
 
@@ -43,24 +45,21 @@ struct RoomListSection: View {
                 .listRowBackground(Color.clear)
         }
 
-        // Alert for renaming
+        // Edit sheet trigger
         Color.clear
             .frame(height: 0)
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
-            .alert("Rename Room", isPresented: Binding(
-                get: { renamingRoom != nil },
-                set: { if !$0 { renamingRoom = nil } }
-            )) {
-                TextField("Room name", text: $renameText)
-                Button("Rename") {
-                    guard let room = renamingRoom else { return }
-                    let trimmed = renameText.trimmingCharacters(in: .whitespaces)
+            .sheet(isPresented: $showEditSheet) {
+                RoomEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: false) {
+                    guard let room = editingRoom else { return }
+                    let trimmed = sheetName.trimmingCharacters(in: .whitespaces)
                     if !trimmed.isEmpty { room.name = trimmed }
+                    room.colorHex = sheetColorHex
                     try? modelContext.save()
-                    renamingRoom = nil
+                    editingRoom = nil
+
                 }
-                Button("Cancel", role: .cancel) { renamingRoom = nil }
             }
     }
 
@@ -68,21 +67,11 @@ struct RoomListSection: View {
 
     @ViewBuilder
     private func roomContextMenu(_ room: Room) -> some View {
-        Button("Rename...") {
-            renameText = room.name
-            renamingRoom = room
-        }
-        Divider()
-        Menu("Color") {
-            ForEach(roomColors, id: \.hex) { color in
-                Button {
-                    room.colorHex = color.hex
-                    try? modelContext.save()
-                } label: {
-                    Label(color.name, systemImage: room.colorHex == color.hex ? "checkmark.circle.fill" : "circle.fill")
-                }
-                .tint(Color(hex: color.hex))
-            }
+        Button("Edit...") {
+            editingRoom = room
+            sheetName = room.name
+            sheetColorHex = room.colorHex
+            showEditSheet = true
         }
         Divider()
         Button("Delete Room", role: .destructive) {
@@ -175,16 +164,4 @@ struct RoomListSection: View {
 
     // MARK: - Colors
 
-    private let roomColors: [(name: String, hex: String)] = [
-        ("Blue", "#007AFF"),
-        ("Green", "#34C759"),
-        ("Orange", "#FF9500"),
-        ("Red", "#FF3B30"),
-        ("Purple", "#AF52DE"),
-        ("Pink", "#FF2D55"),
-        ("Teal", "#5AC8FA"),
-        ("Yellow", "#FFCC00"),
-        ("Indigo", "#5856D6"),
-        ("Mint", "#00C7BE"),
-    ]
 }

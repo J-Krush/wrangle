@@ -181,7 +181,6 @@ struct BrowserWebView: NSViewRepresentable {
             }
 
             let config = WKWebViewConfiguration()
-            config.processPool = session.processPool
 
             let userContent = WKUserContentController()
             userContent.add(WeakScriptMessageHandler(delegate: self), name: "consoleCapture")
@@ -221,35 +220,36 @@ struct BrowserWebView: NSViewRepresentable {
         }
 
         private func setupObservations(for webView: WKWebView, tab: BrowserTab) -> [NSKeyValueObservation] {
-            [
-                webView.observe(\.title) { [weak tab] wv, _ in
+            let tab = tab
+            return [
+                webView.observe(\.title) { wv, _ in
                     Task { @MainActor in
-                        tab?.title = wv.title ?? "Untitled"
+                        tab.title = wv.title ?? "Untitled"
                     }
                 },
-                webView.observe(\.url) { [weak tab] wv, _ in
+                webView.observe(\.url) { wv, _ in
                     Task { @MainActor in
-                        tab?.url = wv.url
+                        tab.url = wv.url
                     }
                 },
-                webView.observe(\.isLoading) { [weak tab] wv, _ in
+                webView.observe(\.isLoading) { wv, _ in
                     Task { @MainActor in
-                        tab?.isLoading = wv.isLoading
+                        tab.isLoading = wv.isLoading
                     }
                 },
-                webView.observe(\.canGoBack) { [weak tab] wv, _ in
+                webView.observe(\.canGoBack) { wv, _ in
                     Task { @MainActor in
-                        tab?.canGoBack = wv.canGoBack
+                        tab.canGoBack = wv.canGoBack
                     }
                 },
-                webView.observe(\.canGoForward) { [weak tab] wv, _ in
+                webView.observe(\.canGoForward) { wv, _ in
                     Task { @MainActor in
-                        tab?.canGoForward = wv.canGoForward
+                        tab.canGoForward = wv.canGoForward
                     }
                 },
-                webView.observe(\.estimatedProgress) { [weak tab] wv, _ in
+                webView.observe(\.estimatedProgress) { wv, _ in
                     Task { @MainActor in
-                        tab?.estimatedProgress = wv.estimatedProgress
+                        tab.estimatedProgress = wv.estimatedProgress
                     }
                 },
             ]

@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 import UserNotifications
+import CoreServices
 
 // MARK: - Notification Delegate
 
@@ -91,11 +92,13 @@ struct WrangleApp: App {
                 .onAppear {
                     guard !coordinator.isSetupComplete else { return }
                     coordinator.isSetupComplete = true
+                    registerWithLaunchServices()
                     setupNotifications()
                     setupForegroundTracking()
                     updateSystemScheme()
                     coordinator.updateChecker.checkForUpdate()
                     coordinator.licenseManager.loadOnLaunch()
+                    removeSystemCloseMenuItems()
 
 // Listen for macOS appearance changes
                     DistributedNotificationCenter.default().addObserver(
@@ -230,6 +233,15 @@ struct WrangleApp: App {
                 }
                 .keyboardShortcut("s", modifiers: [.command, .shift])
                 .disabled(focusedAppState == nil)
+
+                Divider()
+
+                Button("Close Tab") {
+                    guard let state = focusedAppState, !state.tabs.isEmpty else { return }
+                    state.requestCloseTab(at: state.activeTabIndex)
+                }
+                .keyboardShortcut("w")
+                .disabled(focusedAppState == nil || focusedAppState?.tabs.isEmpty == true)
             }
 
             CommandGroup(replacing: .sidebar) {
@@ -314,8 +326,22 @@ struct WrangleApp: App {
                 }
             }
 
-            // Tab navigation
+            // Navigation history
             CommandGroup(after: .windowArrangement) {
+                Button("Back") {
+                    focusedAppState?.goBack()
+                }
+                .keyboardShortcut("[", modifiers: .command)
+                .disabled(focusedAppState?.canGoBack != true)
+
+                Button("Forward") {
+                    focusedAppState?.goForward()
+                }
+                .keyboardShortcut("]", modifiers: .command)
+                .disabled(focusedAppState?.canGoForward != true)
+
+                Divider()
+
                 Button("Next Tab") {
                     guard let state = focusedAppState else { return }
                     if state.activeTabIndex < state.tabs.count - 1 {
@@ -333,12 +359,6 @@ struct WrangleApp: App {
                 }
                 .keyboardShortcut("[", modifiers: [.command, .shift])
                 .disabled(focusedAppState == nil)
-
-                Button("Close Tab") {
-                    focusedAppState?.requestCloseTab(at: focusedAppState?.activeTabIndex ?? 0)
-                }
-                .keyboardShortcut("w")
-                .disabled(focusedAppState == nil)
             }
         }
 
@@ -352,6 +372,28 @@ struct WrangleApp: App {
 
     private func openNewWindow() {
         openWindow(id: "main")
+    }
+
+    /// Remove system-provided "Close" and "Close All" from the File menu.
+    /// Our custom "Close Tab" (Cmd+W) in the File menu handles tab closing.
+    private func removeSystemCloseMenuItems() {
+        Task { @MainActor in
+            // Delay slightly so SwiftUI finishes building the menu
+            try? await Task.sleep(for: .milliseconds(200))
+            guard let mainMenu = NSApp.mainMenu else { return }
+            // File menu is typically the second item (index 1) after the app menu
+            guard mainMenu.items.count > 1,
+                  let fileMenu = mainMenu.items[1].submenu else { return }
+            // Remove system "Close" and "Close All" items by action selector
+            for item in fileMenu.items.reversed() {
+                if item.action == #selector(NSWindow.performClose(_:)) ||
+                   item.action == #selector(NSWindow.close) ||
+                   item.title == "Close" ||
+                   item.title == "Close All" {
+                    fileMenu.removeItem(item)
+                }
+            }
+        }
     }
 
     private func activeProjectDirectory() -> URL? {
@@ -434,6 +476,12 @@ struct WrangleApp: App {
     }
 
     // MARK: - Notification Setup
+
+    /// Ensure macOS Launch Services points to *this* copy of the app,
+    /// so notification taps always activate the running instance.
+    private func registerWithLaunchServices() {
+        LSRegisterURL(Bundle.main.bundleURL as CFURL, true)
+    }
 
     private func setupNotifications() {
         let center = UNUserNotificationCenter.current()

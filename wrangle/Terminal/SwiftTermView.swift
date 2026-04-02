@@ -38,17 +38,23 @@ class TerminalContainerView: NSView {
         }
     }
 
+    /// Insets applied around the terminal view for visual padding.
+    /// These are handled here (not via SwiftUI .padding()) so SwiftTerm's
+    /// frame and reported terminal dimensions stay in sync.
+    private static let insets = NSEdgeInsets(top: 6, left: 8, bottom: 0, right: 8)
+
     init(terminalView: LocalProcessTerminalView) {
         self.terminalView = terminalView
         super.init(frame: .zero)
 
+        let insets = Self.insets
         terminalView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(terminalView)
         NSLayoutConstraint.activate([
-            terminalView.topAnchor.constraint(equalTo: topAnchor),
-            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor),
-            terminalView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            terminalView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            terminalView.topAnchor.constraint(equalTo: topAnchor, constant: insets.top),
+            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -insets.bottom),
+            terminalView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: insets.left),
+            terminalView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -insets.right),
         ])
         // Drag type registration is managed dynamically via isActive didSet
     }
@@ -57,7 +63,11 @@ class TerminalContainerView: NSView {
         super.layout()
         if bounds.width > 0, let callback = onFirstLayout {
             onFirstLayout = nil
-            callback()
+            // Defer to next run loop iteration so the frame is fully settled
+            // before SwiftTerm calculates terminal column/row count.
+            Task { @MainActor in
+                callback()
+            }
         }
     }
 
@@ -156,9 +166,21 @@ struct SwiftTermView: NSViewRepresentable {
     func updateNSView(_ container: TerminalContainerView, context: Context) {
         let terminalView = container.terminalView
 
+        // Detect activation transition to force SwiftTerm dimension recalculation
+        let wasActive = context.coordinator.isActive
+
         // Sync isActive state to coordinator and container
         context.coordinator.isActive = isActive
         container.isActive = isActive
+
+        // Force SwiftTerm to recalculate cols/rows when tab becomes active.
+        // Inactive terminals in the ZStack may miss frame changes during resize.
+        if isActive && !wasActive && context.coordinator.processStarted {
+            // Trigger setFrameSize which calls processSizeChange to recalculate
+            // terminal dimensions from the current bounds.
+            terminalView.setFrameSize(terminalView.frame.size)
+            terminalView.needsDisplay = true
+        }
 
         if context.coordinator.lastColorScheme != colorScheme {
             context.coordinator.lastColorScheme = colorScheme
@@ -297,7 +319,12 @@ struct SwiftTermView: NSViewRepresentable {
 
         // MARK: - LocalProcessTerminalViewDelegate
 
-        func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {}
+        func sizeChanged(source: LocalProcessTerminalView, newCols: Int, newRows: Int) {
+            Task { @MainActor in
+                session.emulator.terminalCols = newCols
+                session.emulator.terminalRows = newRows
+            }
+        }
 
         func setTerminalTitle(source: LocalProcessTerminalView, title: String) {
             Task { @MainActor in

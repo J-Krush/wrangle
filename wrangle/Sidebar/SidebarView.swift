@@ -7,6 +7,7 @@ struct SidebarView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
+    @Query(sort: \Room.displayOrder) private var rooms: [Room]
     @State private var activeFileTypeFilters: Set<FileTypeFilter> = []
     @State private var showFilterPopover = false
     @State private var rawDropTargeted = false
@@ -34,10 +35,13 @@ struct SidebarView: View {
                     ScrollViewReader { scrollProxy in
                         List {
                             if let roomID = appState.selectedRoomID {
-                                Section("Intents") {
-                                    IntentListView(roomID: roomID)
-                                }
-                                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                                // Section("Intents") {
+                                //     IntentListView(roomID: roomID)
+                                // }
+                                // .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+
+                                BrowserSessionsSection()
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 Section("Locations") {
                                     RoomBookmarkListView(
@@ -50,10 +54,8 @@ struct SidebarView: View {
                                         onAddLocation: addLocation
                                     )
                                 }
+                                .id(roomID)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
-
-                                BrowserSessionsSection()
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 OrphanedSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
@@ -326,9 +328,10 @@ struct SidebarView: View {
             if let roomID = appState.selectedRoomID {
                 bookmark.roomID = roomID
             } else {
+                let maxRoomOrder = rooms.map(\.displayOrder).max() ?? -1
                 let room = Room(
                     name: url.lastPathComponent,
-                    displayOrder: (bookmarks.map(\.displayOrder).max() ?? -1) + 1
+                    displayOrder: maxRoomOrder + 1
                 )
                 modelContext.insert(room)
                 bookmark.roomID = room.id
@@ -352,7 +355,6 @@ struct SidebarView: View {
     }
 
     private func handleFinderDrop(_ providers: [NSItemProvider]) -> Bool {
-        var handled = false
         for provider in providers {
             provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
                 guard let data = data as? Data,
@@ -361,16 +363,16 @@ struct SidebarView: View {
                 let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
                 guard isDir else { return }
 
-                // Deduplicate: skip if this directory is already bookmarked
-                let urlPath = url.path(percentEncoded: false)
-                for bookmark in bookmarks {
-                    if let existingURL = bookmark.resolveURL(),
-                       existingURL.path(percentEncoded: false) == urlPath {
-                        return
-                    }
-                }
-
                 Task { @MainActor in
+                    // Deduplicate: skip if this directory is already bookmarked
+                    let urlPath = url.path(percentEncoded: false)
+                    for bookmark in bookmarks {
+                        if let existingURL = bookmark.resolveURL(),
+                           existingURL.path(percentEncoded: false) == urlPath {
+                            return
+                        }
+                    }
+
                     do {
                         let bookmarkData = try SecurityScopedBookmark.create(for: url)
                         let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
@@ -383,7 +385,8 @@ struct SidebarView: View {
                         if let roomID = appState.selectedRoomID {
                             bookmark.roomID = roomID
                         } else {
-                            let room = Room(name: url.lastPathComponent, displayOrder: maxOrder + 2)
+                            let maxRoomOrder = rooms.map(\.displayOrder).max() ?? -1
+                            let room = Room(name: url.lastPathComponent, displayOrder: maxRoomOrder + 1)
                             modelContext.insert(room)
                             bookmark.roomID = room.id
                         }
@@ -393,14 +396,13 @@ struct SidebarView: View {
                         if appState.selectedRoomID == nil, let roomID = bookmark.roomID {
                             appState.selectedRoomID = roomID
                         }
-                        handled = true
                     } catch {
                         // Bookmark creation failed
                     }
                 }
             }
         }
-        return handled
+        return true
     }
 }
 

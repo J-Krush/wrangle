@@ -1,12 +1,18 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct RoomRailView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Room.displayOrder) private var rooms: [Room]
-    @State private var showNewRoomAlert = false
-    @State private var newRoomName = ""
+    @State private var showNewRoomSheet = false
+    @State private var showEditRoomSheet = false
+    @State private var editingRoom: Room?
+    @State private var sheetName = ""
+    @State private var sheetColorHex = "#007AFF"
+    @State private var draggingRoomID: String?
+    @State private var dropTargetRoomID: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,12 +40,15 @@ struct RoomRailView: View {
         }
         .frame(width: 52)
         .background(Color(nsColor: Theme.chromeBackground))
-        .alert("New Room", isPresented: $showNewRoomAlert) {
-            TextField("Room name", text: $newRoomName)
-            Button("Create") { commitNewRoom() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Enter a name for the new room.")
+        .sheet(isPresented: $showNewRoomSheet) {
+            RoomEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: true) {
+                commitNewRoom()
+            }
+        }
+        .sheet(isPresented: $showEditRoomSheet) {
+            RoomEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: false) {
+                commitEditRoom()
+            }
         }
     }
 
@@ -89,8 +98,9 @@ struct RoomRailView: View {
         let hasRunning = roomTabs.contains { $0.terminalSession?.isRunning == true }
 
         return Button {
-            guard appState.selectedRoomID != room.id else { return }
-            appState.switchToRoom(room.id)
+            if appState.selectedRoomID != room.id {
+                appState.switchToRoom(room.id)
+            }
         } label: {
             ZStack(alignment: .topTrailing) {
                 RoundedRectangle(cornerRadius: isSelected ? 12 : 20)
@@ -122,14 +132,30 @@ struct RoomRailView: View {
         .contextMenu {
             roomContextMenu(room)
         }
+        .overlay(alignment: .top) {
+            if dropTargetRoomID == room.id && draggingRoomID != nil && draggingRoomID != room.id {
+                Color.accentColor
+                    .frame(height: 2)
+                    .frame(maxWidth: .infinity)
+                    .offset(y: -5)
+            }
+        }
+        .onDrag {
+            draggingRoomID = room.id
+            return NSItemProvider(object: room.id as NSString)
+        }
+        .onDrop(of: [UTType.text], isTargeted: dropBinding(for: room.id)) { providers in
+            handleReorderDrop(providers: providers, targetID: room.id)
+        }
     }
 
     // MARK: - Add Button
 
     private var addButton: some View {
         Button {
-            showNewRoomAlert = true
-            newRoomName = ""
+            sheetName = ""
+            sheetColorHex = "#007AFF"
+            showNewRoomSheet = true
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
@@ -149,19 +175,11 @@ struct RoomRailView: View {
 
     @ViewBuilder
     private func roomContextMenu(_ room: Room) -> some View {
-        Button("Rename...") {
-            newRoomName = room.name
-            // Reuse the alert for renaming (simple approach for now)
-            showNewRoomAlert = true
-        }
-        Divider()
-        Menu("Color") {
-            ForEach(roomColors, id: \.hex) { color in
-                Button(color.name) {
-                    room.colorHex = color.hex
-                    try? modelContext.save()
-                }
-            }
+        Button("Edit...") {
+            editingRoom = room
+            sheetName = room.name
+            sheetColorHex = room.colorHex
+            showEditRoomSheet = true
         }
         Divider()
         Button("Delete Room", role: .destructive) {
@@ -172,14 +190,26 @@ struct RoomRailView: View {
     // MARK: - Actions
 
     private func commitNewRoom() {
-        let name = newRoomName.trimmingCharacters(in: .whitespaces)
+        let name = sheetName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
 
         let maxOrder = rooms.map(\.displayOrder).max() ?? -1
         let room = Room(name: name, displayOrder: maxOrder + 1)
+        room.colorHex = sheetColorHex
         modelContext.insert(room)
         try? modelContext.save()
         appState.switchToRoom(room.id)
+
+    }
+
+    private func commitEditRoom() {
+        let name = sheetName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, let room = editingRoom else { return }
+        room.name = name
+        room.colorHex = sheetColorHex
+        try? modelContext.save()
+        editingRoom = nil
+
     }
 
     private func deleteRoom(_ room: Room) {
@@ -206,6 +236,46 @@ struct RoomRailView: View {
         try? modelContext.save()
     }
 
+    // MARK: - Reordering
+
+    private func dropBinding(for roomID: String) -> Binding<Bool> {
+        Binding(
+            get: { dropTargetRoomID == roomID },
+            set: { targeted in
+                if targeted { dropTargetRoomID = roomID }
+                else if dropTargetRoomID == roomID { dropTargetRoomID = nil }
+            }
+        )
+    }
+
+    private func handleReorderDrop(providers: [NSItemProvider], targetID: String) -> Bool {
+        guard let provider = providers.first else { return false }
+        provider.loadObject(ofClass: NSString.self) { item, _ in
+            guard let sourceID = item as? String else { return }
+            Task { @MainActor in
+                reorderRoom(sourceID: sourceID, beforeTargetID: targetID)
+                draggingRoomID = nil
+                dropTargetRoomID = nil
+            }
+        }
+        return true
+    }
+
+    private func reorderRoom(sourceID: String, beforeTargetID: String) {
+        var ordered = Array(rooms)
+        guard let sourceIndex = ordered.firstIndex(where: { $0.id == sourceID }) else { return }
+        let source = ordered.remove(at: sourceIndex)
+        if let targetIndex = ordered.firstIndex(where: { $0.id == beforeTargetID }) {
+            ordered.insert(source, at: targetIndex)
+        } else {
+            ordered.append(source)
+        }
+        for (index, room) in ordered.enumerated() {
+            room.displayOrder = index
+        }
+        try? modelContext.save()
+    }
+
     // MARK: - Helpers
 
     private func roomInitials(_ name: String) -> String {
@@ -216,16 +286,4 @@ struct RoomRailView: View {
         return String(name.prefix(2)).uppercased()
     }
 
-    private let roomColors: [(name: String, hex: String)] = [
-        ("Blue", "#007AFF"),
-        ("Green", "#34C759"),
-        ("Orange", "#FF9500"),
-        ("Red", "#FF3B30"),
-        ("Purple", "#AF52DE"),
-        ("Pink", "#FF2D55"),
-        ("Teal", "#5AC8FA"),
-        ("Yellow", "#FFCC00"),
-        ("Indigo", "#5856D6"),
-        ("Mint", "#00C7BE"),
-    ]
 }

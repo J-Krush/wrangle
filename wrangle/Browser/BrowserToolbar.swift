@@ -101,6 +101,8 @@ struct BrowserToolbar: View {
         let url: URL?
         if input.hasPrefix("http://") || input.hasPrefix("https://") {
             url = URL(string: input)
+        } else if input.hasPrefix("localhost") || input.hasPrefix("127.0.0.1") || input.hasPrefix("[::1]") {
+            url = URL(string: "http://\(input)")
         } else if input.contains(".") && !input.contains(" ") {
             url = URL(string: "https://\(input)")
         } else {

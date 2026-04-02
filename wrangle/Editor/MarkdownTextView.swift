@@ -246,10 +246,11 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet/checkbox markers with visual symbols
+            // Replace bullet/checkbox/table markers with visual symbols
             if !isJSON {
                 applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
+                applyTableMarkers(in: storage)
             }
             storage.endEditing()
 
@@ -295,10 +296,11 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet/checkbox markers with visual symbols in the storage
+            // Replace bullet/checkbox/table markers with visual symbols in the storage
             if !isJSONDoc {
                 applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
+                applyTableMarkers(in: storage)
             }
             storage.endEditing()
 
@@ -333,6 +335,7 @@ struct MarkdownTextView: NSViewRepresentable {
             // First restore all markers to raw markdown
             isStyling = true
             storage.beginEditing()
+            restoreTableMarkers(in: storage)
             restoreCheckboxMarkers(in: storage)
             restoreBulletMarkers(in: storage)
             storage.endEditing()
@@ -395,6 +398,7 @@ struct MarkdownTextView: NSViewRepresentable {
             storage.beginEditing()
 
             // Restore visual markers back to markdown so parser regex matches on next restyle
+            restoreTableMarkers(in: storage)
             restoreCheckboxMarkers(in: storage)
             restoreBulletMarkers(in: storage)
 
@@ -414,10 +418,11 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet/checkbox markers with visual symbols in the storage
+            // Replace bullet/checkbox/table markers with visual symbols in the storage
             if !isJSON {
                 applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
+                applyTableMarkers(in: storage)
             }
 
             storage.endEditing()
@@ -889,7 +894,7 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        // MARK: - Bullet & Checkbox Marker Helpers
+        // MARK: - Bullet, Checkbox & Table Marker Helpers
 
         /// Restores `•` back to `-` in storage before restyling
         private func restoreBulletMarkers(in storage: NSTextStorage) {
@@ -913,6 +918,18 @@ struct MarkdownTextView: NSViewRepresentable {
                 let original = checked ? "- [x] " : "- [ ] "
                 let attrs = storage.attributes(at: range.location, effectiveRange: nil)
                 storage.replaceCharacters(in: range, with: NSAttributedString(string: original, attributes: attrs))
+            }
+        }
+
+        /// Restores `\t` back to `|` at positions marked with .tableMarker
+        private func restoreTableMarkers(in storage: NSTextStorage) {
+            var ranges: [NSRange] = []
+            storage.enumerateAttribute(.tableMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { ranges.append(range) }
+            }
+            for range in ranges.reversed() {
+                let attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: "|", attributes: attrs))
             }
         }
 
@@ -946,9 +963,30 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        /// Reads raw text from storage, reversing any bullet/checkbox marker replacements
+        /// Replaces `|` with `\t` at positions marked with .tableMarker
+        private func applyTableMarkers(in storage: NSTextStorage) {
+            var ranges: [NSRange] = []
+            storage.enumerateAttribute(.tableMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { ranges.append(range) }
+            }
+            for range in ranges.reversed() {
+                var attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                attrs[.tableMarker] = true  // Preserve marker for restoration
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: "\t", attributes: attrs))
+            }
+        }
+
+        /// Reads raw text from storage, reversing any bullet/checkbox/table marker replacements
         func rawText(from storage: NSTextStorage) -> String {
             let mutable = NSMutableString(string: storage.string)
+            // Restore table markers (tabs back to pipes) — 1:1 character swap
+            var tablePositions: [Int] = []
+            storage.enumerateAttribute(.tableMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { tablePositions.append(range.location) }
+            }
+            for pos in tablePositions.reversed() {
+                mutable.replaceCharacters(in: NSRange(location: pos, length: 1), with: "|")
+            }
             // Restore checkboxes (reverse order since replacements change lengths)
             var checkboxRanges: [(NSRange, Bool)] = []
             storage.enumerateAttribute(.checkboxMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in

@@ -11,10 +11,24 @@ enum ViewMode: String, CaseIterable {
     case editor
     case dashboard
     case canvas
+
 }
 
 enum AppearanceMode: String, CaseIterable {
     case system, light, dark
+}
+
+// MARK: - Navigation History
+
+struct NavigationEntry: Equatable {
+    let roomID: String?
+    let tabID: UUID?
+    let viewMode: ViewMode
+    let timestamp: Date
+
+    static func == (lhs: NavigationEntry, rhs: NavigationEntry) -> Bool {
+        lhs.roomID == rhs.roomID && lhs.tabID == rhs.tabID && lhs.viewMode == rhs.viewMode
+    }
 }
 
 @MainActor
@@ -51,6 +65,13 @@ class AppState {
     var pendingCloseTabIndex: Int?
     var showTerminalCloseConfirmation: Bool = false
 
+    // Navigation history (back/forward)
+    private var navHistory: [NavigationEntry] = []
+    private var navIndex: Int = -1
+    private var isNavigatingHistory = false
+    var canGoBack: Bool { navIndex > 0 }
+    var canGoForward: Bool { navIndex < navHistory.count - 1 }
+
     // Terminal session manager (retained for stopAll on quit)
     var terminalSessionManager = TerminalSessionManager()
 
@@ -79,7 +100,7 @@ class AppState {
     /// Tabs visible for the currently selected room
     var visibleTabs: [WorkspaceTab] {
         guard let roomID = selectedRoomID else { return tabs }
-        return tabs.filter { $0.roomID == roomID || $0.roomID == nil }
+        return tabs.filter { $0.roomID == roomID }
     }
 
     /// Index of the active tab within visibleTabs
@@ -137,6 +158,89 @@ class AppState {
             let tab = newVisible[max(0, clampedIndex)]
             if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
                 activeTabIndex = globalIndex
+            }
+        }
+
+        pushNavigation()
+    }
+
+    // MARK: - Navigation History
+
+    /// Record the current view state as a history entry.
+    func pushNavigation() {
+        guard !isNavigatingHistory else { return }
+
+        // Skip recording if the active tab is a preview tab (clicking through files in sidebar)
+        if let activeID = activeTab?.id, activeID == previewTabID {
+            return
+        }
+
+        let entry = NavigationEntry(
+            roomID: selectedRoomID,
+            tabID: activeTab?.id,
+            viewMode: viewMode,
+            timestamp: Date()
+        )
+
+        // Don't push duplicates
+        if navIndex >= 0, navIndex < navHistory.count, navHistory[navIndex] == entry {
+            return
+        }
+
+        // Truncate forward history when pushing new entry (like browser)
+        if navIndex < navHistory.count - 1 {
+            navHistory.removeSubrange((navIndex + 1)...)
+        }
+
+        navHistory.append(entry)
+
+        // Cap history at 200 entries
+        if navHistory.count > 200 {
+            navHistory.removeFirst(navHistory.count - 200)
+        }
+
+        navIndex = navHistory.count - 1
+    }
+
+    func goBack() {
+        guard canGoBack else { return }
+        isNavigatingHistory = true
+        navIndex -= 1
+        applyNavigationEntry(navHistory[navIndex])
+        isNavigatingHistory = false
+    }
+
+    func goForward() {
+        guard canGoForward else { return }
+        isNavigatingHistory = true
+        navIndex += 1
+        applyNavigationEntry(navHistory[navIndex])
+        isNavigatingHistory = false
+    }
+
+    private func applyNavigationEntry(_ entry: NavigationEntry) {
+        // Switch room if needed
+        if entry.roomID != selectedRoomID {
+            if let roomID = entry.roomID {
+                switchToRoom(roomID)
+            } else {
+                selectedRoomID = nil
+            }
+        }
+
+        // Set view mode
+        viewMode = entry.viewMode
+
+        // Select the tab if it still exists
+        if let tabID = entry.tabID,
+           let index = tabs.firstIndex(where: { $0.id == tabID }) {
+            activeTabIndex = index
+        } else {
+            // Tab no longer exists -- fallback to first visible tab
+            let visible = visibleTabs
+            if let first = visible.first,
+               let index = tabs.firstIndex(where: { $0.id == first.id }) {
+                activeTabIndex = index
             }
         }
     }
@@ -361,11 +465,13 @@ class AppState {
         guard index >= 0, index < tabs.count else { return }
         activeTabIndex = index
         tabs[index].terminalSession?.needsAttention = false
+        pushNavigation()
     }
 
     func closeTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }
         let closedTab = tabs[index]
+        let closedName = closedTab.displayName
 
         // Clear preview if this was the preview tab
         if previewTabID == closedTab.id {
@@ -389,6 +495,7 @@ class AppState {
         } else if activeTabIndex > index {
             activeTabIndex -= 1
         }
+
     }
 
     func closeAllTabs() {
