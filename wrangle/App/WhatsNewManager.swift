@@ -6,16 +6,11 @@ class WhatsNewManager {
     private static let lastSeenVersionKey = "WhatsNewManager.lastSeenVersion"
 
     var shouldShowModal: Bool = false
+    var showAll: Bool = false
 
     func checkOnLaunch() {
         let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-        let lastSeen = UserDefaults.standard.string(forKey: Self.lastSeenVersionKey)
-
-        // First install — seed current version, don't show
-        guard let lastSeen else {
-            UserDefaults.standard.set(currentVersion, forKey: Self.lastSeenVersionKey)
-            return
-        }
+        let lastSeen = UserDefaults.standard.string(forKey: Self.lastSeenVersionKey) ?? "0.0.0"
 
         guard lastSeen != currentVersion else { return }
 
@@ -34,9 +29,11 @@ class WhatsNewManager {
         let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
         UserDefaults.standard.set(currentVersion, forKey: Self.lastSeenVersionKey)
         shouldShowModal = false
+        showAll = false
     }
 
     var visibleEntries: [ChangelogEntry] {
+        if showAll { return WhatsNewChangelog.entries }
         let lastSeen = UserDefaults.standard.string(forKey: Self.lastSeenVersionKey) ?? "0.0.0"
         return WhatsNewChangelog.entries.filter { isVersion($0.version, newerThan: lastSeen) }
     }

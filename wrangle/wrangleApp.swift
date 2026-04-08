@@ -172,6 +172,7 @@ struct WrangleApp: App {
                 }
 
                 Button("What's New") {
+                    coordinator.whatsNewManager.showAll = true
                     coordinator.whatsNewManager.shouldShowModal = true
                 }
             }
