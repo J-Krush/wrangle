@@ -1,0 +1,693 @@
+//
+//  ProjectOverviewView.swift
+//  Wrangle
+//
+
+import SwiftUI
+import SwiftData
+
+/// Per-project overview tab showing active sessions, open tabs, and project info.
+struct ProjectOverviewView: View {
+    let projectID: String
+    @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
+    @Query(sort: \Project.displayOrder) private var projects: [Project]
+
+    @Query private var allTodos: [TodoItem]
+    @State private var showTerminalPicker = false
+    @State private var showNewMenu = false
+    @State private var activeLocationMenuID: String?
+    @State private var pendingLaunchClaude = false
+    @State private var pendingLaunchGemini = false
+    @State private var pendingDangerousMode = false
+    @State private var newTodoTitle = ""
+    @State private var showCompleted = false
+    @FocusState private var isAddTodoFocused: Bool
+    @State private var locationBranches: [String: (branch: String?, changes: Int?)] = [:]
+    @State private var gitRefreshTask: Task<Void, Never>?
+
+    private var project: Project? {
+        projects.first { $0.id == projectID }
+    }
+
+    private var projectBookmarks: [BookmarkedDirectory] {
+        bookmarks.filter { $0.projectID == projectID && !$0.isFile }
+    }
+
+    private var projectTodos: [TodoItem] {
+        allTodos.filter { $0.projectID == projectID }
+    }
+
+    private var incompleteTodos: [TodoItem] {
+        projectTodos.filter { !$0.isCompleted }.sorted { $0.displayOrder < $1.displayOrder }
+    }
+
+    private var completedTodos: [TodoItem] {
+        projectTodos.filter { $0.isCompleted }.sorted { ($0.dateCompleted ?? .distantPast) > ($1.dateCompleted ?? .distantPast) }
+    }
+
+    private var projectTabs: [WorkspaceTab] {
+        appState.tabs.filter { $0.projectID == projectID && !$0.isProjectOverview }
+    }
+
+    private var terminalSessions: [WorkspaceTab] {
+        projectTabs.filter(\.isTerminal)
+    }
+
+    private var browserTabs: [WorkspaceTab] {
+        projectTabs.filter(\.isBrowser)
+    }
+
+    private var documentTabs: [WorkspaceTab] {
+        projectTabs.filter { $0.document != nil }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                header
+                todosSection
+                if !terminalSessions.isEmpty { sessionsSection }
+                if !browserTabs.isEmpty { browsersSection }
+                if !documentTabs.isEmpty { documentsSection }
+                locationsSection
+            }
+            .padding(32)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color(nsColor: Theme.chromeBackground))
+        .onTapGesture {
+            isAddTodoFocused = false
+        }
+        .onAppear { startGitPolling() }
+        .onDisappear { gitRefreshTask?.cancel() }
+        .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
+            TerminalDirectoryPicker(
+                launchClaude: pendingLaunchClaude,
+                launchGemini: pendingLaunchGemini,
+                projectID: projectID
+            ) { name, url, bookmarkID in
+                appState.openTerminal(
+                    projectName: name,
+                    directory: url,
+                    bookmarkID: bookmarkID,
+                    launchClaude: pendingLaunchClaude,
+                    launchGemini: pendingLaunchGemini,
+                    dangerousMode: pendingDangerousMode
+                )
+            }
+        }
+    }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(project?.name ?? "Project")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+
+                newButton
+            }
+
+            // Stats
+            HStack(spacing: 16) {
+                statBadge(count: terminalSessions.count, label: "terminals", icon: "terminal", color: .mint)
+                statBadge(count: projectBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
+                if !projectTodos.isEmpty {
+                    todoStatBadge
+                }
+            }
+        }
+    }
+
+    private var newButton: some View {
+        Button {
+            showNewMenu = true
+        } label: {
+            Text("New")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(project.flatMap { Color(hex: $0.colorHex) } ?? .accentColor)
+                }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showNewMenu, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 0) {
+                popoverButton("Scratch Pad", icon: "note.text", color: .yellow) {
+                    showNewMenu = false
+                    appState.newScratchPad()
+                }
+                popoverButton("File...", icon: "doc.badge.plus", color: .secondary) {
+                    showNewMenu = false
+                    appState.newDocument()
+                }
+                Divider().padding(.vertical, 4)
+                popoverButton("Location...", icon: "folder.badge.plus", color: .gray) {
+                    showNewMenu = false
+                    addLocation()
+                }
+            }
+            .padding(6)
+            .frame(width: 220)
+        }
+    }
+
+    private func popoverButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundStyle(color)
+                    .frame(width: 16)
+                Text(title)
+                    .font(.system(size: 12))
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func statBadge(count: Int, label: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(color)
+            Text("\(count)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var todoStatBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "checkmark.circle")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text("\(completedTodos.count)/\(projectTodos.count)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+            Text("todos")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Todos
+
+    private var todosSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Todos")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            // Add new todo
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.body)
+                TextField("Add a todo...", text: $newTodoTitle)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .focused($isAddTodoFocused)
+                    .onSubmit { addTodo() }
+            }
+            .padding(10)
+            .background {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: Theme.sidebarBackground).opacity(0.5))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.white.opacity(0.04), lineWidth: 1)
+            }
+
+            // Incomplete todos
+            ForEach(incompleteTodos, id: \.id) { todo in
+                TodoRowView(todo: todo)
+            }
+
+            // Completed section
+            if !completedTodos.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        showCompleted.toggle()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .rotationEffect(.degrees(showCompleted ? 90 : 0))
+                            Text("\(completedTodos.count) completed")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    if showCompleted {
+                        ForEach(completedTodos, id: \.id) { todo in
+                            TodoRowView(todo: todo)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.bottom, 8)
+    }
+
+    private func addTodo() {
+        let title = newTodoTitle.trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty else { return }
+        let maxOrder = incompleteTodos.map(\.displayOrder).max() ?? -1
+        let todo = TodoItem(title: title, projectID: projectID, displayOrder: maxOrder + 1)
+        modelContext.insert(todo)
+        try? modelContext.save()
+        newTodoTitle = ""
+    }
+
+    // MARK: - Sessions
+
+    private var sessionsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Terminal Sessions")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                ForEach(terminalSessions) { tab in
+                    sessionCard(tab)
+                }
+            }
+        }
+    }
+
+    private func sessionCard(_ tab: WorkspaceTab) -> some View {
+        Button {
+            navigateToTab(tab)
+        } label: {
+            HStack(spacing: 12) {
+                if let session = tab.terminalSession {
+                    Group {
+                        if session.isCustomIcon {
+                            Image(session.iconName)
+                                .resizable()
+                                .renderingMode(.template)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 20, height: 20)
+                        } else {
+                            Image(systemName: session.iconName)
+                                .font(.title3)
+                        }
+                    }
+                    .foregroundStyle(session.iconColor)
+                    .frame(width: 32)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(session.displayTitle)
+                            .font(.body)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                        HStack(spacing: 6) {
+                            if session.needsAttention {
+                                Circle()
+                                    .fill(.yellow)
+                                    .frame(width: 6, height: 6)
+                                Text("Waiting for input")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else if !(session.isClaude || session.isGemini) {
+                                Circle()
+                                    .fill(session.isRunning ? .green : .gray)
+                                    .frame(width: 6, height: 6)
+                                Text(session.isRunning ? "Active" : "Stopped")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let subtitle = session.displaySubtitle {
+                                Text(subtitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                                    .truncationMode(.head)
+                            }
+                        }
+                    }
+
+                    Spacer()
+
+                    if session.needsAttention {
+                        Circle()
+                            .fill(.yellow)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+            }
+            .modifier(CardStyle())
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button("Go To") { navigateToTab(tab) }
+            Divider()
+            Button("Close") { closeTab(tab) }
+        }
+    }
+
+    // MARK: - Browsers
+
+    private var browsersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Browsers")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                ForEach(browserTabs) { tab in
+                    Button { navigateToTab(tab) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "globe")
+                                .font(.title3)
+                                .foregroundStyle(.blue)
+                                .frame(width: 32)
+                            Text(tab.displayName)
+                                .font(.body)
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                        .modifier(CardStyle())
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Go To") { navigateToTab(tab) }
+                        Divider()
+                        Button("Close") { closeTab(tab) }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Documents
+
+    private var documentsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Open Files")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                ForEach(documentTabs) { tab in
+                    Button { navigateToTab(tab) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: tab.iconName)
+                                .font(.title3)
+                                .foregroundStyle(tab.iconColor)
+                                .frame(width: 32)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tab.displayName)
+                                    .font(.body)
+                                    .lineLimit(1)
+                                if tab.isDirty {
+                                    Text("Unsaved changes")
+                                        .font(.caption)
+                                        .foregroundStyle(.yellow)
+                                }
+                            }
+                            Spacer()
+                        }
+                        .modifier(CardStyle())
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Go To") { navigateToTab(tab) }
+                        if let url = tab.document?.fileURL {
+                            Button("Reveal in Finder") {
+                                NSWorkspace.shared.activateFileViewerSelecting([url])
+                            }
+                        }
+                        Divider()
+                        Button("Close") { closeTab(tab) }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Locations
+
+    private var locationsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Text("Locations")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    addLocation()
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+            }
+
+            if projectBookmarks.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                    Text("No locations added yet. Add a folder to get started.")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(16)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                    ForEach(projectBookmarks) { bookmark in
+                        locationCard(bookmark)
+                    }
+                }
+            }
+        }
+    }
+
+    private func locationCard(_ bookmark: BookmarkedDirectory) -> some View {
+        let bid = bookmark.persistentModelID.hashValue.description
+        return Button {
+            appState.selectedBookmarkID = bid
+            activeLocationMenuID = bid
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "folder.fill")
+                    .font(.title3)
+                    .foregroundStyle(.gray)
+                    .frame(width: 32)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(bookmark.name)
+                        .font(.body)
+                        .lineLimit(1)
+                    if let url = bookmark.resolveURL() {
+                        Text(tildePath(url))
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                            .truncationMode(.head)
+                    }
+                }
+
+                Spacer()
+
+                if let info = locationBranches[bid] {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(info.branch ?? "—")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let count = info.changes, count > 0 {
+                            Text("\(count) changes")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+            }
+            .modifier(CardStyle())
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .popover(
+            isPresented: Binding(
+                get: { activeLocationMenuID == bid },
+                set: { if !$0 { activeLocationMenuID = nil } }
+            ),
+            arrowEdge: .bottom
+        ) {
+            VStack(alignment: .leading, spacing: 0) {
+                popoverButton("Open Terminal", icon: "terminal", color: .mint) {
+                    activeLocationMenuID = nil
+                    openInLocation(bookmark, claude: false, gemini: false)
+                }
+                popoverButton("Launch Claude Code", icon: "brain.head.profile", color: .orange) {
+                    activeLocationMenuID = nil
+                    openInLocation(bookmark, claude: true, gemini: false)
+                }
+                popoverButton("Launch Gemini Code", icon: "sparkles", color: .blue) {
+                    activeLocationMenuID = nil
+                    openInLocation(bookmark, claude: false, gemini: true)
+                }
+                Divider().padding(.vertical, 4)
+                popoverButton("Claude (Skip Permissions)", icon: "exclamationmark.triangle.fill", color: .yellow) {
+                    activeLocationMenuID = nil
+                    openInLocation(bookmark, claude: true, gemini: false, dangerous: true)
+                }
+                Divider().padding(.vertical, 4)
+                popoverButton("Reveal in Finder", icon: "folder", color: .gray) {
+                    activeLocationMenuID = nil
+                    if let url = bookmark.resolveURL() {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+            .padding(6)
+            .frame(width: 220)
+        }
+    }
+
+    // MARK: - Git Info
+
+    private func startGitPolling() {
+        gitRefreshTask?.cancel()
+        gitRefreshTask = Task {
+            while !Task.isCancelled {
+                await fetchLocationBranches()
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
+    }
+
+    private func fetchLocationBranches() async {
+        for bookmark in projectBookmarks {
+            guard !Task.isCancelled else { return }
+            guard let url = bookmark.resolveURL() else { continue }
+            let bid = bookmark.persistentModelID.hashValue.description
+            let path = url.path(percentEncoded: false)
+            let result = await Task.detached {
+                let branch = try? shellOutput("git -C \"\(path)\" rev-parse --abbrev-ref HEAD 2>/dev/null")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let status = try? shellOutput("git -C \"\(path)\" status --porcelain 2>/dev/null")
+                let changes = status?.components(separatedBy: "\n").filter { !$0.isEmpty }.count
+                return (branch: branch, changes: changes)
+            }.value
+            locationBranches[bid] = result
+        }
+    }
+
+    // MARK: - Actions
+
+    private func launchInProject(claude: Bool, gemini: Bool) {
+        pendingLaunchClaude = claude
+        pendingLaunchGemini = gemini
+        pendingDangerousMode = false
+        if projectBookmarks.count == 1, let bookmark = projectBookmarks.first,
+           let url = bookmark.resolveURL() {
+            let bookmarkID = bookmark.persistentModelID.hashValue.description
+            appState.openTerminal(projectName: bookmark.name, directory: url, bookmarkID: bookmarkID, launchClaude: claude, launchGemini: gemini)
+        } else {
+            showTerminalPicker = true
+        }
+    }
+
+    private func openInLocation(_ bookmark: BookmarkedDirectory, claude: Bool, gemini: Bool, dangerous: Bool = false) {
+        guard let url = bookmark.resolveURL() else { return }
+        let bookmarkID = bookmark.persistentModelID.hashValue.description
+        appState.openTerminal(projectName: bookmark.name, directory: url, bookmarkID: bookmarkID, launchClaude: claude, launchGemini: gemini, dangerousMode: dangerous)
+    }
+
+    private func navigateToTab(_ tab: WorkspaceTab) {
+        if let index = appState.tabs.firstIndex(where: { $0.id == tab.id }) {
+            appState.activeTabIndex = index
+        }
+    }
+
+    private func closeTab(_ tab: WorkspaceTab) {
+        if let index = appState.tabs.firstIndex(where: { $0.id == tab.id }) {
+            appState.requestCloseTab(at: index)
+        }
+    }
+
+    private func tildePath(_ url: URL) -> String {
+        let path = url.path(percentEncoded: false)
+        let home = FileManager.default.homeDirectoryForCurrentUser.path(percentEncoded: false)
+        if path.hasPrefix(home) {
+            return "~" + path.dropFirst(home.count)
+        }
+        return path
+    }
+
+    private func addLocation() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.message = "Select a directory to add as a location"
+
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            let data = try SecurityScopedBookmark.create(for: url)
+            let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
+            let bookmark = BookmarkedDirectory(
+                name: url.lastPathComponent,
+                bookmarkData: data,
+                displayOrder: maxOrder + 1,
+                isFile: false
+            )
+            bookmark.projectID = projectID
+            modelContext.insert(bookmark)
+            try? modelContext.save()
+            appState.selectedBookmarkID = bookmark.persistentModelID.hashValue.description
+        } catch {
+            // Bookmark creation failed
+        }
+    }
+}
+
+// MARK: - Card Style Modifier
+
+private struct CardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: Theme.sidebarBackground).opacity(0.8))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+            }
+    }
+}

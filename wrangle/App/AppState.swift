@@ -7,8 +7,28 @@ enum EditingMode: String, CaseIterable {
     case dev
 }
 
+enum ViewMode: String, CaseIterable {
+    case editor
+    case dashboard
+    case canvas
+
+}
+
 enum AppearanceMode: String, CaseIterable {
     case system, light, dark
+}
+
+// MARK: - Navigation History
+
+struct NavigationEntry: Equatable {
+    let projectID: String?
+    let tabID: UUID?
+    let viewMode: ViewMode
+    let timestamp: Date
+
+    static func == (lhs: NavigationEntry, rhs: NavigationEntry) -> Bool {
+        lhs.projectID == rhs.projectID && lhs.tabID == rhs.tabID && lhs.viewMode == rhs.viewMode
+    }
 }
 
 @MainActor
@@ -19,13 +39,27 @@ class AppState {
     weak var nsWindow: NSWindow?
 
     var tabs: [WorkspaceTab]
-    var activeTabIndex: Int
+    var activeTabIndex: Int {
+        didSet {
+            if activeTabIndex >= 0, activeTabIndex < tabs.count {
+                tabs[activeTabIndex].terminalSession?.needsAttention = false
+            }
+        }
+    }
+    var selectedProjectID: String?
+    var activeIntentID: String?
     var selectedBookmarkID: String?
+    var isSidebarVisible: Bool = true
+    var sidebarWidth: CGFloat = 200
+    var projectTabIndexes: [String: Int] = [:]
+    /// Per-project expanded location state so sidebar hierarchy survives project switches
+    var projectExpandedBookmarks: [String: Set<String>] = [:]
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
     var searchQuery: String = ""
     var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing
+    var viewMode: ViewMode = .dashboard
     var sidebarFilterText: String = ""
     var showActiveSessionsOnly: Bool = false
     var selectedFileTreeURL: URL? = nil
@@ -36,6 +70,16 @@ class AppState {
     // Terminal close confirmation state
     var pendingCloseTabIndex: Int?
     var showTerminalCloseConfirmation: Bool = false
+
+    // Location auto-add when creating new files
+    var pendingLocationAdd: URL?
+
+    // Navigation history (back/forward)
+    private var navHistory: [NavigationEntry] = []
+    private var navIndex: Int = -1
+    private var isNavigatingHistory = false
+    var canGoBack: Bool { navIndex > 0 }
+    var canGoForward: Bool { navIndex < navHistory.count - 1 }
 
     // Terminal session manager (retained for stopAll on quit)
     var terminalSessionManager = TerminalSessionManager()
@@ -60,6 +104,173 @@ class AppState {
     // Cached resolved bookmark URLs for scoped-access fallback
     var resolvedBookmarkURLs: [(directoryPath: String, resolvedURL: URL)] = []
 
+    // MARK: - Project Tab Scoping
+
+    /// Tabs visible for the currently selected project
+    var visibleTabs: [WorkspaceTab] {
+        guard let projectID = selectedProjectID else { return tabs }
+        return tabs.filter { $0.projectID == projectID }
+    }
+
+    /// Index of the active tab within visibleTabs
+    var visibleActiveIndex: Int {
+        guard let active = activeTab else { return -1 }
+        return visibleTabs.firstIndex(where: { $0.id == active.id }) ?? -1
+    }
+
+    /// Select a tab by its index in the visibleTabs array
+    func selectVisibleTab(at visibleIndex: Int) {
+        let visible = visibleTabs
+        guard visibleIndex >= 0, visibleIndex < visible.count else { return }
+        let tab = visible[visibleIndex]
+        if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
+            selectTab(at: globalIndex)
+        }
+    }
+
+    /// Close a tab by its index in the visibleTabs array
+    func closeVisibleTab(at visibleIndex: Int) {
+        let visible = visibleTabs
+        guard visibleIndex >= 0, visibleIndex < visible.count else { return }
+        let tab = visible[visibleIndex]
+        if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
+            closeTab(at: globalIndex)
+        }
+    }
+
+    /// Navigate to the All Projects dashboard view.
+    func showAllProjects() {
+        if let currentProject = selectedProjectID {
+            saveBrowserState(forProject: currentProject)
+            saveTerminalState(forProject: currentProject)
+        }
+        selectedProjectID = nil
+        activeIntentID = nil
+        viewMode = .dashboard
+        pushNavigation()
+    }
+
+    /// Called when switching projects — saves current project's active tab, restores new project's
+    func switchToProject(_ newProjectID: String) {
+        // Save current project's active tab and browser state
+        if let currentProject = selectedProjectID {
+            if let activeID = activeTab?.id {
+                if let visIdx = visibleTabs.firstIndex(where: { $0.id == activeID }) {
+                    projectTabIndexes[currentProject] = visIdx
+                }
+            }
+            saveBrowserState(forProject: currentProject)
+            saveTerminalState(forProject: currentProject)
+        }
+
+        selectedProjectID = newProjectID
+        activeIntentID = nil
+        viewMode = .editor
+
+        // Ensure project overview tab exists
+        ensureProjectOverviewTab(forProject: newProjectID)
+
+        // Restore browser and terminal sessions for the new project if none exist
+        restoreBrowserState(forProject: newProjectID)
+        restoreTerminalState(forProject: newProjectID)
+
+        // Restore new project's active tab
+        let newVisible = visibleTabs
+        if newVisible.isEmpty {
+            activeTabIndex = -1
+        } else {
+            let savedIndex = projectTabIndexes[newProjectID] ?? 0
+            let clampedIndex = min(savedIndex, newVisible.count - 1)
+            let tab = newVisible[max(0, clampedIndex)]
+            if let globalIndex = tabs.firstIndex(where: { $0.id == tab.id }) {
+                activeTabIndex = globalIndex
+            }
+        }
+
+        pushNavigation()
+    }
+
+    // MARK: - Navigation History
+
+    /// Record the current view state as a history entry.
+    func pushNavigation() {
+        guard !isNavigatingHistory else { return }
+
+        // Skip recording if the active tab is a preview tab (clicking through files in sidebar)
+        if let activeID = activeTab?.id, activeID == previewTabID {
+            return
+        }
+
+        let entry = NavigationEntry(
+            projectID: selectedProjectID,
+            tabID: activeTab?.id,
+            viewMode: viewMode,
+            timestamp: Date()
+        )
+
+        // Don't push duplicates
+        if navIndex >= 0, navIndex < navHistory.count, navHistory[navIndex] == entry {
+            return
+        }
+
+        // Truncate forward history when pushing new entry (like browser)
+        if navIndex < navHistory.count - 1 {
+            navHistory.removeSubrange((navIndex + 1)...)
+        }
+
+        navHistory.append(entry)
+
+        // Cap history at 200 entries
+        if navHistory.count > 200 {
+            navHistory.removeFirst(navHistory.count - 200)
+        }
+
+        navIndex = navHistory.count - 1
+    }
+
+    func goBack() {
+        guard canGoBack else { return }
+        isNavigatingHistory = true
+        navIndex -= 1
+        applyNavigationEntry(navHistory[navIndex])
+        isNavigatingHistory = false
+    }
+
+    func goForward() {
+        guard canGoForward else { return }
+        isNavigatingHistory = true
+        navIndex += 1
+        applyNavigationEntry(navHistory[navIndex])
+        isNavigatingHistory = false
+    }
+
+    private func applyNavigationEntry(_ entry: NavigationEntry) {
+        // Switch project if needed
+        if entry.projectID != selectedProjectID {
+            if let projectID = entry.projectID {
+                switchToProject(projectID)
+            } else {
+                selectedProjectID = nil
+            }
+        }
+
+        // Set view mode
+        viewMode = entry.viewMode
+
+        // Select the tab if it still exists
+        if let tabID = entry.tabID,
+           let index = tabs.firstIndex(where: { $0.id == tabID }) {
+            activeTabIndex = index
+        } else {
+            // Tab no longer exists -- fallback to first visible tab
+            let visible = visibleTabs
+            if let first = visible.first,
+               let index = tabs.firstIndex(where: { $0.id == first.id }) {
+                activeTabIndex = index
+            }
+        }
+    }
+
     // MARK: - Computed Properties
 
     var activeTab: WorkspaceTab? {
@@ -83,7 +294,10 @@ class AppState {
 
     /// Terminal sessions belonging to a specific bookmark location
     func terminalSessions(for bookmarkID: String) -> [TerminalSession] {
-        tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == bookmarkID }
+        let all = tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == bookmarkID }
+        guard let intentID = activeIntentID else { return all }
+        // Show sessions tagged to the active intent + unscoped sessions
+        return all.filter { $0.intentID == intentID || $0.intentID == nil }
     }
 
     /// Terminal sessions with no associated bookmark (opened via Browse, etc.)
@@ -92,10 +306,10 @@ class AppState {
     }
 
     init() {
-        let blank = EditorDocument()
-        let tab = WorkspaceTab(content: .document(blank))
-        self.tabs = [tab]
-        self.activeTabIndex = 0
+        self.tabs = []
+        self.activeTabIndex = -1
+        // Seed the initial "All Projects" entry so back button works from first project
+        pushNavigation()
     }
 
     // MARK: - Scratch Pads
@@ -103,9 +317,9 @@ class AppState {
     func newScratchPad(name: String? = nil) {
         let url: URL
         if let name, !name.trimmingCharacters(in: .whitespaces).isEmpty {
-            url = scratchPadManager.createScratchPad(name: name)
+            url = scratchPadManager.createScratchPad(name: name, projectID: selectedProjectID)
         } else {
-            url = scratchPadManager.createScratchPadWithTimestamp()
+            url = scratchPadManager.createScratchPadWithTimestamp(projectID: selectedProjectID)
         }
         openFile(url: url)
     }
@@ -126,9 +340,13 @@ class AppState {
     // MARK: - Document Methods
 
     func openFile(url: URL, scopedURL: URL? = nil) {
+        // Switch to editor when opening a file
+        viewMode = .editor
+
         // Check if this file is already open in a tab
         if let existingIndex = tabs.firstIndex(where: { $0.document?.fileURL == url }) {
             activeTabIndex = existingIndex
+            pushNavigation()
             return
         }
 
@@ -139,13 +357,16 @@ class AppState {
         }
         document.isLoading = true
         let tab = WorkspaceTab(content: .document(document))
+        tab.projectID = selectedProjectID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
 
         loadDocumentAsync(for: document, from: url)
     }
 
     func openFileAsPreview(url: URL, scopedURL: URL? = nil) {
+        viewMode = .editor
         print("[AppState] openFileAsPreview: \(url.lastPathComponent), scopedURL: \(scopedURL?.path ?? "nil")")
 
         // If already open, just select it
@@ -162,6 +383,7 @@ class AppState {
         }
         document.isLoading = true
         let tab = WorkspaceTab(content: .document(document))
+        tab.projectID = selectedProjectID
 
         // Replace existing preview tab if one exists
         if let previewID = previewTabID,
@@ -233,8 +455,15 @@ class AppState {
 
         let document = EditorDocument(fileURL: url)
         let tab = WorkspaceTab(content: .document(document))
+        tab.projectID = selectedProjectID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
+
+        // Signal to add the parent directory as a location
+        if selectedProjectID != nil {
+            pendingLocationAdd = url.deletingLastPathComponent()
+        }
     }
 
     // MARK: - Tab Management
@@ -271,12 +500,19 @@ class AppState {
     func selectTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }
         activeTabIndex = index
-        tabs[index].terminalSession?.needsAttention = false
+        // Deselect sidebar location when switching to non-file tabs
+        if tabs[index].isProjectOverview || tabs[index].browserSession != nil {
+            selectedBookmarkID = nil
+        }
+        pushNavigation()
     }
 
     func closeTab(at index: Int) {
         guard index >= 0, index < tabs.count else { return }
         let closedTab = tabs[index]
+
+        // Project overview tabs cannot be closed
+        if closedTab.isProjectOverview { return }
 
         // Clear preview if this was the preview tab
         if previewTabID == closedTab.id {
@@ -291,30 +527,35 @@ class AppState {
         tabs.remove(at: index)
 
         if tabs.isEmpty {
-            // Always keep at least one tab open
-            let blank = EditorDocument()
-            let tab = WorkspaceTab(content: .document(blank))
-            tabs.append(tab)
-            activeTabIndex = 0
+            activeTabIndex = -1
+        } else if visibleTabs.isEmpty {
+            // No visible tabs in this project — nothing to select
+            activeTabIndex = -1
         } else if activeTabIndex >= tabs.count {
             activeTabIndex = tabs.count - 1
         } else if activeTabIndex > index {
             activeTabIndex -= 1
         }
+
     }
 
     func closeAllTabs() {
-        for tab in tabs {
+        // Close only visible tabs (current project), preserving project overview tabs
+        let visible = visibleTabs
+        for tab in visible {
+            if tab.isProjectOverview { continue }
             if let session = tab.terminalSession {
                 session.stop()
             }
+            tabs.removeAll { $0.id == tab.id }
         }
-        tabs.removeAll()
         previewTabID = nil
-        let blank = EditorDocument()
-        let tab = WorkspaceTab(content: .document(blank))
-        tabs.append(tab)
-        activeTabIndex = 0
+        // Select the overview tab if it exists
+        if let overviewIndex = tabs.firstIndex(where: { $0.isProjectOverview && $0.projectID == selectedProjectID }) {
+            activeTabIndex = overviewIndex
+        } else {
+            activeTabIndex = -1
+        }
     }
 
     func closeTab(_ tab: WorkspaceTab) {
@@ -351,6 +592,9 @@ class AppState {
         guard index >= 0, index < tabs.count else { return }
         let tab = tabs[index]
 
+        // Project overview tabs cannot be closed
+        if tab.isProjectOverview { return }
+
         // If it's a running terminal, show confirmation
         if let session = tab.terminalSession, session.isRunning {
             pendingCloseTabIndex = index
@@ -374,6 +618,7 @@ class AppState {
     }
 
     func openTerminal(projectName: String, directory: URL?, bookmarkID: String?, launchClaude: Bool = false, launchGemini: Bool = false, dangerousMode: Bool = false) {
+        viewMode = .editor
         let emulator = TerminalEmulator()
         // Don't start the process here — SwiftTermView will start it when rendered
 
@@ -385,6 +630,7 @@ class AppState {
             isClaude: launchClaude,
             isGemini: launchGemini
         )
+        session.intentID = activeIntentID
 
         if launchClaude {
             session.pendingCommand = ClaudeCodeLauncher.launchCommand(dangerousMode: dangerousMode)
@@ -400,8 +646,10 @@ class AppState {
         }
 
         let tab = WorkspaceTab(content: .terminal(session))
+        tab.projectID = selectedProjectID
         tabs.append(tab)
         activeTabIndex = tabs.count - 1
+        pushNavigation()
     }
 
     /// Opens a terminal (or AI session) using the active project's context.
@@ -431,5 +679,224 @@ class AppState {
         var n = 2
         while existingNames.contains("\(baseName) \(n)") { n += 1 }
         return "\(baseName) \(n)"
+    }
+
+    // MARK: - Browser Methods
+
+    func openBrowser(url: URL? = nil, bookmarkID: String? = nil) {
+        viewMode = .editor
+
+        let session = BrowserSession(
+            url: url,
+            bookmarkID: bookmarkID ?? selectedBookmarkID,
+            intentID: activeIntentID,
+            projectID: selectedProjectID
+        )
+
+        let tab = WorkspaceTab(content: .browser(session))
+        tab.projectID = selectedProjectID
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
+        selectedBookmarkID = nil
+        pushNavigation()
+    }
+
+    func openBrowserForActiveProject(url: URL? = nil) {
+        openBrowser(url: url, bookmarkID: selectedBookmarkID)
+    }
+
+    /// All open browser sessions across tabs
+    var openBrowserSessions: [BrowserSession] {
+        tabs.compactMap(\.browserSession)
+    }
+
+    /// Browser sessions belonging to a specific bookmark location
+    func browserSessions(for bookmarkID: String) -> [BrowserSession] {
+        let all = tabs.compactMap(\.browserSession).filter { $0.bookmarkID == bookmarkID }
+        guard let intentID = activeIntentID else { return all }
+        return all.filter { $0.intentID == intentID || $0.intentID == nil }
+    }
+
+    /// Browser sessions for the currently selected project
+    var projectBrowserSessions: [BrowserSession] {
+        guard let projectID = selectedProjectID else { return [] }
+        return tabs.compactMap(\.browserSession).filter { $0.projectID == projectID }
+    }
+
+    /// Browser sessions with no associated project
+    var orphanedBrowserSessions: [BrowserSession] {
+        tabs.compactMap(\.browserSession).filter { $0.projectID == nil }
+    }
+
+    /// Find the tab index for a given browser session
+    func tabIndex(for session: BrowserSession) -> Int? {
+        tabs.firstIndex(where: { $0.browserSession?.id == session.id })
+    }
+
+    // MARK: - Browser Hybrid Tab Operations
+
+    /// Pop an internal browser tab out into its own workspace tab
+    func popOutBrowserTab(_ browserTab: BrowserTab, from session: BrowserSession) {
+        guard let tabIndex = session.tabs.firstIndex(where: { $0.id == browserTab.id }) else { return }
+
+        // Remove from source session
+        session.tabs.remove(at: tabIndex)
+        if session.tabs.isEmpty {
+            session.tabs.append(BrowserTab())
+        }
+        if session.activeTabIndex >= session.tabs.count {
+            session.activeTabIndex = session.tabs.count - 1
+        }
+
+        // Create new session with just the popped tab
+        let newSession = BrowserSession(
+            bookmarkID: session.bookmarkID,
+            intentID: session.intentID,
+            projectID: session.projectID
+        )
+        newSession.tabs = [browserTab]
+        newSession.activeTabIndex = 0
+
+        let tab = WorkspaceTab(content: .browser(newSession))
+        tab.projectID = selectedProjectID
+        tabs.append(tab)
+        activeTabIndex = tabs.count - 1
+    }
+
+    /// Merge a solo browser session's tab into another browser session
+    func mergeBrowserTab(from sourceSession: BrowserSession, into targetSession: BrowserSession) {
+        guard let sourceTab = sourceSession.activeTab else { return }
+
+        // Move tab to target
+        targetSession.tabs.append(sourceTab)
+        targetSession.activeTabIndex = targetSession.tabs.count - 1
+
+        // Remove source tab from its session
+        sourceSession.tabs.removeAll { $0.id == sourceTab.id }
+
+        // If source session is now empty, close its workspace tab
+        if sourceSession.tabs.isEmpty {
+            if let wsIndex = tabs.firstIndex(where: { $0.browserSession?.id == sourceSession.id }) {
+                closeTab(at: wsIndex)
+            }
+        }
+    }
+
+    // MARK: - Project Overview Tab
+
+    /// Ensures a project overview tab exists as the first tab for the given project.
+    func ensureProjectOverviewTab(forProject projectID: String) {
+        let hasOverview = tabs.contains { $0.projectOverviewID == projectID }
+        guard !hasOverview else { return }
+
+        let tab = WorkspaceTab(content: .projectOverview(projectID))
+        tab.projectID = projectID
+        tab.isPinned = true
+
+        // Insert before any other tabs for this project
+        if let firstProjectIndex = tabs.firstIndex(where: { $0.projectID == projectID }) {
+            tabs.insert(tab, at: firstProjectIndex)
+            // Adjust activeTabIndex if it shifted
+            if activeTabIndex >= firstProjectIndex {
+                activeTabIndex += 1
+            }
+        } else {
+            tabs.append(tab)
+        }
+    }
+
+    // MARK: - Browser Persistence
+
+    func saveBrowserState(forProject projectID: String) {
+        let projectBrowserSessions = openBrowserSessions.filter { $0.projectID == projectID }
+        BrowserStateStore.save(sessions: projectBrowserSessions, forProject: projectID)
+    }
+
+    func restoreBrowserState(forProject projectID: String) {
+        // Only restore if no browser tabs exist for this project
+        let existing = openBrowserSessions.filter { $0.projectID == projectID }
+        guard existing.isEmpty else { return }
+
+        let states = BrowserStateStore.restore(forProject: projectID)
+        for state in states {
+            let session = BrowserSession(
+                bookmarkID: state.bookmarkID,
+                intentID: state.intentID,
+                projectID: projectID
+            )
+            session.isDevToolsVisible = state.isDevToolsVisible
+
+            // Restore tabs
+            session.tabs.removeAll()
+            for tabState in state.tabs {
+                let url = tabState.url.flatMap { URL(string: $0) }
+                let tab = BrowserTab(url: url)
+                tab.title = tabState.title
+                session.tabs.append(tab)
+            }
+            if session.tabs.isEmpty {
+                session.tabs.append(BrowserTab())
+            }
+            session.activeTabIndex = min(state.activeIndex, session.tabs.count - 1)
+
+            let wsTab = WorkspaceTab(content: .browser(session))
+            wsTab.projectID = projectID
+            tabs.append(wsTab)
+        }
+    }
+
+    // MARK: - Terminal Persistence
+
+    func saveTerminalState(forProject projectID: String) {
+        let projectTerminalSessions = tabs
+            .compactMap { tab -> TerminalSession? in
+                guard tab.projectID == projectID else { return nil }
+                return tab.terminalSession
+            }
+        TerminalStateStore.save(sessions: projectTerminalSessions, forProject: projectID)
+    }
+
+    func saveAllTerminalState() {
+        // Collect all unique project IDs from terminal tabs
+        let projectIDs = Set(tabs.compactMap { tab -> String? in
+            guard tab.terminalSession != nil else { return nil }
+            return tab.projectID
+        })
+        for projectID in projectIDs {
+            saveTerminalState(forProject: projectID)
+        }
+    }
+
+    func restoreTerminalState(forProject projectID: String) {
+        // Only restore if no terminal tabs exist for this project
+        let existing = tabs.filter { $0.projectID == projectID && $0.terminalSession != nil }
+        guard existing.isEmpty else { return }
+
+        let states = TerminalStateStore.restore(forProject: projectID)
+        for state in states {
+            // Only restore Claude/Gemini sessions (plain terminals aren't useful without scrollback)
+            guard state.isClaude || state.isGemini else { continue }
+
+            let dir = state.workingDirectoryPath.map { URL(fileURLWithPath: $0) }
+            let emulator = TerminalEmulator()
+            emulator.workingDirectory = dir
+
+            let session = TerminalSession(
+                emulator: emulator,
+                projectName: state.projectName,
+                workingDirectory: dir,
+                bookmarkID: state.bookmarkID,
+                isClaude: state.isClaude,
+                isGemini: state.isGemini
+            )
+            session.intentID = state.intentID
+            session.customTitle = state.customTitle
+            session.claudeSessionID = state.claudeSessionID
+            session.isRestored = true
+
+            let wsTab = WorkspaceTab(content: .terminal(session))
+            wsTab.projectID = projectID
+            tabs.append(wsTab)
+        }
     }
 }

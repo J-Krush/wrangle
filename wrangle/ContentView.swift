@@ -21,50 +21,100 @@ struct ContentView: View {
     @Environment(AppCoordinator.self) private var coordinator
     @Environment(\.modelContext) private var modelContext
     @State private var editorContext = EditorContext()
+    @State private var systemMetrics = SystemMetrics()
 
     /// Cached map: directory path -> (bookmarkID, bookmarkName)
-    @State private var bookmarkPathCache: [(path: String, id: String, name: String)] = []
+    @State private var bookmarkPathCache: [(path: String, id: String, name: String, projectID: String?)] = []
+    @Query private var projects: [Project]
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = false
+
+    private var windowTitle: String {
+        if let projectID = appState.selectedProjectID,
+           let project = projects.first(where: { $0.id == projectID }) {
+            return project.name
+        }
+        return "Wrangle"
+    }
 
     var body: some View {
         @Bindable var appState = appState
 
-        NavigationSplitView {
-            SidebarView()
-                .navigationSplitViewColumnWidth(min: 180, ideal: 240, max: 400)
-        } detail: {
-            VStack(spacing: 0) {
-                TrialBannerView()
-                NotificationBannerView()
+        VStack(spacing: 0) {
+            TrialBannerView()
+
+            HStack(spacing: 0) {
+                SidebarView()
+
+                // Right side: tabs + detail
+                VStack(spacing: 0) {
+                    if appState.selectedProjectID != nil {
+                        TitleBarTabStrip()
+                    }
+                    NotificationBannerView()
 
                 ZStack {
                     // Keep all terminal NSViews alive to preserve process state and scrollback
+                    // These must live outside the project/viewMode conditionals so switching
+                    // projects or going to project overview doesn't destroy the NSView hierarchy.
                     ForEach(appState.tabs) { tab in
                         if let session = tab.terminalSession {
-                            TerminalTabContentView(session: session)
-                                .opacity(appState.activeTab?.id == tab.id ? 1 : 0)
-                                .allowsHitTesting(appState.activeTab?.id == tab.id)
-                                .zIndex(appState.activeTab?.id == tab.id ? 1 : 0)
+                            let isActive = appState.selectedProjectID != nil
+                                && appState.viewMode == .editor
+                                && appState.activeTab?.id == tab.id
+                            TerminalTabContentView(session: session, isActive: isActive)
+                                .opacity(isActive ? 1 : 0)
+                                .allowsHitTesting(isActive)
+                                .zIndex(isActive ? 1 : 0)
                         }
                     }
 
-                    // Document or empty view (renders on top when active tab is not a terminal)
-                    if let tab = appState.activeTab {
-                        switch tab.content {
-                        case .document(let doc):
-                            VStack(spacing: 0) {
-                                documentContentView(doc)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .onDrop(of: [.fileURL], isTargeted: nil) { providers in
-                                handleFileDrop(providers)
-                            }
-                        case .terminal:
-                            EmptyView()
+                    // Keep all browser WKWebViews alive to preserve page state
+                    ForEach(appState.tabs) { tab in
+                        if let session = tab.browserSession {
+                            let isActive = appState.selectedProjectID != nil
+                                && appState.viewMode == .editor
+                                && appState.activeTab?.id == tab.id
+                            BrowserTabContentView(session: session)
+                                .opacity(isActive ? 1 : 0)
+                                .allowsHitTesting(isActive)
+                                .zIndex(isActive ? 1 : 0)
                         }
-                    } else {
-                        emptyEditorView
                     }
+
+                    if appState.selectedProjectID == nil {
+                        // No project selected — show project overview
+                        DashboardView()
+                    } else {
+                    switch appState.viewMode {
+                    case .dashboard:
+                        DashboardView()
+                    case .canvas:
+                        CanvasView()
+                    case .editor:
+                        // Document or empty view (renders on top when active tab is not a terminal/browser)
+                        if let tab = appState.activeTab {
+                            switch tab.content {
+                            case .document(let doc):
+                                VStack(spacing: 0) {
+                                    documentContentView(doc)
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+                                    handleFileDrop(providers)
+                                }
+                                .transition(.identity)
+                            case .terminal, .browser:
+                                EmptyView()
+                            case .projectOverview(let projectID):
+                                ProjectOverviewView(projectID: projectID)
+                            }
+                        } else {
+                            DashboardView()
+                        }
+                    }
+                    } // end if selectedProjectID != nil
                 }
+                .animation(nil, value: appState.activeTabIndex)
             }
             .background(
                 GeometryReader { geo in
@@ -74,7 +124,10 @@ struct ContentView: View {
                     )
                 }
             )
-            .background(Color(nsColor: Theme.chromeBackground), ignoresSafeAreaEdges: .all)
+            .background(
+                Color(nsColor: Theme.chromeBackground),
+                ignoresSafeAreaEdges: .all
+            )
             .alert(
                 "Close Terminal?",
                 isPresented: Binding(
@@ -122,12 +175,16 @@ struct ContentView: View {
                 let current = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
                 Text("Wrangle v\(current) is the latest version.")
             }
-        }
+        } // HStack
+        } // outer VStack (trial banner + content)
+        .background(
+            Color(nsColor: Theme.chromeBackground),
+            ignoresSafeAreaEdges: .all
+        )
         .coordinateSpace(name: "root")
         .onPreferenceChange(DetailLeadingKey.self) { value in
             appState.detailAreaLeading = value
         }
-        .toolbarBackground(.hidden, for: .windowToolbar)
         .overlay {
             if appState.showFuzzyFinder {
                 FuzzyFinderView()
@@ -137,10 +194,29 @@ struct ContentView: View {
             }
             LicenseGateView()
             NotificationPermissionView()
+            WhatsNewView()
         }
-        .navigationTitle(appState.activeTab?.displayName ?? "Wrangle")
-        .background { TitleBarAccessoryInstaller(appState: appState, modelContainer: modelContext.container) }
-        .frame(minWidth: 800, minHeight: 500)
+        .navigationTitle(windowTitle)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigation) {
+                Button { appState.goBack() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .disabled(!appState.canGoBack)
+                .help("Back (⌘[)")
+
+                Button { appState.goForward() } label: {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .disabled(!appState.canGoForward)
+                .help("Forward (⌘])")
+            }
+
+        }
+        .background { WindowChromeConfigurator(appState: appState, systemMetrics: systemMetrics) }
+        .frame(minWidth: 140, minHeight: 500)
         .onChange(of: appState.activeTabIndex) { _, _ in
             if let url = appState.activeDocument?.fileURL {
                 recordRecentFile(url: url, in: modelContext)
@@ -158,9 +234,25 @@ struct ContentView: View {
                 Task { await coordinator.notificationManager.refreshStatus() }
             }
         }
+        .onChange(of: appState.pendingLocationAdd) { _, url in
+            guard let url, let projectID = appState.selectedProjectID else { return }
+            appState.pendingLocationAdd = nil
+            addLocationIfNeeded(url: url, projectID: projectID)
+        }
+        .task {
+            systemMetrics.coordinator = coordinator
+        }
+        .onChange(of: showSystemMetrics, initial: true) { _, visible in
+            if visible {
+                systemMetrics.startMonitoring()
+            } else {
+                systemMetrics.stopMonitoring()
+            }
+        }
         .onAppear {
             appState.coordinator = coordinator
             coordinator.register(appState)
+            ProjectMigration.runIfNeeded(modelContext: modelContext)
             rebuildBookmarkPathCache()
         }
         .onDisappear {
@@ -207,7 +299,7 @@ struct ContentView: View {
             .background(Color(nsColor: Theme.chromeBackground))
 
             Divider()
-        } else {
+        } else if doc.fileType.isMarkdownRendered {
             EditorToolbar(context: editorContext, editingMode: Binding(
                 get: { appState.editingMode },
                 set: { appState.editingMode = $0 }
@@ -256,21 +348,6 @@ struct ContentView: View {
         StatusBarView(document: doc)
     }
 
-    private var emptyEditorView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
-            Text("Open a file to get started")
-                .font(.title2)
-                .foregroundStyle(.secondary)
-            Text("Cmd+O to open \u{2022} Cmd+N for new file \u{2022} Cmd+P to quick open")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
 
     private func rebuildBookmarkPathCache() {
@@ -278,7 +355,7 @@ struct ContentView: View {
             guard !bookmark.isFile, let dirURL = bookmark.resolveURL() else { return nil }
             let dirPath = dirURL.path(percentEncoded: false)
             let id = bookmark.persistentModelID.hashValue.description
-            return (path: dirPath, id: id, name: bookmark.name)
+            return (path: dirPath, id: id, name: bookmark.name, projectID: bookmark.projectID)
         }
 
         // Also populate the scoped URL cache on AppState for fallback resolution
@@ -295,6 +372,9 @@ struct ContentView: View {
             if filePath.hasPrefix(entry.path) {
                 appState.selectedBookmarkID = entry.id
                 appState.activeProjectName = entry.name
+                if let projectID = entry.projectID {
+                    appState.selectedProjectID = projectID
+                }
                 return
             }
         }
@@ -314,6 +394,31 @@ struct ContentView: View {
             }
         }
         return handled
+    }
+
+    private func addLocationIfNeeded(url: URL, projectID: String) {
+        // Skip if this directory is already a location for this project
+        let dirPath = url.path(percentEncoded: false)
+        if bookmarkPathCache.contains(where: { $0.path == dirPath && $0.projectID == projectID }) {
+            return
+        }
+
+        do {
+            let data = try SecurityScopedBookmark.create(for: url)
+            let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
+            let bookmark = BookmarkedDirectory(
+                name: url.lastPathComponent,
+                bookmarkData: data,
+                displayOrder: maxOrder + 1,
+                isFile: false
+            )
+            bookmark.projectID = projectID
+            modelContext.insert(bookmark)
+            try? modelContext.save()
+            rebuildBookmarkPathCache()
+        } catch {
+            // Bookmark creation failed — user may not have granted access
+        }
     }
 }
 

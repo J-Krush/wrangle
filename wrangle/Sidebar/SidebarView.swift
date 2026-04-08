@@ -7,6 +7,7 @@ struct SidebarView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
+    @Query(sort: \Project.displayOrder) private var projects: [Project]
     @State private var activeFileTypeFilters: Set<FileTypeFilter> = []
     @State private var showFilterPopover = false
     @State private var rawDropTargeted = false
@@ -20,39 +21,109 @@ struct SidebarView: View {
         case hovering
     }
 
+    @State private var startWidth: CGFloat?
+
     var body: some View {
         @Bindable var appState = appState
-        VStack(spacing: 0) {
-            ScrollViewReader { scrollProxy in
-                List {
-                    Section("Scratch Pads") {
-                        ScratchPadSection()
-                    }
+        HStack(spacing: 0) {
+            // Project rail — always visible
+            ProjectRailView()
 
-                    Section("Locations") {
-                        BookmarkListView(scrollProxy: scrollProxy, filterText: appState.sidebarFilterText, activeFileTypeFilters: activeFileTypeFilters, isFinderDragActive: dropState == .hovering, showActiveSessionsOnly: appState.showActiveSessionsOnly, onAddLocation: addLocation)
-                    }
+            // Content card — toggleable
+            if appState.isSidebarVisible {
+                VStack(spacing: 0) {
+                    ScrollViewReader { scrollProxy in
+                        List {
+                            if let projectID = appState.selectedProjectID {
+                                // Section("Intents") {
+                                //     IntentListView(projectID: projectID)
+                                // }
+                                // .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
-                    OrphanedSessionsSection()
+                                BrowserSessionsSection()
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+
+                                if !appState.scratchPadManager.scratchPads(forProject: projectID).isEmpty {
+                                    Section("Scratch Pads") {
+                                        ScratchPadSection()
+                                    }
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                                }
+
+                                Section("Locations") {
+                                    ProjectBookmarkListView(
+                                        projectID: projectID,
+                                        scrollProxy: scrollProxy,
+                                        filterText: appState.sidebarFilterText,
+                                        activeFileTypeFilters: activeFileTypeFilters,
+                                        isFinderDragActive: dropState == .hovering,
+                                        showActiveSessionsOnly: appState.showActiveSessionsOnly,
+                                        onAddLocation: addLocation
+                                    )
+                                }
+                                .id(projectID)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+
+                                OrphanedSessionsSection()
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                            } else {
+                                Section {
+                                    Text("Select a project to get started")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                            }
+                        }
+                    }
+                    .listStyle(.sidebar)
+                    .environment(\.defaultMinListRowHeight, 20)
+                    .environment(\.sidebarRowSize, .small)
+                    .scrollContentBackground(.hidden)
+                    .frame(maxHeight: .infinity)
+                    sidebarBottomBar
                 }
+                .frame(maxHeight: .infinity)
+                .frame(width: appState.sidebarWidth)
+                .frame(minWidth: 140, maxWidth: 400)
+                .background(Color(nsColor: Theme.sidebarBackground), in: RoundedRectangle(cornerRadius: 8))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(4)
+                .overlay(alignment: .trailing) {
+                    // Resize handle
+                    Rectangle()
+                        .fill(Color.clear)
+                        .frame(width: 5)
+                        .contentShape(Rectangle())
+                        .onHover { hovering in
+                            if hovering { NSCursor.resizeLeftRight.push() }
+                            else { NSCursor.pop() }
+                        }
+                        .gesture(
+                            DragGesture(minimumDistance: 1)
+                                .onChanged { value in
+                                    if startWidth == nil { startWidth = appState.sidebarWidth }
+                                    appState.sidebarWidth = max(140, min(400, (startWidth ?? 200) + value.translation.width))
+                                }
+                                .onEnded { _ in startWidth = nil }
+                        )
+                }
+                .overlay {
+                    if dropState == .hovering {
+                        dropOverlay
+                            .transition(.opacity)
+                    }
+                }
+                .onDrop(of: [.fileURL], isTargeted: $rawDropTargeted) { providers in
+                    handleFinderDrop(providers)
+                }
+                .transition(.move(edge: .leading).combined(with: .opacity))
             }
-            .listStyle(.sidebar)
-            .environment(\.defaultMinListRowHeight, 22)
-            .scrollContentBackground(.hidden)
-            sidebarBottomBar
         }
-        .background(Color(nsColor: Theme.sidebarBackground))
-        .frame(minWidth: 200, idealWidth: 240)
-        .overlay {
-            if dropState == .hovering {
-                dropOverlay
-                    .transition(.opacity)
-            }
-        }
+        .clipped()
+        .background(Color(nsColor: Theme.chromeBackground))
+        .fixedSize(horizontal: true, vertical: false)
         .animation(.smooth(duration: 0.2), value: dropState == .hovering)
-        .onDrop(of: [.fileURL], isTargeted: $rawDropTargeted) { providers in
-            handleFinderDrop(providers)
-        }
         .onChange(of: rawDropTargeted) { _, newValue in
             dropDebounceTask?.cancel()
             if newValue {
@@ -119,6 +190,9 @@ struct SidebarView: View {
                     Button("New Scratch Pad") {
                         appState.newScratchPad()
                     }
+                    // Button("New Browser") {
+                    //     appState.openBrowser()
+                    // }
                     Divider()
                     Button("Add Location...") {
                         addLocation()
@@ -257,12 +331,29 @@ struct SidebarView: View {
                 displayOrder: maxOrder + 1,
                 isFile: !isDir
             )
+            // If drilled into a project, assign the new bookmark to it.
+            // Otherwise create a new project for this bookmark.
+            if let projectID = appState.selectedProjectID {
+                bookmark.projectID = projectID
+            } else {
+                let maxProjectOrder = projects.map(\.displayOrder).max() ?? -1
+                let project = Project(
+                    name: url.lastPathComponent,
+                    displayOrder: maxProjectOrder + 1
+                )
+                modelContext.insert(project)
+                bookmark.projectID = project.id
+            }
             modelContext.insert(bookmark)
             try? modelContext.save()
 
             let id = bookmark.persistentModelID.hashValue.description
             if isDir {
                 appState.selectedBookmarkID = id
+                // Auto-drill into the project if we just created one at the top level
+                if appState.selectedProjectID == nil, let projectID = bookmark.projectID {
+                    appState.selectedProjectID = projectID
+                }
             } else {
                 appState.openFile(url: url, scopedURL: url)
             }
@@ -272,7 +363,6 @@ struct SidebarView: View {
     }
 
     private func handleFinderDrop(_ providers: [NSItemProvider]) -> Bool {
-        var handled = false
         for provider in providers {
             provider.loadItem(forTypeIdentifier: "public.file-url", options: nil) { data, _ in
                 guard let data = data as? Data,
@@ -281,16 +371,16 @@ struct SidebarView: View {
                 let isDir = (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
                 guard isDir else { return }
 
-                // Deduplicate: skip if this directory is already bookmarked
-                let urlPath = url.path(percentEncoded: false)
-                for bookmark in bookmarks {
-                    if let existingURL = bookmark.resolveURL(),
-                       existingURL.path(percentEncoded: false) == urlPath {
-                        return
-                    }
-                }
-
                 Task { @MainActor in
+                    // Deduplicate: skip if this directory is already bookmarked
+                    let urlPath = url.path(percentEncoded: false)
+                    for bookmark in bookmarks {
+                        if let existingURL = bookmark.resolveURL(),
+                           existingURL.path(percentEncoded: false) == urlPath {
+                            return
+                        }
+                    }
+
                     do {
                         let bookmarkData = try SecurityScopedBookmark.create(for: url)
                         let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
@@ -300,17 +390,27 @@ struct SidebarView: View {
                             displayOrder: maxOrder + 1,
                             isFile: false
                         )
+                        if let projectID = appState.selectedProjectID {
+                            bookmark.projectID = projectID
+                        } else {
+                            let maxProjectOrder = projects.map(\.displayOrder).max() ?? -1
+                            let project = Project(name: url.lastPathComponent, displayOrder: maxProjectOrder + 1)
+                            modelContext.insert(project)
+                            bookmark.projectID = project.id
+                        }
                         modelContext.insert(bookmark)
                         try? modelContext.save()
                         appState.selectedBookmarkID = bookmark.persistentModelID.hashValue.description
-                        handled = true
+                        if appState.selectedProjectID == nil, let projectID = bookmark.projectID {
+                            appState.selectedProjectID = projectID
+                        }
                     } catch {
                         // Bookmark creation failed
                     }
                 }
             }
         }
-        return handled
+        return true
     }
 }
 
@@ -372,6 +472,49 @@ struct FileTypeFilterPopover: View {
         }
         .padding(.bottom, 6)
         .frame(width: 180)
+    }
+}
+
+// MARK: - Spaces Section
+
+private struct SpacesSection: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        Button {
+            appState.viewMode = .dashboard
+        } label: {
+            Label("All Projects", systemImage: "square.grid.2x2")
+        }
+        .listRowBackground(
+            Theme.sidebarSelectionBackground(isSelected: appState.viewMode == .dashboard)
+        )
+
+        Button {
+            appState.viewMode = .canvas
+        } label: {
+            Label("Canvas", systemImage: "rectangle.3.group")
+        }
+        .listRowBackground(
+            Theme.sidebarSelectionBackground(isSelected: appState.viewMode == .canvas)
+        )
+    }
+}
+
+// MARK: - Browser Sessions Section
+
+private struct BrowserSessionsSection: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        let browsers = appState.projectBrowserSessions
+        if !browsers.isEmpty {
+            Section("Browsers") {
+                ForEach(browsers) { session in
+                    LocationBrowserRow(session: session)
+                }
+            }
+        }
     }
 }
 

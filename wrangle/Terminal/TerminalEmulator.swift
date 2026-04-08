@@ -16,6 +16,8 @@ class TerminalEmulator {
     var isRunning: Bool = false
     var workingDirectory: URL?
     var title: String?
+    var terminalCols: Int = 0
+    var terminalRows: Int = 0
 
     /// Bridge to the SwiftTermView.Coordinator that owns the actual process.
     /// Set during SwiftTermView.makeNSView.

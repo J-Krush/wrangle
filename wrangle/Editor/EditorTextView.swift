@@ -3,6 +3,10 @@ import AppKit
 extension NSAttributedString.Key {
     /// Custom attribute marking code block ranges for card-style background drawing.
     static let codeBlockBackground = NSAttributedString.Key("codeBlockBackground")
+    /// Custom attribute marking table block ranges for card-style background drawing.
+    static let tableBlock = NSAttributedString.Key("com.Wrangle.tableBlock")
+    /// Custom attribute marking the header row of a table for bold styling and separator line.
+    static let tableHeaderRow = NSAttributedString.Key("com.Wrangle.tableHeaderRow")
 }
 
 /// Delegate protocol for forwarding keyboard-driven formatting to the coordinator.
@@ -315,6 +319,8 @@ class EditorTextView: NSTextView {
     override func drawBackground(in rect: NSRect) {
         super.drawBackground(in: rect)
         drawCodeBlockCards()
+        drawTableCards()
+        drawTableHeaderLine()
         drawXMLFoldTriangles()
         if showLineNumbers { drawLineNumbers(in: rect) }
     }
@@ -353,6 +359,82 @@ class EditorTextView: NSTextView {
             let path = NSBezierPath(roundedRect: blockRect, xRadius: 8, yRadius: 8)
             theme.codeBackground.setFill()
             path.fill()
+        }
+    }
+
+    // MARK: - Table Drawing
+
+    private func drawTableCards() {
+        guard editingMode == .writing else { return }
+        guard let layoutManager, let textContainer, let textStorage else { return }
+        guard textStorage.length > 0 else { return }
+
+        let theme = Theme.current
+
+        textStorage.enumerateAttribute(
+            .tableBlock,
+            in: NSRange(location: 0, length: textStorage.length)
+        ) { value, range, _ in
+            guard value != nil else { return }
+
+            let glyphRange = layoutManager.glyphRange(
+                forCharacterRange: range,
+                actualCharacterRange: nil
+            )
+            guard glyphRange.length > 0 else { return }
+
+            var blockRect = layoutManager.boundingRect(
+                forGlyphRange: glyphRange,
+                in: textContainer
+            )
+
+            let cardPadTop: CGFloat = 8
+            let cardPadBottom: CGFloat = 8
+            blockRect.origin.x = textContainerInset.width + 4
+            blockRect.origin.y += textContainerInset.height - cardPadTop
+            blockRect.size.width = bounds.width - (textContainerInset.width + 4) * 2
+            blockRect.size.height += cardPadTop + cardPadBottom
+
+            let path = NSBezierPath(roundedRect: blockRect, xRadius: 8, yRadius: 8)
+            theme.codeBackground.setFill()
+            path.fill()
+        }
+    }
+
+    private func drawTableHeaderLine() {
+        guard editingMode == .writing else { return }
+        guard let layoutManager, let textContainer, let textStorage else { return }
+        guard textStorage.length > 0 else { return }
+
+        let theme = Theme.current
+
+        textStorage.enumerateAttribute(
+            .tableHeaderRow,
+            in: NSRange(location: 0, length: textStorage.length)
+        ) { value, range, _ in
+            guard value != nil else { return }
+
+            let glyphRange = layoutManager.glyphRange(
+                forCharacterRange: range,
+                actualCharacterRange: nil
+            )
+            guard glyphRange.length > 0 else { return }
+
+            let lineRect = layoutManager.boundingRect(
+                forGlyphRange: glyphRange,
+                in: textContainer
+            )
+
+            let y = lineRect.origin.y + lineRect.height + textContainerInset.height
+            let lineX = textContainerInset.width + 16
+            let lineWidth = bounds.width - (textContainerInset.width + 4) * 2 - 24
+
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: lineX, y: y))
+            path.line(to: NSPoint(x: lineX + lineWidth, y: y))
+            path.lineWidth = 1
+            theme.blockquoteBorder.setStroke()
+            path.stroke()
         }
     }
 

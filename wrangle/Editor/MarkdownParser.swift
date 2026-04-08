@@ -12,6 +12,8 @@ extension NSAttributedString.Key {
     /// Marks a `- [ ]` or `- [x]` checkbox prefix for replacement in writing mode.
     /// Value is `true` (checked) or `false` (unchecked).
     static let checkboxMarker = NSAttributedString.Key("com.Wrangle.checkboxMarker")
+    /// Marks a `|` pipe character in a table row for replacement with `\t` in writing mode.
+    static let tableMarker = NSAttributedString.Key("com.Wrangle.tableMarker")
 }
 
 final class MarkdownParser: @unchecked Sendable {
@@ -64,6 +66,11 @@ final class MarkdownParser: @unchecked Sendable {
     private static let linkRegex = try! NSRegularExpression(
         pattern: "(\\[)([^\\]]+)(\\]\\()([^)]+)(\\))"
     )
+    /// Matches a complete markdown table: header row + separator row + data rows.
+    private static let tableRegex = try! NSRegularExpression(
+        pattern: "^(\\|[^\\n]+\\|\\s*\\n)(\\|[\\s:]*-+[\\s:]*(?:\\|[\\s:]*-+[\\s:]*)*\\|\\s*\\n)((?:\\|[^\\n]+\\|\\s*\\n?)*)",
+        options: .anchorsMatchLines
+    )
 
     // MARK: - Protected Ranges
 
@@ -92,37 +99,40 @@ final class MarkdownParser: @unchecked Sendable {
         // 1. Code blocks (fenced) — must be first so content inside is protected
         applyCodeBlocks(in: result, fullRange: fullRange, theme: theme)
 
-        // 2. Inline code
+        // 2. Tables (before inline code so table pipes aren't treated as other syntax)
+        applyTables(in: result, fullRange: fullRange, theme: theme)
+
+        // 3. Inline code
         applyInlineCode(in: result, fullRange: fullRange, theme: theme)
 
-        // 3. Headings
+        // 4. Headings
         applyHeadings(in: result, fullRange: fullRange, theme: theme)
 
-        // 4. Bold
+        // 5. Bold
         applyBold(in: result, fullRange: fullRange, theme: theme)
 
-        // 5. Italic
+        // 6. Italic
         applyItalic(in: result, fullRange: fullRange, theme: theme)
 
-        // 6. Strikethrough
+        // 7. Strikethrough
         applyStrikethrough(in: result, fullRange: fullRange, theme: theme)
 
-        // 7. Blockquotes
+        // 8. Blockquotes
         applyBlockquotes(in: result, fullRange: fullRange, theme: theme)
 
-        // 8a. Checkboxes (before bullet lists so `- [ ]` isn't caught as a plain bullet)
+        // 9a. Checkboxes (before bullet lists so `- [ ]` isn't caught as a plain bullet)
         applyCheckboxes(in: result, fullRange: fullRange, theme: theme)
 
-        // 8b. Bullet lists
+        // 9b. Bullet lists
         applyBulletLists(in: result, fullRange: fullRange, theme: theme)
 
-        // 9. Numbered lists
+        // 10. Numbered lists
         applyNumberedLists(in: result, fullRange: fullRange, theme: theme)
 
-        // 10. Horizontal rules
+        // 11. Horizontal rules
         applyHorizontalRules(in: result, fullRange: fullRange, theme: theme)
 
-        // 11. Links
+        // 12. Links
         applyLinks(in: result, fullRange: fullRange, theme: theme)
 
         return result
@@ -232,7 +242,172 @@ final class MarkdownParser: @unchecked Sendable {
         ], range: range)
     }
 
-    // 2. Inline Code
+    // 2. Tables
+    private func applyTables(
+        in attrStr: NSMutableAttributedString,
+        fullRange: NSRange,
+        theme: Theme
+    ) {
+        let matches = Self.tableRegex.matches(in: attrStr.string, range: fullRange)
+        let nsString = attrStr.string as NSString
+
+        for match in matches.reversed() {
+            let range = match.range
+            if isProtected(range) { continue }
+
+            let headerRange = match.range(at: 1)
+            let separatorRange = match.range(at: 2)
+            let dataRange = match.range(at: 3)
+
+            // Parse all rows to calculate column widths
+            let allContentRows = collectTableRows(in: nsString, headerRange: headerRange, dataRange: dataRange)
+            let columnWidths = calculateColumnWidths(rows: allContentRows, font: theme.editorFont)
+
+            // Build tab stops from column widths
+            let cellPadding: CGFloat = 12
+            let tableInset: CGFloat = 16
+            var tabStops: [NSTextTab] = []
+            var cumulative: CGFloat = tableInset
+            for width in columnWidths {
+                cumulative += cellPadding
+                tabStops.append(NSTextTab(textAlignment: .left, location: cumulative))
+                cumulative += width + cellPadding
+            }
+
+            // Mark entire table for card background drawing
+            attrStr.addAttribute(.tableBlock, value: true, range: range)
+
+            // Apply paragraph style with tab stops to header row
+            let headerStyle = NSMutableParagraphStyle()
+            headerStyle.lineSpacing = theme.lineSpacing
+            headerStyle.paragraphSpacing = 0
+            headerStyle.paragraphSpacingBefore = 4
+            headerStyle.headIndent = tableInset
+            headerStyle.firstLineHeadIndent = tableInset
+            headerStyle.tabStops = tabStops
+            attrStr.addAttributes([
+                .paragraphStyle: headerStyle,
+                .font: NSFont.boldSystemFont(ofSize: theme.editorFont.pointSize),
+            ], range: headerRange)
+
+            // Mark header row for separator line drawing
+            attrStr.addAttribute(.tableHeaderRow, value: true, range: headerRange)
+
+            // Apply paragraph style to data rows
+            if dataRange.length > 0 {
+                let dataStyle = NSMutableParagraphStyle()
+                dataStyle.lineSpacing = theme.lineSpacing
+                dataStyle.paragraphSpacing = 0
+                dataStyle.headIndent = tableInset
+                dataStyle.firstLineHeadIndent = tableInset
+                dataStyle.tabStops = tabStops
+                attrStr.addAttribute(.paragraphStyle, value: dataStyle, range: dataRange)
+            }
+
+            // Mark pipe characters for replacement in writing mode
+            if shouldHideMarkdownSyntax {
+                markPipeCharacters(in: attrStr, range: headerRange)
+                if dataRange.length > 0 {
+                    markPipeCharacters(in: attrStr, range: dataRange)
+                }
+
+                // Collapse separator row to near-zero height
+                hideSeparatorRow(in: attrStr, range: separatorRange)
+            }
+
+            protectedRanges.append(range)
+        }
+    }
+
+    /// Collects cell content strings from header and data rows for width calculation.
+    private func collectTableRows(in nsString: NSString, headerRange: NSRange, dataRange: NSRange) -> [[String]] {
+        var rows: [[String]] = []
+
+        func parseRow(_ lineRange: NSRange) {
+            let line = nsString.substring(with: lineRange)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let parts = line.split(separator: "|", omittingEmptySubsequences: false)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+            // Drop leading/trailing empty entries from the split (before first | and after last |)
+            let trimmed = parts.dropFirst().dropLast().map { String($0) }
+            rows.append(Array(trimmed))
+        }
+
+        // Header row
+        let headerLineRange = NSRange(location: headerRange.location,
+                                       length: headerRange.length)
+        parseRow(headerLineRange)
+
+        // Data rows
+        if dataRange.length > 0 {
+            var offset = dataRange.location
+            let end = dataRange.location + dataRange.length
+            while offset < end {
+                let lineRange = nsString.lineRange(for: NSRange(location: offset, length: 0))
+                let clampedRange = NSRange(
+                    location: lineRange.location,
+                    length: min(lineRange.length, end - lineRange.location)
+                )
+                if clampedRange.length > 0 {
+                    parseRow(clampedRange)
+                }
+                let next = NSMaxRange(lineRange)
+                if next <= offset { break }
+                offset = next
+            }
+        }
+
+        return rows
+    }
+
+    /// Measures max column widths across all rows using the given font.
+    private func calculateColumnWidths(rows: [[String]], font: NSFont) -> [CGFloat] {
+        guard let firstRow = rows.first else { return [] }
+        var widths = [CGFloat](repeating: 0, count: firstRow.count)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let boldAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.boldSystemFont(ofSize: font.pointSize)
+        ]
+
+        for (rowIndex, row) in rows.enumerated() {
+            for (colIndex, cell) in row.enumerated() where colIndex < widths.count {
+                let measureAttrs = rowIndex == 0 ? boldAttrs : attrs
+                let cellWidth = NSAttributedString(string: cell, attributes: measureAttrs).size().width
+                widths[colIndex] = max(widths[colIndex], cellWidth)
+            }
+        }
+
+        // Ensure minimum column width
+        return widths.map { max($0, 30) }
+    }
+
+    /// Marks each `|` character in the given range with `.tableMarker` for replacement with `\t`.
+    private func markPipeCharacters(in attrStr: NSMutableAttributedString, range: NSRange) {
+        let nsString = attrStr.string as NSString
+        for i in 0..<range.length {
+            let charIndex = range.location + i
+            if nsString.character(at: charIndex) == 0x7C { // '|'
+                attrStr.addAttribute(.tableMarker, value: true, range: NSRange(location: charIndex, length: 1))
+            }
+        }
+    }
+
+    /// Collapses the separator row (| --- | --- |) to near-zero height.
+    private func hideSeparatorRow(in attrStr: NSMutableAttributedString, range: NSRange) {
+        let collapsedStyle = NSMutableParagraphStyle()
+        collapsedStyle.maximumLineHeight = 0.01
+        collapsedStyle.minimumLineHeight = 0.01
+        collapsedStyle.lineSpacing = 0
+        collapsedStyle.paragraphSpacing = 0
+
+        attrStr.addAttributes([
+            .foregroundColor: NSColor.clear,
+            .font: NSFont.systemFont(ofSize: 0.01),
+            .paragraphStyle: collapsedStyle,
+        ], range: range)
+    }
+
+    // 3. Inline Code
     private func applyInlineCode(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -260,7 +435,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 3. Headings
+    // 4. Headings
     private func applyHeadings(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -288,7 +463,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 4. Bold
+    // 5. Bold
     private func applyBold(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -317,7 +492,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 5. Italic — uses two separate patterns to avoid unreliable backreferences
+    // 6. Italic — uses two separate patterns to avoid unreliable backreferences
     private func applyItalic(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -357,7 +532,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 6. Strikethrough
+    // 7. Strikethrough
     private func applyStrikethrough(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -380,7 +555,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 7. Blockquotes
+    // 8. Blockquotes
     private func applyBlockquotes(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -410,7 +585,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 8a. Checkboxes (task lists)
+    // 9a. Checkboxes (task lists)
     private func applyCheckboxes(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -455,7 +630,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 8b. Bullet Lists
+    // 9b. Bullet Lists
     private func applyBulletLists(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -486,7 +661,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 9. Numbered Lists
+    // 10. Numbered Lists
     private func applyNumberedLists(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -509,7 +684,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 10. Horizontal Rules
+    // 11. Horizontal Rules
     private func applyHorizontalRules(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,
@@ -535,7 +710,7 @@ final class MarkdownParser: @unchecked Sendable {
         }
     }
 
-    // 11. Links
+    // 12. Links
     private func applyLinks(
         in attrStr: NSMutableAttributedString,
         fullRange: NSRange,

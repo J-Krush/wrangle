@@ -14,11 +14,18 @@ class TerminalSession: Identifiable {
     let projectName: String
     let workingDirectory: URL?
     let bookmarkID: String?
+    var intentID: String?
     var isClaude: Bool
     var isGemini: Bool
     var customTitle: String?
     var needsAttention: Bool = false
     var sessionContext: SessionContext?
+
+    /// Whether this session was restored from a previous app launch (not yet running).
+    var isRestored: Bool = false
+
+    /// Claude Code's internal session ID, captured from hook events. Used for `claude --resume`.
+    var claudeSessionID: String?
 
     /// Whether this session was auto-detected as Claude (vs. explicitly launched)
     var wasAutoDetected: Bool = false
@@ -45,8 +52,13 @@ class TerminalSession: Identifiable {
         refreshSessionContext()
     }
 
+    private static let genericShells: Set<String> = ["bash", "zsh", "sh", "fish", "tcsh", "csh", "ksh", "dash"]
+
     var displayTitle: String {
         if let customTitle { return customTitle }
+        if let title = sanitizedEmulatorTitle {
+            return title
+        }
         if let dir = workingDirectory ?? emulator.workingDirectory {
             return dir.lastPathComponent
         }
@@ -57,12 +69,20 @@ class TerminalSession: Identifiable {
     /// and isn't a generic shell name. Captures plan names set via OSC escape sequences.
     var emulatorSubtitle: String? {
         guard isClaude || isGemini,
-              let emulatorTitle = emulator.title,
-              !emulatorTitle.isEmpty,
-              emulatorTitle != displayTitle else { return nil }
-        let genericShells: Set<String> = ["bash", "zsh", "sh", "fish", "tcsh", "csh", "ksh", "dash"]
-        if genericShells.contains(emulatorTitle.lowercased()) { return nil }
-        return emulatorTitle
+              let title = sanitizedEmulatorTitle,
+              title != displayTitle else { return nil }
+        return title
+    }
+
+    private var sanitizedEmulatorTitle: String? {
+        guard let title = emulator.title, !title.isEmpty,
+              !Self.genericShells.contains(title.lowercased()) else { return nil }
+        guard isClaude || isGemini else { return title }
+        let cleaned = title
+            .replacingOccurrences(of: "✻ ", with: "")
+            .replacingOccurrences(of: "✻", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        return cleaned.isEmpty ? nil : cleaned
     }
 
     var displaySubtitle: String? {

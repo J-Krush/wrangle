@@ -2,7 +2,8 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-struct BookmarkListView: View {
+struct ProjectBookmarkListView: View {
+    let projectID: String
     let scrollProxy: ScrollViewProxy
     let filterText: String
     let activeFileTypeFilters: Set<FileTypeFilter>
@@ -11,9 +12,36 @@ struct BookmarkListView: View {
     var onAddLocation: (() -> Void)?
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
+    @Query private var bookmarks: [BookmarkedDirectory]
 
-    @State private var expandedBookmarks: Set<String> = []
+    init(
+        projectID: String,
+        scrollProxy: ScrollViewProxy,
+        filterText: String,
+        activeFileTypeFilters: Set<FileTypeFilter>,
+        isFinderDragActive: Bool,
+        showActiveSessionsOnly: Bool,
+        onAddLocation: (() -> Void)? = nil
+    ) {
+        self.projectID = projectID
+        self.scrollProxy = scrollProxy
+        self.filterText = filterText
+        self.activeFileTypeFilters = activeFileTypeFilters
+        self.isFinderDragActive = isFinderDragActive
+        self.showActiveSessionsOnly = showActiveSessionsOnly
+        self.onAddLocation = onAddLocation
+        _bookmarks = Query(
+            filter: #Predicate<BookmarkedDirectory> { bookmark in
+                bookmark.projectID == projectID
+            },
+            sort: \BookmarkedDirectory.displayOrder
+        )
+    }
+
+    private var expandedBookmarks: Set<String> {
+        get { appState.projectExpandedBookmarks[projectID] ?? [] }
+        nonmutating set { appState.projectExpandedBookmarks[projectID] = newValue }
+    }
     @State private var draggingBookmarkID: String?
     @State private var dropTargetBookmarkID: String?
     @State private var renamingBookmark: BookmarkedDirectory?
@@ -67,7 +95,7 @@ struct BookmarkListView: View {
                     .help(bookmark.resolveURL()?.path(percentEncoded: false) ?? bookmark.name)
                 }
             } else {
-                // Normal view: sessions + filtered file tree (handles both filters composing)
+                // Normal view: sessions + filtered file tree
                 DisclosureGroup(isExpanded: expansionBinding(for: bookmarkID)) {
                     ForEach(sessions) { session in
                         LocationSessionRow(session: session)

@@ -11,8 +11,8 @@ class AppCoordinator {
     var updateChecker = UpdateChecker()
     var licenseManager = LicenseManager()
     var notificationManager = NotificationPermissionManager()
+    var whatsNewManager = WhatsNewManager()
     var selectedSettingsTab: SettingsTab = .general
-
     // Registry of all window states
     private(set) var windowStates: [UUID: AppState] = [:]
 

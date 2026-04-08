@@ -6,6 +6,7 @@ struct FileTreeContent: View {
     let filterText: String
     let activeFileTypeFilters: Set<FileTypeFilter>
     @Environment(AppState.self) private var appState
+    @AppStorage("showHiddenFiles") private var showHiddenFiles: Bool = false
     @State private var nodes: [FileNode] = []
     @State private var watcher: FileWatcher?
     @State private var resolvedURL: URL?
@@ -69,6 +70,7 @@ struct FileTreeContent: View {
         }
         .onAppear { loadTree(refreshBookmark: true) }
         .onChange(of: bookmark.bookmarkData) { loadTree(refreshBookmark: false) }
+        .onChange(of: showHiddenFiles) { loadTree(refreshBookmark: false) }
         .onDisappear {
             loadTask?.cancel()
             watcher?.stop()
@@ -123,9 +125,10 @@ struct FileTreeContent: View {
         let currentGeneration = loadGeneration
         isLoading = true
 
+        let showHidden = showHiddenFiles
         loadTask = Task {
             let tree = await Task.detached {
-                FileNode.buildTree(at: url)
+                FileNode.buildTree(at: url, showAllHidden: showHidden)
             }.value
             guard !Task.isCancelled, currentGeneration == loadGeneration else { return }
             nodes = tree
@@ -138,7 +141,7 @@ struct FileTreeContent: View {
             loadTask?.cancel()
             loadTask = Task {
                 let tree = await Task.detached {
-                    FileNode.buildTree(at: url)
+                    FileNode.buildTree(at: url, showAllHidden: showHidden)
                 }.value
                 guard !Task.isCancelled, gen == loadGeneration else { return }
                 nodes = tree

@@ -8,66 +8,51 @@ import SwiftData
 import AppKit
 import UniformTypeIdentifiers
 
-// MARK: - Title Bar Accessory Installer
+// MARK: - Window Chrome Configurator
 
-/// Installs a custom tab strip in the window's titlebar using `NSTitlebarAccessoryViewController`.
-///
-/// Note: `appState` is captured by value when creating the `TitleBarTabStrip` SwiftUI view
-/// inside the `onWindow` closure. This works because `AppState` is a reference type injected
-/// via `.environment()`, so the captured reference stays current. The `dismantleNSView` method
-/// properly removes the accessory view controller when this view is torn down.
-struct TitleBarAccessoryInstaller: NSViewRepresentable {
+/// Configures the window's title bar appearance (transparent, background color).
+/// No longer installs a tab strip accessory — tabs are now in the regular SwiftUI layout.
+struct WindowChromeConfigurator: NSViewRepresentable {
     let appState: AppState
-    let modelContainer: ModelContainer
+    let systemMetrics: SystemMetrics
 
     func makeNSView(context: Context) -> NSView {
         let view = WindowAccessorView()
-        view.onWindow = { [weak coordinator = context.coordinator] window in
-            guard let coordinator, !coordinator.isInstalled else { return }
-
-            // Make titlebar transparent so tabs sit flush at top
+        view.onWindow = { window in
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .visible
             window.backgroundColor = Theme.chromeBackground
-
-            let tabStrip = TitleBarTabStrip().environment(appState).modelContainer(modelContainer)
-            let hostingView = TabStripHostingView(rootView: tabStrip)
-            hostingView.translatesAutoresizingMaskIntoConstraints = false
-
-            let accessoryVC = NSTitlebarAccessoryViewController()
-            accessoryVC.view = hostingView
-            accessoryVC.layoutAttribute = .bottom
-
-            window.addTitlebarAccessoryViewController(accessoryVC)
             appState.nsWindow = window
-            coordinator.isInstalled = true
-            coordinator.accessoryVC = accessoryVC
+            installMetricsAccessory(in: window)
         }
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
-        if let vc = coordinator.accessoryVC, let window = nsView.window {
-            if let index = window.titlebarAccessoryViewControllers.firstIndex(of: vc) {
-                window.removeTitlebarAccessoryViewController(at: index)
-            }
+    func updateNSView(_ nsView: NSView, context: Context) {
+        let desired = Theme.chromeBackground
+        if appState.nsWindow?.backgroundColor != desired {
+            appState.nsWindow?.backgroundColor = desired
         }
-        coordinator.isInstalled = false
-        coordinator.accessoryVC = nil
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    private func installMetricsAccessory(in window: NSWindow) {
+        let hostingView = NSHostingView(rootView: SystemMetricsView(metrics: systemMetrics))
+        hostingView.translatesAutoresizingMaskIntoConstraints = false
 
-    class Coordinator {
-        var isInstalled = false
-        var accessoryVC: NSTitlebarAccessoryViewController?
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 28))
+        container.addSubview(hostingView)
+
+        NSLayoutConstraint.activate([
+            hostingView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -12),
+            hostingView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+        ])
+
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = container
+        accessory.layoutAttribute = .trailing
+
+        window.addTitlebarAccessoryViewController(accessory)
     }
-}
-
-private class TabStripHostingView<Content: View>: NSHostingView<Content> {
-    override var mouseDownCanMoveWindow: Bool { false }
 }
 
 private class WindowAccessorView: NSView {
@@ -97,15 +82,15 @@ struct TitleBarTabStrip: View {
         HStack(spacing: 0) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(Array(appState.tabs.enumerated()), id: \.element.id) { index, tab in
+                    ForEach(Array(appState.visibleTabs.enumerated()), id: \.element.id) { index, tab in
                         TitleBarTabItem(
                             tab: tab,
-                            isActive: index == appState.activeTabIndex,
+                            isActive: index == appState.visibleActiveIndex,
                             isPreview: tab.id == appState.previewTabID,
                             draggingTabID: $draggingTabID,
                             dropTargetTabID: $dropTargetTabID,
-                            onSelect: { appState.selectTab(at: index) },
-                            onClose: { appState.requestCloseTab(at: index) },
+                            onSelect: { appState.selectVisibleTab(at: index) },
+                            onClose: { appState.closeVisibleTab(at: index) },
                             onCloseAll: { appState.closeAllTabs() },
                             onPromote: {
                                 if let doc = tab.document {
@@ -154,6 +139,9 @@ struct TitleBarTabStrip: View {
                 Button("New Scratch Pad") {
                     appState.newScratchPad()
                 }
+                // Button("New Browser") {
+                //     appState.openBrowser()
+                // }
                 Divider()
                 Button("New Terminal") {
                     pendingLaunchClaude = false
@@ -205,7 +193,7 @@ struct TitleBarTabStrip: View {
             .accessibilityLabel("New tab")
             .padding(.horizontal, 6)
             .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
-                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini) { name, url, bookmarkID in
+                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini, projectID: appState.selectedProjectID) { name, url, bookmarkID in
                     appState.openTerminal(
                         projectName: name,
                         directory: url,
@@ -217,8 +205,9 @@ struct TitleBarTabStrip: View {
                 }
             }
         }
-        .padding(.leading, 8)
-        .padding(.trailing, 8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Color(nsColor: Theme.chromeBackground))
     }
 }
 
@@ -245,17 +234,19 @@ struct TitleBarTabItem: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 4) {
-                if tab.isCustomIcon {
-                    Image(tab.iconName)
-                        .resizable()
-                        .renderingMode(.template)
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: tab.terminalSession?.isClaude == true ? 13 : 11, height: tab.terminalSession?.isClaude == true ? 13 : 11)
-                        .foregroundColor(isActive ? tab.iconColor : .secondary)
-                } else {
-                    Image(systemName: tab.iconName)
-                        .font(.system(size: 10))
-                        .foregroundColor(isActive ? tab.iconColor : .secondary)
+                if tab.terminalSession?.isClaude != true && tab.terminalSession?.isGemini != true {
+                    if tab.isCustomIcon {
+                        Image(tab.iconName)
+                            .resizable()
+                            .renderingMode(.template)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 11, height: 11)
+                            .foregroundColor(isActive ? tab.iconColor : .secondary)
+                    } else {
+                        Image(systemName: tab.iconName)
+                            .font(.system(size: 10))
+                            .foregroundColor(isActive ? tab.iconColor : .secondary)
+                    }
                 }
 
                 Text(tab.displayName)
@@ -274,7 +265,7 @@ struct TitleBarTabItem: View {
                         .frame(width: 5, height: 5)
                 }
 
-                if isHovering || isActive {
+                if (isHovering || isActive) && !tab.isProjectOverview {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 7, weight: .bold))
@@ -371,12 +362,14 @@ struct TitleBarTabItem: View {
                 renameText = tab.terminalSession?.customTitle ?? tab.customName ?? tab.displayName
                 isRenaming = true
             }
-            Divider()
-            Button("Close") { onClose() }
-            Button("Close Others") {
-                // Close all tabs except this one
+            if !tab.isProjectOverview {
+                Divider()
+                Button("Close") { onClose() }
+                Button("Close Others") {
+                    // Close all tabs except this one
+                }
+                Button("Close All") { onCloseAll() }
             }
-            Button("Close All") { onCloseAll() }
         }
         .popover(isPresented: $isRenaming, arrowEdge: .bottom) {
             VStack(spacing: 8) {

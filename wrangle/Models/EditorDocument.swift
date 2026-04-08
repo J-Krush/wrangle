@@ -52,6 +52,16 @@ enum FileType: String, CaseIterable {
         }
     }
 
+    /// Whether this file type should get markdown rendering (syntax hiding, heading styles, etc.)
+    var isMarkdownRendered: Bool {
+        switch self {
+        case .claudeMD, .skillMD, .agentsMD, .systemPrompt, .markdown:
+            return true
+        default:
+            return false
+        }
+    }
+
     var iconColor: Color {
         switch self {
         case .claudeMD: .orange
@@ -132,7 +142,7 @@ enum FileType: String, CaseIterable {
 }
 
 enum FileTypeFilter: String, CaseIterable, Identifiable {
-    case markdown, json, yaml, swift, shell, config, code, plainText
+    case markdown, json, yaml, swift, env, code, plainText
 
     var id: String { rawValue }
 
@@ -142,8 +152,7 @@ enum FileTypeFilter: String, CaseIterable, Identifiable {
         case .json: "JSON"
         case .yaml: "YAML"
         case .swift: "Swift"
-        case .shell: "Shell"
-        case .config: "Config"
+        case .env: "Env"
         case .code: "Code"
         case .plainText: "Plain Text"
         }
@@ -155,8 +164,7 @@ enum FileTypeFilter: String, CaseIterable, Identifiable {
         case .json: "curlybraces"
         case .yaml: "list.bullet.indent"
         case .swift: "swift"
-        case .shell: "apple.terminal"
-        case .config: "gearshape"
+        case .env: "lock.shield"
         case .code: "chevron.left.forwardslash.chevron.right"
         case .plainText: "doc.plaintext"
         }
@@ -168,23 +176,33 @@ enum FileTypeFilter: String, CaseIterable, Identifiable {
         case .json: .yellow
         case .yaml: .pink
         case .swift: .orange
-        case .shell: .mint
-        case .config: .gray
+        case .env: .green
         case .code: .cyan
         case .plainText: .secondary
         }
     }
 
+    /// Whether this filter matches a file by its FileType.
     var matchingFileTypes: Set<FileType> {
         switch self {
         case .markdown: [.claudeMD, .skillMD, .agentsMD, .systemPrompt, .markdown]
         case .json: [.json, .mcpConfig]
         case .yaml: [.yaml]
         case .swift: [.swift]
-        case .shell: [.shell]
-        case .config: [.config]
-        case .code: [.code]
+        case .env: []
+        case .code: [.code, .shell, .config]
         case .plainText: [.plainText]
+        }
+    }
+
+    /// Matches files by name pattern (for filters that can't rely on FileType alone).
+    func matchesFileName(_ name: String) -> Bool {
+        switch self {
+        case .env:
+            let lower = name.lowercased()
+            return lower == ".env" || lower.hasPrefix(".env.")
+        default:
+            return false
         }
     }
 }

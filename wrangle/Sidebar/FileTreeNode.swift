@@ -49,16 +49,36 @@ struct FileNode: Identifiable, Comparable, Sendable {
         "license", "licence", "readme", "changelog", "contributing",
         "authors", "codeowners", "todo", "copying", "install",
         "claude.md", ".claude.md",
+        // Dotfiles
+        ".gitignore", ".gitattributes", ".gitmodules",
+        ".editorconfig", ".dockerignore",
+        ".eslintignore", ".prettierignore",
+        ".swiftlint.yml", ".swiftformat",
+    ]
+
+    /// Prefixes for dotfiles that should be openable regardless of their extension variant
+    /// (e.g., .env, .env.local, .env.production are all openable).
+    private static let openableDotPrefixes: [String] = [
+        ".env", ".eslintrc", ".prettierrc", ".babelrc",
     ]
 
     var isOpenable: Bool {
         if isDirectory { return false }
+        let lower = name.lowercased()
+        // Check exact file names first (handles dotfiles and extensionless files)
+        if Self.openableFileNames.contains(lower) { return true }
+        // Check dotfile prefix patterns (e.g., .env, .env.local, .env.production)
+        if lower.hasPrefix(".") {
+            for prefix in Self.openableDotPrefixes {
+                if lower == prefix || lower.hasPrefix(prefix + ".") { return true }
+            }
+        }
+        // Check by file extension
         let ext = url.pathExtension.lowercased()
         if !ext.isEmpty {
             return Self.openableExtensions.contains(ext)
         }
-        // Extensionless files: check by name
-        return Self.openableFileNames.contains(name.lowercased())
+        return false
     }
 
     var fileType: FileType {
@@ -95,14 +115,32 @@ struct FileNode: Identifiable, Comparable, Sendable {
         "__pycache__", ".tox", ".venv", "venv",
     ]
 
-    /// Hidden (dot-prefixed) names that should still appear in the file tree.
-    private nonisolated static let allowedHiddenNames: Set<String> = [
+    /// Hidden (dot-prefixed) directory names that should still appear in the file tree.
+    private nonisolated static let allowedHiddenDirs: Set<String> = [
         ".claude", ".cursor", ".cursorrules", ".gemini",
-        ".agent", ".agents",
+        ".agent", ".agents", ".github", ".vscode",
+        ".planning",
+    ]
+
+    /// Hidden (dot-prefixed) file names that should still appear in the file tree.
+    private nonisolated static let allowedHiddenFiles: Set<String> = [
+        ".env", ".env.local", ".env.development", ".env.production", ".env.staging", ".env.test",
+        ".env.example", ".env.sample",
+        ".gitignore", ".gitattributes", ".gitmodules",
+        ".editorconfig",
+        ".eslintrc", ".eslintrc.json", ".eslintrc.js", ".eslintrc.cjs", ".eslintrc.yml",
+        ".prettierrc", ".prettierrc.json", ".prettierrc.js", ".prettierrc.yml",
+        ".prettierignore", ".eslintignore",
+        ".babelrc", ".babelrc.json",
+        ".nvmrc", ".node-version", ".ruby-version", ".python-version", ".tool-versions",
+        ".dockerignore",
+        ".claude.md", ".cursorrules",
+        ".swiftlint.yml", ".swiftformat",
     ]
 
     /// Recursively builds a file tree rooted at `url`, descending up to `depth` levels.
-    nonisolated static func buildTree(at url: URL, depth: Int = 20) -> [FileNode] {
+    /// When `showAllHidden` is true, all dotfiles are shown except those in `skippedDirectories`.
+    nonisolated static func buildTree(at url: URL, depth: Int = 20, showAllHidden: Bool = false) -> [FileNode] {
         guard depth > 0 else { return [] }
         let fm = FileManager.default
         guard let contents = try? fm.contentsOfDirectory(
@@ -115,17 +153,20 @@ struct FileNode: Identifiable, Comparable, Sendable {
 
         return contents.compactMap { childURL in
             let name = childURL.lastPathComponent
-            // Hide dotfiles/dotdirs unless they're in the AI-related allowlist
-            if name.hasPrefix(".") && !allowedHiddenNames.contains(name) {
-                return nil
-            }
             let isDir = (try? childURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
+
+            // Filter hidden files/dirs
+            if name.hasPrefix(".") && !showAllHidden {
+                let allowed = isDir ? allowedHiddenDirs.contains(name) : allowedHiddenFiles.contains(name)
+                if !allowed { return nil }
+            }
+
             var children: [FileNode]? = nil
             if isDir {
                 if skippedDirectories.contains(name) {
                     children = nil
                 } else {
-                    children = buildTree(at: childURL, depth: depth - 1)
+                    children = buildTree(at: childURL, depth: depth - 1, showAllHidden: showAllHidden)
                 }
             }
             return FileNode(
@@ -160,7 +201,7 @@ struct FileNode: Identifiable, Comparable, Sendable {
         // For files: must match text AND type (when each is active)
         if !isDirectory {
             let textMatch = filter.isEmpty || name.localizedCaseInsensitiveContains(filter)
-            let typeMatch = fileTypes.isEmpty || fileTypes.contains(where: { $0.matchingFileTypes.contains(fileType) })
+            let typeMatch = fileTypes.isEmpty || fileTypes.contains(where: { $0.matchingFileTypes.contains(fileType) || $0.matchesFileName(name) })
             return (textMatch && typeMatch) ? self : nil
         }
 
@@ -234,6 +275,7 @@ struct FileTreeNodeView: View {
             }
         }
         .id("\(bookmarkID)|\(node.url)")
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
         .onChange(of: appState.revealFileURL, initial: true) { _, revealURL in
             guard let revealURL else { return }
@@ -260,6 +302,7 @@ struct FileTreeNodeView: View {
         }
         .buttonStyle(.plain)
         .id("\(bookmarkID)|\(node.url)")
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
         .onChange(of: appState.revealFileURL, initial: true) { _, revealURL in
             guard let revealURL else { return }
@@ -276,6 +319,7 @@ struct FileTreeNodeView: View {
             .foregroundStyle(.secondary)
             .opacity(0.4)
             .id("\(bookmarkID)|\(node.url)")
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
             .listRowBackground(Color.clear)
             .help("This file type cannot be opened in the editor")
     }
@@ -283,10 +327,13 @@ struct FileTreeNodeView: View {
     // MARK: - Node Label
 
     private var nodeLabel: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             Image(systemName: node.icon)
+                .font(.system(size: 13))
+                .frame(width: 16, height: 16, alignment: .center)
                 .foregroundStyle(node.iconColor)
             Text(node.name)
+                .font(.system(size: 12))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()

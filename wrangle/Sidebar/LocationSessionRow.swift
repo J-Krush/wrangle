@@ -18,21 +18,23 @@ struct LocationSessionRow: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Group {
-                    if session.isCustomIcon {
-                        Image(session.iconName)
-                            .resizable()
-                            .renderingMode(.template)
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 14, height: 14)
-                            .foregroundStyle(isActive ? session.iconColor : Color.secondary)
-                    } else {
-                        Image(systemName: session.iconName)
-                            .font(.caption2)
-                            .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                if !(session.isClaude || session.isGemini) {
+                    Group {
+                        if session.isCustomIcon {
+                            Image(session.iconName)
+                                .resizable()
+                                .renderingMode(.template)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 14, height: 14)
+                                .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                        } else {
+                            Image(systemName: session.iconName)
+                                .font(.caption2)
+                                .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                        }
                     }
+                    .frame(width: 18, alignment: .center)
                 }
-                .frame(width: 18, alignment: .center)
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(session.displayTitle)

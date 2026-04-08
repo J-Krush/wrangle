@@ -84,6 +84,10 @@ struct MarkdownTextView: NSViewRepresentable {
         // Apply initial content
         context.coordinator.setTextViewContent(text)
 
+        // Initialize color scheme tracking so the first updateNSView
+        // doesn't detect a spurious appearance change and trigger forceRestyle
+        context.coordinator.lastColorScheme = colorScheme
+
         // Publish coordinator to the editor context so toolbars can interact
         editorContext?.coordinator = context.coordinator
         context.coordinator.editorContext = editorContext
@@ -152,10 +156,11 @@ struct MarkdownTextView: NSViewRepresentable {
         } else {
             currentPlain = ""
         }
-        if modeChanged || appearanceChanged {
-            context.coordinator.forceRestyle()
-        } else if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
+        // Update content first if it changed, then restyle if mode/appearance changed
+        if currentPlain != text && !context.coordinator.isUpdatingFromTextView {
             context.coordinator.setTextViewContent(text)
+        } else if modeChanged || appearanceChanged {
+            context.coordinator.forceRestyle()
         }
     }
 
@@ -193,6 +198,11 @@ struct MarkdownTextView: NSViewRepresentable {
             document?.fileURL?.pathExtension.lowercased() == "json"
         }
 
+        /// Whether the document's file type should receive markdown rendering.
+        var isMarkdownRendered: Bool {
+            document?.fileType.isMarkdownRendered ?? true
+        }
+
         init(text: Binding<String>, document: EditorDocument?, editingMode: EditingMode = .writing) {
             self.text = text
             self.document = document
@@ -202,49 +212,61 @@ struct MarkdownTextView: NSViewRepresentable {
 
         // MARK: - Content Management
 
-        /// Replaces the text view's content and re-applies styling.
-        ///
-        /// Phase 1 (immediate): set plain text with base styling so the user sees content instantly.
-        /// Phase 2 (async): parse on a background thread, then apply attributes on main thread.
+        /// Replaces the text view's content and re-applies styled formatting synchronously
+        /// to avoid a flash of unstyled (dev mode) content when switching documents.
         func setTextViewContent(_ plainText: String) {
             guard let textView, let storage = textView.textStorage else { return }
 
             // Bump generation so any in-flight async parse is discarded
             parseGeneration += 1
-            let currentGeneration = parseGeneration
 
-            // --- Phase 1: Immediate plain-text display ---
             isStyling = true
+            defer { isStyling = false }
+
+            let hidesSyntax = editingMode == .writing
             let theme = Theme.current
-            let baseAttributes: [NSAttributedString.Key: Any] = [
-                .font: theme.editorFont,
-                .foregroundColor: theme.editorForeground,
-            ]
-            let plain = NSAttributedString(string: plainText, attributes: baseAttributes)
+
+            let styled: NSAttributedString
+            if isJSON {
+                styled = JsonSyntaxHighlighter().highlight(plainText, theme: theme)
+            } else if !isMarkdownRendered {
+                styled = ConfigSyntaxHighlighter().highlight(plainText, theme: theme)
+            } else {
+                styled = parser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: theme)
+            }
 
             let selectedRanges = textView.selectedRanges
+
             textView.undoManager?.disableUndoRegistration()
+            defer { textView.undoManager?.enableUndoRegistration() }
+
             storage.beginEditing()
-            storage.setAttributedString(plain)
+            storage.setAttributedString(styled)
+
+            // Layer XML tag rendering on top (not for JSON or config files)
+            if !isJSON && isMarkdownRendered {
+                let foldEnabled = editingMode == .writing
+                XMLTagRenderer.render(
+                    in: storage,
+                    foldingEnabled: foldEnabled,
+                    collapsedOffsets: foldEnabled ? collapsedXMLTagOffsets : []
+                )
+            }
+
+            // Replace bullet/checkbox/table markers with visual symbols
+            if !isJSON {
+                applyCheckboxMarkers(in: storage)
+                applyBulletMarkers(in: storage)
+                applyTableMarkers(in: storage)
+            }
             storage.endEditing()
-            textView.undoManager?.enableUndoRegistration()
+
             restoreSelection(selectedRanges, in: textView)
-            isStyling = false
 
-            // --- Phase 2: Async styled parse ---
-            let hidesSyntax = editingMode == .writing
-            let isJSONDoc = isJSON
-
-            Task {
-                let styled = await Task.detached {
-                    if isJSONDoc {
-                        return await JsonSyntaxHighlighter().highlight(plainText, theme: theme)
-                    } else {
-                        let bgParser = await MarkdownParser()
-                        return await bgParser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: theme)
-                    }
-                }.value
-                self.applyParsedStyling(styled, isJSON: isJSONDoc, generation: currentGeneration)
+            // Sync fold state to the text view for triangle drawing
+            if let editorTV = textView as? EditorTextView {
+                editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
+                editorTV.updateCopyButtons()
             }
         }
 
@@ -281,10 +303,11 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet/checkbox markers with visual symbols in the storage
+            // Replace bullet/checkbox/table markers with visual symbols in the storage
             if !isJSONDoc {
                 applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
+                applyTableMarkers(in: storage)
             }
             storage.endEditing()
 
@@ -319,6 +342,7 @@ struct MarkdownTextView: NSViewRepresentable {
             // First restore all markers to raw markdown
             isStyling = true
             storage.beginEditing()
+            restoreTableMarkers(in: storage)
             restoreCheckboxMarkers(in: storage)
             restoreBulletMarkers(in: storage)
             storage.endEditing()
@@ -369,6 +393,8 @@ struct MarkdownTextView: NSViewRepresentable {
             let styled: NSAttributedString
             if isJSON {
                 styled = JsonSyntaxHighlighter().highlight(plainText, theme: .current)
+            } else if !isMarkdownRendered {
+                styled = ConfigSyntaxHighlighter().highlight(plainText, theme: .current)
             } else {
                 styled = parser.parse(plainText, hideMarkdownSyntax: hidesSyntax, theme: .current)
             }
@@ -381,8 +407,11 @@ struct MarkdownTextView: NSViewRepresentable {
             storage.beginEditing()
 
             // Restore visual markers back to markdown so parser regex matches on next restyle
-            restoreCheckboxMarkers(in: storage)
-            restoreBulletMarkers(in: storage)
+            if isMarkdownRendered {
+                restoreTableMarkers(in: storage)
+                restoreCheckboxMarkers(in: storage)
+                restoreBulletMarkers(in: storage)
+            }
 
             // Replace attributes only, keeping the same string
             let fullRange = NSRange(location: 0, length: storage.length)
@@ -390,8 +419,8 @@ struct MarkdownTextView: NSViewRepresentable {
                 storage.setAttributes(attrs, range: range)
             }
 
-            // Layer XML tag rendering on top (not for JSON)
-            if !isJSON {
+            // Layer XML tag rendering on top (only for markdown files)
+            if !isJSON && isMarkdownRendered {
                 let foldEnabled = editingMode == .writing
                 XMLTagRenderer.render(
                     in: storage,
@@ -400,10 +429,11 @@ struct MarkdownTextView: NSViewRepresentable {
                 )
             }
 
-            // Replace bullet/checkbox markers with visual symbols in the storage
-            if !isJSON {
+            // Replace bullet/checkbox/table markers with visual symbols in the storage
+            if !isJSON && isMarkdownRendered {
                 applyCheckboxMarkers(in: storage)
                 applyBulletMarkers(in: storage)
+                applyTableMarkers(in: storage)
             }
 
             storage.endEditing()
@@ -875,7 +905,7 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        // MARK: - Bullet & Checkbox Marker Helpers
+        // MARK: - Bullet, Checkbox & Table Marker Helpers
 
         /// Restores `•` back to `-` in storage before restyling
         private func restoreBulletMarkers(in storage: NSTextStorage) {
@@ -899,6 +929,18 @@ struct MarkdownTextView: NSViewRepresentable {
                 let original = checked ? "- [x] " : "- [ ] "
                 let attrs = storage.attributes(at: range.location, effectiveRange: nil)
                 storage.replaceCharacters(in: range, with: NSAttributedString(string: original, attributes: attrs))
+            }
+        }
+
+        /// Restores `\t` back to `|` at positions marked with .tableMarker
+        private func restoreTableMarkers(in storage: NSTextStorage) {
+            var ranges: [NSRange] = []
+            storage.enumerateAttribute(.tableMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { ranges.append(range) }
+            }
+            for range in ranges.reversed() {
+                let attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: "|", attributes: attrs))
             }
         }
 
@@ -932,9 +974,30 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
-        /// Reads raw text from storage, reversing any bullet/checkbox marker replacements
+        /// Replaces `|` with `\t` at positions marked with .tableMarker
+        private func applyTableMarkers(in storage: NSTextStorage) {
+            var ranges: [NSRange] = []
+            storage.enumerateAttribute(.tableMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { ranges.append(range) }
+            }
+            for range in ranges.reversed() {
+                var attrs = storage.attributes(at: range.location, effectiveRange: nil)
+                attrs[.tableMarker] = true  // Preserve marker for restoration
+                storage.replaceCharacters(in: range, with: NSAttributedString(string: "\t", attributes: attrs))
+            }
+        }
+
+        /// Reads raw text from storage, reversing any bullet/checkbox/table marker replacements
         func rawText(from storage: NSTextStorage) -> String {
             let mutable = NSMutableString(string: storage.string)
+            // Restore table markers (tabs back to pipes) — 1:1 character swap
+            var tablePositions: [Int] = []
+            storage.enumerateAttribute(.tableMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+                if value != nil { tablePositions.append(range.location) }
+            }
+            for pos in tablePositions.reversed() {
+                mutable.replaceCharacters(in: NSRange(location: pos, length: 1), with: "|")
+            }
             // Restore checkboxes (reverse order since replacements change lengths)
             var checkboxRanges: [(NSRange, Bool)] = []
             storage.enumerateAttribute(.checkboxMarker, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
