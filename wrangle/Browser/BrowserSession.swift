@@ -20,7 +20,7 @@ class BrowserSession: Identifiable {
     let id = UUID()
     var bookmarkID: String?
     var intentID: String?
-    var roomID: String?
+    var projectID: String?
     var tabs: [BrowserTab]
     var activeTabIndex: Int = 0
     var customTitle: String?
@@ -31,12 +31,12 @@ class BrowserSession: Identifiable {
     /// Set by the BrowserWebView Coordinator
     weak var controller: BrowserController?
 
-    init(url: URL? = nil, bookmarkID: String? = nil, intentID: String? = nil, roomID: String? = nil) {
+    init(url: URL? = nil, bookmarkID: String? = nil, intentID: String? = nil, projectID: String? = nil) {
         let initialTab = BrowserTab(url: url)
         self.tabs = [initialTab]
         self.bookmarkID = bookmarkID
         self.intentID = intentID
-        self.roomID = roomID
+        self.projectID = projectID
     }
 
     // MARK: - Computed Properties

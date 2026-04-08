@@ -201,7 +201,7 @@ struct FileNode: Identifiable, Comparable, Sendable {
         // For files: must match text AND type (when each is active)
         if !isDirectory {
             let textMatch = filter.isEmpty || name.localizedCaseInsensitiveContains(filter)
-            let typeMatch = fileTypes.isEmpty || fileTypes.contains(where: { $0.matchingFileTypes.contains(fileType) })
+            let typeMatch = fileTypes.isEmpty || fileTypes.contains(where: { $0.matchingFileTypes.contains(fileType) || $0.matchesFileName(name) })
             return (textMatch && typeMatch) ? self : nil
         }
 
@@ -275,6 +275,7 @@ struct FileTreeNodeView: View {
             }
         }
         .id("\(bookmarkID)|\(node.url)")
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
         .onChange(of: appState.revealFileURL, initial: true) { _, revealURL in
             guard let revealURL else { return }
@@ -301,6 +302,7 @@ struct FileTreeNodeView: View {
         }
         .buttonStyle(.plain)
         .id("\(bookmarkID)|\(node.url)")
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isSelected))
         .onChange(of: appState.revealFileURL, initial: true) { _, revealURL in
             guard let revealURL else { return }
@@ -317,6 +319,7 @@ struct FileTreeNodeView: View {
             .foregroundStyle(.secondary)
             .opacity(0.4)
             .id("\(bookmarkID)|\(node.url)")
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
             .listRowBackground(Color.clear)
             .help("This file type cannot be opened in the editor")
     }
@@ -324,10 +327,13 @@ struct FileTreeNodeView: View {
     // MARK: - Node Label
 
     private var nodeLabel: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             Image(systemName: node.icon)
+                .font(.system(size: 13))
+                .frame(width: 16, height: 16, alignment: .center)
                 .foregroundStyle(node.iconColor)
             Text(node.name)
+                .font(.system(size: 12))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer()

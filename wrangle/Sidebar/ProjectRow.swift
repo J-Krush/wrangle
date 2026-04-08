@@ -1,18 +1,18 @@
 import SwiftUI
 import SwiftData
 
-struct RoomRow: View {
-    let room: Room
+struct ProjectRow: View {
+    let project: Project
     let intentCount: Int
     let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 8) {
             Circle()
-                .fill(Color(hex: room.colorHex) ?? .blue)
+                .fill(Color(hex: project.colorHex) ?? .blue)
                 .frame(width: 10, height: 10)
 
-            Text(room.name)
+            Text(project.name)
                 .font(.body)
                 .lineLimit(1)
 

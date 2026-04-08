@@ -47,27 +47,35 @@ class TerminalContainerView: NSView {
         self.terminalView = terminalView
         super.init(frame: .zero)
 
-        let insets = Self.insets
-        terminalView.translatesAutoresizingMaskIntoConstraints = false
+        // Use manual frame management (not AutoLayout) so that setFrameSize:
+        // is called on the terminal view during layout(). AutoLayout's internal
+        // frame-setting bypasses setFrameSize:, which means SwiftTerm never
+        // calls processSizeChange and keeps its initial 0×0 col/row count.
         addSubview(terminalView)
-        NSLayoutConstraint.activate([
-            terminalView.topAnchor.constraint(equalTo: topAnchor, constant: insets.top),
-            terminalView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -insets.bottom),
-            terminalView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: insets.left),
-            terminalView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -insets.right),
-        ])
         // Drag type registration is managed dynamically via isActive didSet
     }
 
     override func layout() {
         super.layout()
+        // Manually position the terminal view with insets. Using manual frame
+        // management instead of AutoLayout ensures setFrameSize: is called,
+        // which triggers SwiftTerm's processSizeChange to update col/row count.
+        let insets = Self.insets
+        let termFrame = NSRect(
+            x: insets.left,
+            y: insets.bottom,
+            width: max(0, bounds.width - insets.left - insets.right),
+            height: max(0, bounds.height - insets.top - insets.bottom)
+        )
+        // Only set frame when it actually changed — setting it during a mouse
+        // drag interrupts SwiftTerm's selection tracking.
+        if terminalView.frame != termFrame {
+            terminalView.frame = termFrame
+        }
+
         if bounds.width > 0, let callback = onFirstLayout {
             onFirstLayout = nil
-            // Defer to next run loop iteration so the frame is fully settled
-            // before SwiftTerm calculates terminal column/row count.
-            Task { @MainActor in
-                callback()
-            }
+            callback()
         }
     }
 
@@ -88,8 +96,33 @@ class TerminalContainerView: NSView {
         return super.hitTest(point)
     }
 
+    // MARK: - Mouse Selection (Option-key toggle)
+
+    /// Monitor that restores mouse reporting after an Option-drag selection.
+    private var mouseUpMonitor: Any?
+
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(terminalView)
+
+        // Hold Option to enable mouse reporting for TUI apps (vim, htop, etc.).
+        // Default is text selection; Option+click temporarily forwards mouse
+        // events to the running program instead.
+        if event.modifierFlags.contains(.option) && !terminalView.allowMouseReporting {
+            terminalView.allowMouseReporting = true
+
+            // Use a local event monitor to catch mouseUp reliably — the container
+            // won't receive it because AppKit routes drag/up to the terminal view.
+            mouseUpMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseUp) { [weak self] upEvent in
+                guard let self else { return upEvent }
+                self.terminalView.allowMouseReporting = false
+                if let monitor = self.mouseUpMonitor {
+                    NSEvent.removeMonitor(monitor)
+                    self.mouseUpMonitor = nil
+                }
+                return upEvent
+            }
+        }
+
         super.mouseDown(with: event)
     }
 
@@ -125,10 +158,14 @@ class TerminalContainerView: NSView {
 
 // MARK: - SwiftTermView
 
-struct SwiftTermView: NSViewRepresentable {
+struct SwiftTermView: NSViewRepresentable, Equatable {
     let session: TerminalSession
     var isActive: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+
+    static func == (lhs: SwiftTermView, rhs: SwiftTermView) -> Bool {
+        lhs.session === rhs.session && lhs.isActive == rhs.isActive
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(session: session)
@@ -176,8 +213,6 @@ struct SwiftTermView: NSViewRepresentable {
         // Force SwiftTerm to recalculate cols/rows when tab becomes active.
         // Inactive terminals in the ZStack may miss frame changes during resize.
         if isActive && !wasActive && context.coordinator.processStarted {
-            // Trigger setFrameSize which calls processSizeChange to recalculate
-            // terminal dimensions from the current bounds.
             terminalView.setFrameSize(terminalView.frame.size)
             terminalView.needsDisplay = true
         }
@@ -313,7 +348,7 @@ struct SwiftTermView: NSViewRepresentable {
             terminalView.caretColor = theme.terminalCursor
             terminalView.font = theme.terminalFont
             terminalView.optionAsMetaKey = true
-            terminalView.allowMouseReporting = true
+            terminalView.allowMouseReporting = false
             TerminalPalette.install(on: terminalView)
         }
 

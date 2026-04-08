@@ -7,7 +7,7 @@ import SwiftUI
 
 struct SystemMetricsView: View {
     let metrics: SystemMetrics
-    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = false
 
     var body: some View {
         if showSystemMetrics {

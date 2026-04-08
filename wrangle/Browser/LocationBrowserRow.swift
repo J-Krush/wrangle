@@ -33,6 +33,7 @@ struct LocationBrowserRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isActive))
         .contextMenu {
             Button("Close") {
                 if let index = appState.tabIndex(for: session) {

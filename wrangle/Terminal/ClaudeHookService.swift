@@ -232,10 +232,10 @@ class ClaudeHookService {
         guard let coordinator,
               let result = coordinator.findTerminalSession(bySessionID: sessionID) else { return }
 
-        // Switch to the tab's room first so the tab strip shows the right tabs
+        // Switch to the tab's project first so the tab strip shows the right tabs
         let tab = result.appState.tabs[result.tabIndex]
-        if let roomID = tab.roomID, result.appState.selectedRoomID != roomID {
-            result.appState.switchToRoom(roomID)
+        if let projectID = tab.projectID, result.appState.selectedProjectID != projectID {
+            result.appState.switchToProject(projectID)
         }
         result.appState.selectTab(at: result.tabIndex)
         result.appState.nsWindow?.makeKeyAndOrderFront(nil)

@@ -7,7 +7,7 @@ struct SidebarView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
-    @Query(sort: \Room.displayOrder) private var rooms: [Room]
+    @Query(sort: \Project.displayOrder) private var projects: [Project]
     @State private var activeFileTypeFilters: Set<FileTypeFilter> = []
     @State private var showFilterPopover = false
     @State private var rawDropTargeted = false
@@ -26,24 +26,24 @@ struct SidebarView: View {
     var body: some View {
         @Bindable var appState = appState
         HStack(spacing: 0) {
-            // Room rail — always visible
-            RoomRailView()
+            // Project rail — always visible
+            ProjectRailView()
 
             // Content card — toggleable
             if appState.isSidebarVisible {
                 VStack(spacing: 0) {
                     ScrollViewReader { scrollProxy in
                         List {
-                            if let roomID = appState.selectedRoomID {
+                            if let projectID = appState.selectedProjectID {
                                 // Section("Intents") {
-                                //     IntentListView(roomID: roomID)
+                                //     IntentListView(projectID: projectID)
                                 // }
                                 // .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 BrowserSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
-                                if !appState.scratchPadManager.scratchPads(forRoom: roomID).isEmpty {
+                                if !appState.scratchPadManager.scratchPads(forProject: projectID).isEmpty {
                                     Section("Scratch Pads") {
                                         ScratchPadSection()
                                     }
@@ -51,8 +51,8 @@ struct SidebarView: View {
                                 }
 
                                 Section("Locations") {
-                                    RoomBookmarkListView(
-                                        roomID: roomID,
+                                    ProjectBookmarkListView(
+                                        projectID: projectID,
                                         scrollProxy: scrollProxy,
                                         filterText: appState.sidebarFilterText,
                                         activeFileTypeFilters: activeFileTypeFilters,
@@ -61,14 +61,14 @@ struct SidebarView: View {
                                         onAddLocation: addLocation
                                     )
                                 }
-                                .id(roomID)
+                                .id(projectID)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 OrphanedSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                             } else {
                                 Section {
-                                    Text("Select a room to get started")
+                                    Text("Select a project to get started")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -77,7 +77,8 @@ struct SidebarView: View {
                         }
                     }
                     .listStyle(.sidebar)
-                    .environment(\.defaultMinListRowHeight, 22)
+                    .environment(\.defaultMinListRowHeight, 20)
+                    .environment(\.sidebarRowSize, .small)
                     .scrollContentBackground(.hidden)
                     .frame(maxHeight: .infinity)
                     sidebarBottomBar
@@ -189,9 +190,9 @@ struct SidebarView: View {
                     Button("New Scratch Pad") {
                         appState.newScratchPad()
                     }
-                    Button("New Browser") {
-                        appState.openBrowser()
-                    }
+                    // Button("New Browser") {
+                    //     appState.openBrowser()
+                    // }
                     Divider()
                     Button("Add Location...") {
                         addLocation()
@@ -330,18 +331,18 @@ struct SidebarView: View {
                 displayOrder: maxOrder + 1,
                 isFile: !isDir
             )
-            // If drilled into a room, assign the new bookmark to it.
-            // Otherwise create a new room for this bookmark.
-            if let roomID = appState.selectedRoomID {
-                bookmark.roomID = roomID
+            // If drilled into a project, assign the new bookmark to it.
+            // Otherwise create a new project for this bookmark.
+            if let projectID = appState.selectedProjectID {
+                bookmark.projectID = projectID
             } else {
-                let maxRoomOrder = rooms.map(\.displayOrder).max() ?? -1
-                let room = Room(
+                let maxProjectOrder = projects.map(\.displayOrder).max() ?? -1
+                let project = Project(
                     name: url.lastPathComponent,
-                    displayOrder: maxRoomOrder + 1
+                    displayOrder: maxProjectOrder + 1
                 )
-                modelContext.insert(room)
-                bookmark.roomID = room.id
+                modelContext.insert(project)
+                bookmark.projectID = project.id
             }
             modelContext.insert(bookmark)
             try? modelContext.save()
@@ -349,9 +350,9 @@ struct SidebarView: View {
             let id = bookmark.persistentModelID.hashValue.description
             if isDir {
                 appState.selectedBookmarkID = id
-                // Auto-drill into the room if we just created one at the top level
-                if appState.selectedRoomID == nil, let roomID = bookmark.roomID {
-                    appState.selectedRoomID = roomID
+                // Auto-drill into the project if we just created one at the top level
+                if appState.selectedProjectID == nil, let projectID = bookmark.projectID {
+                    appState.selectedProjectID = projectID
                 }
             } else {
                 appState.openFile(url: url, scopedURL: url)
@@ -389,19 +390,19 @@ struct SidebarView: View {
                             displayOrder: maxOrder + 1,
                             isFile: false
                         )
-                        if let roomID = appState.selectedRoomID {
-                            bookmark.roomID = roomID
+                        if let projectID = appState.selectedProjectID {
+                            bookmark.projectID = projectID
                         } else {
-                            let maxRoomOrder = rooms.map(\.displayOrder).max() ?? -1
-                            let room = Room(name: url.lastPathComponent, displayOrder: maxRoomOrder + 1)
-                            modelContext.insert(room)
-                            bookmark.roomID = room.id
+                            let maxProjectOrder = projects.map(\.displayOrder).max() ?? -1
+                            let project = Project(name: url.lastPathComponent, displayOrder: maxProjectOrder + 1)
+                            modelContext.insert(project)
+                            bookmark.projectID = project.id
                         }
                         modelContext.insert(bookmark)
                         try? modelContext.save()
                         appState.selectedBookmarkID = bookmark.persistentModelID.hashValue.description
-                        if appState.selectedRoomID == nil, let roomID = bookmark.roomID {
-                            appState.selectedRoomID = roomID
+                        if appState.selectedProjectID == nil, let projectID = bookmark.projectID {
+                            appState.selectedProjectID = projectID
                         }
                     } catch {
                         // Bookmark creation failed
@@ -506,7 +507,7 @@ private struct BrowserSessionsSection: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        let browsers = appState.roomBrowserSessions
+        let browsers = appState.projectBrowserSessions
         if !browsers.isEmpty {
             Section("Browsers") {
                 ForEach(browsers) { session in

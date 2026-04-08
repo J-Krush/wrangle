@@ -29,7 +29,10 @@ struct WindowChromeConfigurator: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        appState.nsWindow?.backgroundColor = Theme.chromeBackground
+        let desired = Theme.chromeBackground
+        if appState.nsWindow?.backgroundColor != desired {
+            appState.nsWindow?.backgroundColor = desired
+        }
     }
 
     private func installMetricsAccessory(in window: NSWindow) {
@@ -136,9 +139,9 @@ struct TitleBarTabStrip: View {
                 Button("New Scratch Pad") {
                     appState.newScratchPad()
                 }
-                Button("New Browser") {
-                    appState.openBrowser()
-                }
+                // Button("New Browser") {
+                //     appState.openBrowser()
+                // }
                 Divider()
                 Button("New Terminal") {
                     pendingLaunchClaude = false
@@ -190,7 +193,7 @@ struct TitleBarTabStrip: View {
             .accessibilityLabel("New tab")
             .padding(.horizontal, 6)
             .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
-                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini, roomID: appState.selectedRoomID) { name, url, bookmarkID in
+                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini, projectID: appState.selectedProjectID) { name, url, bookmarkID in
                     appState.openTerminal(
                         projectName: name,
                         directory: url,
@@ -231,17 +234,19 @@ struct TitleBarTabItem: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 4) {
-                if tab.isCustomIcon {
-                    Image(tab.iconName)
-                        .resizable()
-                        .renderingMode(.template)
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: tab.terminalSession?.isClaude == true ? 13 : 11, height: tab.terminalSession?.isClaude == true ? 13 : 11)
-                        .foregroundColor(isActive ? tab.iconColor : .secondary)
-                } else {
-                    Image(systemName: tab.iconName)
-                        .font(.system(size: 10))
-                        .foregroundColor(isActive ? tab.iconColor : .secondary)
+                if tab.terminalSession?.isClaude != true && tab.terminalSession?.isGemini != true {
+                    if tab.isCustomIcon {
+                        Image(tab.iconName)
+                            .resizable()
+                            .renderingMode(.template)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 11, height: 11)
+                            .foregroundColor(isActive ? tab.iconColor : .secondary)
+                    } else {
+                        Image(systemName: tab.iconName)
+                            .font(.system(size: 10))
+                            .foregroundColor(isActive ? tab.iconColor : .secondary)
+                    }
                 }
 
                 Text(tab.displayName)
@@ -260,7 +265,7 @@ struct TitleBarTabItem: View {
                         .frame(width: 5, height: 5)
                 }
 
-                if (isHovering || isActive) && !tab.isRoomOverview {
+                if (isHovering || isActive) && !tab.isProjectOverview {
                     Button(action: onClose) {
                         Image(systemName: "xmark")
                             .font(.system(size: 7, weight: .bold))
@@ -357,7 +362,7 @@ struct TitleBarTabItem: View {
                 renameText = tab.terminalSession?.customTitle ?? tab.customName ?? tab.displayName
                 isRenaming = true
             }
-            if !tab.isRoomOverview {
+            if !tab.isProjectOverview {
                 Divider()
                 Button("Close") { onClose() }
                 Button("Close Others") {

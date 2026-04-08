@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct IntentListView: View {
-    let roomID: String
+    let projectID: String
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query private var intents: [Intent]
@@ -11,11 +11,11 @@ struct IntentListView: View {
     @State private var renamingIntent: Intent?
     @State private var renameText = ""
 
-    init(roomID: String) {
-        self.roomID = roomID
+    init(projectID: String) {
+        self.projectID = projectID
         _intents = Query(
             filter: #Predicate<Intent> { intent in
-                intent.roomID == roomID
+                intent.projectID == projectID
             },
             sort: \Intent.displayOrder
         )
@@ -156,7 +156,7 @@ struct IntentListView: View {
             return
         }
         let maxOrder = intents.map(\.displayOrder).max() ?? -1
-        let intent = Intent(name: name, roomID: roomID, displayOrder: maxOrder + 1)
+        let intent = Intent(name: name, projectID: projectID, displayOrder: maxOrder + 1)
         modelContext.insert(intent)
         try? modelContext.save()
         appState.activeIntentID = intent.id

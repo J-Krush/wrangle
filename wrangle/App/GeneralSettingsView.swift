@@ -6,7 +6,7 @@ struct GeneralSettingsView: View {
     @AppStorage("editorFontSize") private var editorFontSize: Double = 14
     @AppStorage("showLineNumbers") private var showLineNumbers: Bool = true
     @AppStorage("autoSaveEnabled") private var autoSaveEnabled: Bool = false
-    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = false
     @AppStorage("showHiddenFiles") private var showHiddenFiles: Bool = false
 
     var body: some View {

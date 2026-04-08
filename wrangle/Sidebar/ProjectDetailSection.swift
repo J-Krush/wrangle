@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-struct RoomDetailSection: View {
-    let roomID: String
+struct ProjectDetailSection: View {
+    let projectID: String
     let scrollProxy: ScrollViewProxy
     let filterText: String
     let activeFileTypeFilters: Set<FileTypeFilter>
@@ -11,10 +11,10 @@ struct RoomDetailSection: View {
     var onAddLocation: (() -> Void)?
 
     @Environment(AppState.self) private var appState
-    @Query private var rooms: [Room]
+    @Query private var projects: [Project]
 
-    private var room: Room? {
-        rooms.first { $0.id == roomID }
+    private var project: Project? {
+        projects.first { $0.id == projectID }
     }
 
     var body: some View {
@@ -26,7 +26,7 @@ struct RoomDetailSection: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
-                    Text("Rooms")
+                    Text("Projects")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -36,13 +36,13 @@ struct RoomDetailSection: View {
             .listRowBackground(Color.clear)
         }
 
-        if let room {
+        if let project {
             Section {
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(Color(hex: room.colorHex) ?? .blue)
+                        .fill(Color(hex: project.colorHex) ?? .blue)
                         .frame(width: 10, height: 10)
-                    Text(room.name)
+                    Text(project.name)
                         .font(.headline)
                         .lineLimit(1)
                 }
@@ -51,12 +51,12 @@ struct RoomDetailSection: View {
         }
 
         Section("Intents") {
-            IntentListView(roomID: roomID)
+            IntentListView(projectID: projectID)
         }
 
         Section("Locations") {
-            RoomBookmarkListView(
-                roomID: roomID,
+            ProjectBookmarkListView(
+                projectID: projectID,
                 scrollProxy: scrollProxy,
                 filterText: filterText,
                 activeFileTypeFilters: activeFileTypeFilters,

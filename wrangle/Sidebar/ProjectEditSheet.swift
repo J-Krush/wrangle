@@ -1,12 +1,12 @@
 //
-//  RoomEditSheet.swift
+//  ProjectEditSheet.swift
 //  Wrangle
 //
-//  Sheet for creating or editing a room with name and color picker.
+//  Sheet for creating or editing a project with name and color picker.
 
 import SwiftUI
 
-struct RoomEditSheet: View {
+struct ProjectEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var name: String
     @Binding var colorHex: String
@@ -23,15 +23,14 @@ struct RoomEditSheet: View {
         ("Teal", "#5AC8FA"),
         ("Yellow", "#FFCC00"),
         ("Indigo", "#5856D6"),
-        ("Mint", "#00C7BE"),
     ]
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(isNew ? "New Room" : "Edit Room")
+            Text(isNew ? "New Project" : "Edit Project")
                 .font(.headline)
 
-            TextField("Room name", text: $name)
+            TextField("Project name", text: $name)
                 .textFieldStyle(.roundedBorder)
 
             // Color picker

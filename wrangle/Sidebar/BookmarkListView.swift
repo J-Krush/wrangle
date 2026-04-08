@@ -2,8 +2,8 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-struct RoomBookmarkListView: View {
-    let roomID: String
+struct ProjectBookmarkListView: View {
+    let projectID: String
     let scrollProxy: ScrollViewProxy
     let filterText: String
     let activeFileTypeFilters: Set<FileTypeFilter>
@@ -15,7 +15,7 @@ struct RoomBookmarkListView: View {
     @Query private var bookmarks: [BookmarkedDirectory]
 
     init(
-        roomID: String,
+        projectID: String,
         scrollProxy: ScrollViewProxy,
         filterText: String,
         activeFileTypeFilters: Set<FileTypeFilter>,
@@ -23,7 +23,7 @@ struct RoomBookmarkListView: View {
         showActiveSessionsOnly: Bool,
         onAddLocation: (() -> Void)? = nil
     ) {
-        self.roomID = roomID
+        self.projectID = projectID
         self.scrollProxy = scrollProxy
         self.filterText = filterText
         self.activeFileTypeFilters = activeFileTypeFilters
@@ -32,15 +32,15 @@ struct RoomBookmarkListView: View {
         self.onAddLocation = onAddLocation
         _bookmarks = Query(
             filter: #Predicate<BookmarkedDirectory> { bookmark in
-                bookmark.roomID == roomID
+                bookmark.projectID == projectID
             },
             sort: \BookmarkedDirectory.displayOrder
         )
     }
 
     private var expandedBookmarks: Set<String> {
-        get { appState.roomExpandedBookmarks[roomID] ?? [] }
-        nonmutating set { appState.roomExpandedBookmarks[roomID] = newValue }
+        get { appState.projectExpandedBookmarks[projectID] ?? [] }
+        nonmutating set { appState.projectExpandedBookmarks[projectID] = newValue }
     }
     @State private var draggingBookmarkID: String?
     @State private var dropTargetBookmarkID: String?

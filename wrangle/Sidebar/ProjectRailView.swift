@@ -2,17 +2,17 @@ import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
 
-struct RoomRailView: View {
+struct ProjectRailView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Room.displayOrder) private var rooms: [Room]
-    @State private var showNewRoomSheet = false
-    @State private var showEditRoomSheet = false
-    @State private var editingRoom: Room?
+    @Query(sort: \Project.displayOrder) private var projects: [Project]
+    @State private var showNewProjectSheet = false
+    @State private var showEditProjectSheet = false
+    @State private var editingProject: Project?
     @State private var sheetName = ""
     @State private var sheetColorHex = "#007AFF"
-    @State private var draggingRoomID: String?
-    @State private var dropTargetRoomID: String?
+    @State private var draggingProjectID: String?
+    @State private var dropTargetProjectID: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,8 +28,8 @@ struct RoomRailView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 8) {
                     projectOverviewButton
-                    ForEach(rooms) { room in
-                        roomButton(room)
+                    ForEach(projects) { project in
+                        projectButton(project)
                     }
                     addButton
                 }
@@ -40,14 +40,14 @@ struct RoomRailView: View {
         }
         .frame(width: 52)
         .background(Color(nsColor: Theme.chromeBackground))
-        .sheet(isPresented: $showNewRoomSheet) {
-            RoomEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: true) {
-                commitNewRoom()
+        .sheet(isPresented: $showNewProjectSheet) {
+            ProjectEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: true) {
+                commitNewProject()
             }
         }
-        .sheet(isPresented: $showEditRoomSheet) {
-            RoomEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: false) {
-                commitEditRoom()
+        .sheet(isPresented: $showEditProjectSheet) {
+            ProjectEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: false) {
+                commitEditProject()
             }
         }
     }
@@ -60,7 +60,7 @@ struct RoomRailView: View {
         } label: {
             Image(systemName: "square.grid.2x2")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(appState.selectedRoomID == nil ? .primary : .secondary)
+                .foregroundStyle(appState.selectedProjectID == nil ? .primary : .secondary)
                 .frame(width: 32, height: 28)
                 .contentShape(Rectangle())
         }
@@ -86,19 +86,18 @@ struct RoomRailView: View {
         .help(appState.isSidebarVisible ? "Hide Sidebar" : "Show Sidebar")
     }
 
-    // MARK: - Room Button
+    // MARK: - Project Button
 
-    private func roomButton(_ room: Room) -> some View {
-        let isSelected = appState.selectedRoomID == room.id
-        let initials = roomInitials(room.name)
-        let color = Color(hex: room.colorHex) ?? .blue
-        let roomTabs = appState.tabs.filter { $0.roomID == room.id }
-        let hasAttention = roomTabs.contains { $0.terminalSession?.needsAttention == true }
-        let hasRunning = roomTabs.contains { $0.terminalSession?.isRunning == true }
+    private func projectButton(_ project: Project) -> some View {
+        let isSelected = appState.selectedProjectID == project.id
+        let initials = projectInitials(project.name)
+        let color = Color(hex: project.colorHex) ?? .blue
+        let projectTabs = appState.tabs.filter { $0.projectID == project.id }
+        let hasAttention = projectTabs.contains { $0.terminalSession?.needsAttention == true }
 
         return Button {
-            if appState.selectedRoomID != room.id {
-                appState.switchToRoom(room.id)
+            if appState.selectedProjectID != project.id {
+                appState.switchToProject(project.id)
             }
         } label: {
             ZStack(alignment: .topTrailing) {
@@ -117,22 +116,17 @@ struct RoomRailView: View {
                         .frame(width: 10, height: 10)
                         .overlay(Circle().stroke(Color(nsColor: Theme.chromeBackground), lineWidth: 2))
                         .offset(x: 2, y: -2)
-                } else if hasRunning {
-                    Circle()
-                        .fill(.orange)
-                        .frame(width: 8, height: 8)
-                        .overlay(Circle().stroke(Color(nsColor: Theme.chromeBackground), lineWidth: 2))
-                        .offset(x: 2, y: -2)
                 }
             }
+            .padding(4)
         }
         .buttonStyle(.plain)
-        .help(room.name)
+        .help(project.name)
         .contextMenu {
-            roomContextMenu(room)
+            projectContextMenu(project)
         }
         .overlay(alignment: .top) {
-            if dropTargetRoomID == room.id && draggingRoomID != nil && draggingRoomID != room.id {
+            if dropTargetProjectID == project.id && draggingProjectID != nil && draggingProjectID != project.id {
                 Color.accentColor
                     .frame(height: 2)
                     .frame(maxWidth: .infinity)
@@ -140,11 +134,11 @@ struct RoomRailView: View {
             }
         }
         .onDrag {
-            draggingRoomID = room.id
-            return NSItemProvider(object: room.id as NSString)
+            draggingProjectID = project.id
+            return NSItemProvider(object: project.id as NSString)
         }
-        .onDrop(of: [UTType.text], isTargeted: dropBinding(for: room.id)) { providers in
-            handleReorderDrop(providers: providers, targetID: room.id)
+        .onDrop(of: [UTType.text], isTargeted: dropBinding(for: project.id)) { providers in
+            handleReorderDrop(providers: providers, targetID: project.id)
         }
     }
 
@@ -154,7 +148,7 @@ struct RoomRailView: View {
         Button {
             sheetName = ""
             sheetColorHex = "#007AFF"
-            showNewRoomSheet = true
+            showNewProjectSheet = true
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 20)
@@ -165,84 +159,85 @@ struct RoomRailView: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundStyle(.secondary)
             }
+            .contentShape(RoundedRectangle(cornerRadius: 20))
         }
         .buttonStyle(.plain)
-        .help("New Room")
+        .help("New Project")
     }
 
     // MARK: - Context Menu
 
     @ViewBuilder
-    private func roomContextMenu(_ room: Room) -> some View {
+    private func projectContextMenu(_ project: Project) -> some View {
         Button("Edit...") {
-            editingRoom = room
-            sheetName = room.name
-            sheetColorHex = room.colorHex
-            showEditRoomSheet = true
+            editingProject = project
+            sheetName = project.name
+            sheetColorHex = project.colorHex
+            showEditProjectSheet = true
         }
         Divider()
-        Button("Delete Room", role: .destructive) {
-            deleteRoom(room)
+        Button("Delete Project", role: .destructive) {
+            deleteProject(project)
         }
     }
 
     // MARK: - Actions
 
-    private func commitNewRoom() {
+    private func commitNewProject() {
         let name = sheetName.trimmingCharacters(in: .whitespaces)
         guard !name.isEmpty else { return }
 
-        let maxOrder = rooms.map(\.displayOrder).max() ?? -1
-        let room = Room(name: name, displayOrder: maxOrder + 1)
-        room.colorHex = sheetColorHex
-        modelContext.insert(room)
+        let maxOrder = projects.map(\.displayOrder).max() ?? -1
+        let project = Project(name: name, displayOrder: maxOrder + 1)
+        project.colorHex = sheetColorHex
+        modelContext.insert(project)
         try? modelContext.save()
-        appState.switchToRoom(room.id)
+        appState.switchToProject(project.id)
 
     }
 
-    private func commitEditRoom() {
+    private func commitEditProject() {
         let name = sheetName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty, let room = editingRoom else { return }
-        room.name = name
-        room.colorHex = sheetColorHex
+        guard !name.isEmpty, let project = editingProject else { return }
+        project.name = name
+        project.colorHex = sheetColorHex
         try? modelContext.save()
-        editingRoom = nil
+        editingProject = nil
 
     }
 
-    private func deleteRoom(_ room: Room) {
-        if appState.selectedRoomID == room.id {
-            appState.selectedRoomID = nil
+    private func deleteProject(_ project: Project) {
+        if appState.selectedProjectID == project.id {
+            appState.selectedProjectID = nil
             appState.activeIntentID = nil
         }
-        let roomID = room.id
+        let projectID = project.id
         do {
             let bookmarkDesc = FetchDescriptor<BookmarkedDirectory>(
-                predicate: #Predicate { $0.roomID == roomID }
+                predicate: #Predicate { $0.projectID == projectID }
             )
             for bookmark in try modelContext.fetch(bookmarkDesc) {
-                bookmark.roomID = nil
+                bookmark.projectID = nil
             }
             let intentDesc = FetchDescriptor<Intent>(
-                predicate: #Predicate { $0.roomID == roomID }
+                predicate: #Predicate { $0.projectID == projectID }
             )
             for intent in try modelContext.fetch(intentDesc) {
                 modelContext.delete(intent)
             }
         } catch {}
-        modelContext.delete(room)
+        modelContext.delete(project)
         try? modelContext.save()
     }
 
     // MARK: - Reordering
 
-    private func dropBinding(for roomID: String) -> Binding<Bool> {
+    private func dropBinding(for projectID: String) -> Binding<Bool> {
         Binding(
-            get: { dropTargetRoomID == roomID },
+            get: { dropTargetProjectID == projectID },
             set: { targeted in
-                if targeted { dropTargetRoomID = roomID }
-                else if dropTargetRoomID == roomID { dropTargetRoomID = nil }
+                if targeted { dropTargetProjectID = projectID }
+                else if dropTargetProjectID == projectID { dropTargetProjectID = nil }
             }
         )
     }
@@ -252,16 +247,16 @@ struct RoomRailView: View {
         provider.loadObject(ofClass: NSString.self) { item, _ in
             guard let sourceID = item as? String else { return }
             Task { @MainActor in
-                reorderRoom(sourceID: sourceID, beforeTargetID: targetID)
-                draggingRoomID = nil
-                dropTargetRoomID = nil
+                reorderProject(sourceID: sourceID, beforeTargetID: targetID)
+                draggingProjectID = nil
+                dropTargetProjectID = nil
             }
         }
         return true
     }
 
-    private func reorderRoom(sourceID: String, beforeTargetID: String) {
-        var ordered = Array(rooms)
+    private func reorderProject(sourceID: String, beforeTargetID: String) {
+        var ordered = Array(projects)
         guard let sourceIndex = ordered.firstIndex(where: { $0.id == sourceID }) else { return }
         let source = ordered.remove(at: sourceIndex)
         if let targetIndex = ordered.firstIndex(where: { $0.id == beforeTargetID }) {
@@ -269,15 +264,15 @@ struct RoomRailView: View {
         } else {
             ordered.append(source)
         }
-        for (index, room) in ordered.enumerated() {
-            room.displayOrder = index
+        for (index, project) in ordered.enumerated() {
+            project.displayOrder = index
         }
         try? modelContext.save()
     }
 
     // MARK: - Helpers
 
-    private func roomInitials(_ name: String) -> String {
+    private func projectInitials(_ name: String) -> String {
         let words = name.split(separator: " ")
         if words.count >= 2 {
             return String(words[0].prefix(1) + words[1].prefix(1)).uppercased()

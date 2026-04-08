@@ -9,7 +9,7 @@ import SwiftData
 struct TerminalDirectoryPicker: View {
     let launchClaude: Bool
     let launchGemini: Bool
-    var roomID: String? = nil
+    var projectID: String? = nil
     let onSelect: (String, URL, String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -20,8 +20,8 @@ struct TerminalDirectoryPicker: View {
     ) private var allBookmarks: [BookmarkedDirectory]
 
     private var bookmarks: [BookmarkedDirectory] {
-        if let roomID {
-            return allBookmarks.filter { $0.roomID == roomID }
+        if let projectID {
+            return allBookmarks.filter { $0.projectID == projectID }
         }
         return allBookmarks
     }

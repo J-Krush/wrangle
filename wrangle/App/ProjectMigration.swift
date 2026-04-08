@@ -1,18 +1,18 @@
 import Foundation
 import SwiftData
 
-enum RoomMigration {
+enum ProjectMigration {
     private static let migrationKey = "roomMigrationV1Complete"
 
-    /// Migrates existing BookmarkedDirectories into individual Rooms.
-    /// Each bookmark without a roomID gets its own Room. Idempotent via UserDefaults flag.
+    /// Migrates existing BookmarkedDirectories into individual Projects.
+    /// Each bookmark without a projectID gets its own Project. Idempotent via UserDefaults flag.
     @MainActor
     static func runIfNeeded(modelContext: ModelContext) {
         guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
 
         do {
             let descriptor = FetchDescriptor<BookmarkedDirectory>(
-                predicate: #Predicate { $0.roomID == nil }
+                predicate: #Predicate { $0.projectID == nil }
             )
             let unmigrated = try modelContext.fetch(descriptor)
 
@@ -22,13 +22,13 @@ enum RoomMigration {
             }
 
             for bookmark in unmigrated {
-                let room = Room(
+                let project = Project(
                     name: bookmark.displayName,
                     colorHex: bookmark.iconColorHex,
                     displayOrder: bookmark.displayOrder
                 )
-                modelContext.insert(room)
-                bookmark.roomID = room.id
+                modelContext.insert(project)
+                bookmark.projectID = project.id
             }
 
             try modelContext.save()

@@ -6,12 +6,13 @@ struct DashboardView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
-    @Query(sort: \Room.displayOrder) private var rooms: [Room]
+    @Query(sort: \Project.displayOrder) private var projects: [Project]
+    @Query private var allTodos: [TodoItem]
 
     @State private var projectInfos: [ProjectInfo] = []
     @State private var refreshTask: Task<Void, Never>?
-    @State private var draggingRoomID: String?
-    @State private var dropTargetRoomID: String?
+    @State private var draggingProjectID: String?
+    @State private var dropTargetProjectID: String?
 
     private let columns = [
         GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)
@@ -50,10 +51,10 @@ struct DashboardView: View {
                                     navigateToProject(project)
                                 }
                                 .overlay(alignment: .leading) {
-                                    if let roomID = project.roomID,
-                                       dropTargetRoomID == roomID,
-                                       draggingRoomID != nil,
-                                       draggingRoomID != roomID {
+                                    if let projectID = project.projectID,
+                                       dropTargetProjectID == projectID,
+                                       draggingProjectID != nil,
+                                       draggingProjectID != projectID {
                                         Color.accentColor
                                             .frame(width: 3)
                                             .clipShape(Capsule())
@@ -61,14 +62,14 @@ struct DashboardView: View {
                                     }
                                 }
                                 .onDrag {
-                                    if let roomID = project.roomID {
-                                        draggingRoomID = roomID
-                                        return NSItemProvider(object: roomID as NSString)
+                                    if let projectID = project.projectID {
+                                        draggingProjectID = projectID
+                                        return NSItemProvider(object: projectID as NSString)
                                     }
                                     return NSItemProvider()
                                 }
-                                .onDrop(of: [UTType.text], isTargeted: dropBinding(for: project.roomID)) { providers in
-                                    guard let targetID = project.roomID else { return false }
+                                .onDrop(of: [UTType.text], isTargeted: dropBinding(for: project.projectID)) { providers in
+                                    guard let targetID = project.projectID else { return false }
                                     return handleReorderDrop(providers: providers, targetID: targetID)
                                 }
                         }
@@ -92,9 +93,12 @@ struct DashboardView: View {
             buildProjectInfos()
             startGitRefresh()
         }
-        .onChange(of: rooms.count) { _, _ in
+        .onChange(of: projects.count) { _, _ in
             buildProjectInfos()
             startGitRefresh()
+        }
+        .onChange(of: allTodos.count) { _, _ in
+            buildProjectInfos()
         }
     }
 
@@ -111,7 +115,7 @@ struct DashboardView: View {
             Text("No projects yet")
                 .font(.title2)
                 .foregroundStyle(.secondary)
-            Text("Add a location in the sidebar to see it here")
+            Text("Add a project to see it here")
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
             Spacer()
@@ -122,38 +126,45 @@ struct DashboardView: View {
     // MARK: - Data
 
     private func buildProjectInfos() {
-        projectInfos = rooms.map { room -> ProjectInfo in
-            let roomBookmarks = bookmarks.filter { $0.roomID == room.id && !$0.isFile }
-            let allSessions = roomBookmarks.flatMap { bookmark in
+        projectInfos = projects.map { project -> ProjectInfo in
+            let projectBookmarks = bookmarks.filter { $0.projectID == project.id && !$0.isFile }
+            let allSessions = projectBookmarks.flatMap { bookmark in
                 let bookmarkID = bookmark.persistentModelID.hashValue.description
                 return appState.tabs.compactMap(\.terminalSession).filter { $0.bookmarkID == bookmarkID }
             }
             let agentStatus = resolveAgentStatus(allSessions)
-            let primaryBookmark = roomBookmarks.first
+            let primaryBookmark = projectBookmarks.first
             let primaryBookmarkID = primaryBookmark.map { $0.persistentModelID.hashValue.description } ?? ""
 
+            let projectTodos = allTodos.filter { $0.projectID == project.id }
+            let todoTotal = projectTodos.count
+            let todoDone = projectTodos.filter(\.isCompleted).count
+
             return ProjectInfo(
-                id: room.id,
-                name: room.name,
+                id: project.id,
+                name: project.name,
                 url: primaryBookmark?.resolveURL(),
                 bookmarkID: primaryBookmarkID,
-                roomID: room.id,
+                projectID: project.id,
                 terminalSessions: allSessions,
                 agentStatus: agentStatus,
-                lastActivity: room.dateCreated
+                todoTotal: todoTotal > 0 ? todoTotal : nil,
+                todoDone: todoDone > 0 ? todoDone : nil,
+                lastActivity: project.dateCreated
             )
         }
     }
 
     private func resolveAgentStatus(_ sessions: [TerminalSession]) -> AgentStatus {
-        // Check for Claude/Gemini sessions first
-        for session in sessions {
-            if (session.isClaude || session.isGemini) && session.isRunning {
-                if session.needsAttention {
-                    return .waiting
-                }
-                return .running(0) // Duration would need process start tracking
-            }
+        let agentSessions = sessions.filter { ($0.isClaude || $0.isGemini) && $0.isRunning }
+        let waitingCount = agentSessions.filter(\.needsAttention).count
+        let runningCount = agentSessions.count - waitingCount
+
+        if runningCount > 0 {
+            return .running(count: runningCount + waitingCount)
+        }
+        if waitingCount > 0 {
+            return .waiting(count: waitingCount)
         }
         if sessions.contains(where: \.isRunning) {
             return .idle
@@ -168,12 +179,9 @@ struct DashboardView: View {
                 guard !Task.isCancelled else { return }
                 guard let url = projectInfos[i].url else { continue }
                 let (branch, changes) = await fetchGitInfo(for: url)
-                let (todoTotal, todoDone) = await fetchTodoInfo(for: url)
                 guard !Task.isCancelled else { return }
                 projectInfos[i].gitBranch = branch
                 projectInfos[i].uncommittedCount = changes
-                projectInfos[i].todoTotal = todoTotal
-                projectInfos[i].todoDone = todoDone
             }
         }
     }
@@ -188,65 +196,15 @@ struct DashboardView: View {
         }.value
     }
 
-    private static let todoPattern = try! NSRegularExpression(pattern: #"^\s*-\s*\[( |x|X)\]"#, options: .anchorsMatchLines)
-
-    private func fetchTodoInfo(for url: URL) async -> (Int?, Int?) {
-        let pattern = Self.todoPattern
-        return await Task.detached {
-            let fm = FileManager.default
-            var files: [URL] = []
-
-            // Scan root-level .md files
-            if let rootContents = try? fm.contentsOfDirectory(at: url, includingPropertiesForKeys: [.isDirectoryKey], options: []) {
-                for fileURL in rootContents {
-                    let isDir = (try? fileURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-                    if !isDir && fileURL.pathExtension.lowercased() == "md" {
-                        files.append(fileURL)
-                    }
-                }
-            }
-
-            // Scan .planning/ directory if it exists
-            let planningDir = url.appendingPathComponent(".planning")
-            if let planningContents = try? fm.contentsOfDirectory(at: planningDir, includingPropertiesForKeys: nil, options: []) {
-                for fileURL in planningContents where fileURL.pathExtension.lowercased() == "md" {
-                    files.append(fileURL)
-                }
-            }
-
-            var total = 0
-            var done = 0
-            let maxSize: UInt64 = 100_000
-
-            for file in files {
-                guard let attrs = try? fm.attributesOfItem(atPath: file.path),
-                      let size = attrs[.size] as? UInt64,
-                      size <= maxSize,
-                      let content = try? String(contentsOf: file, encoding: .utf8) else { continue }
-
-                let range = NSRange(content.startIndex..., in: content)
-                let matches = pattern.matches(in: content, range: range)
-                total += matches.count
-                for match in matches {
-                    if let checkRange = Range(match.range(at: 1), in: content) {
-                        let check = content[checkRange]
-                        if check == "x" || check == "X" { done += 1 }
-                    }
-                }
-            }
-
-            return total > 0 ? (total, done) : (nil, nil)
-        }.value
-    }
 
     // MARK: - Reordering
 
-    private func dropBinding(for roomID: String?) -> Binding<Bool> {
+    private func dropBinding(for projectID: String?) -> Binding<Bool> {
         Binding(
-            get: { roomID != nil && dropTargetRoomID == roomID },
+            get: { projectID != nil && dropTargetProjectID == projectID },
             set: { targeted in
-                if targeted { dropTargetRoomID = roomID }
-                else if dropTargetRoomID == roomID { dropTargetRoomID = nil }
+                if targeted { dropTargetProjectID = projectID }
+                else if dropTargetProjectID == projectID { dropTargetProjectID = nil }
             }
         )
     }
@@ -256,16 +214,16 @@ struct DashboardView: View {
         provider.loadObject(ofClass: NSString.self) { item, _ in
             guard let sourceID = item as? String else { return }
             Task { @MainActor in
-                reorderRoom(sourceID: sourceID, beforeTargetID: targetID)
-                draggingRoomID = nil
-                dropTargetRoomID = nil
+                reorderProject(sourceID: sourceID, beforeTargetID: targetID)
+                draggingProjectID = nil
+                dropTargetProjectID = nil
             }
         }
         return true
     }
 
-    private func reorderRoom(sourceID: String, beforeTargetID: String) {
-        var ordered = Array(rooms)
+    private func reorderProject(sourceID: String, beforeTargetID: String) {
+        var ordered = Array(projects)
         guard let sourceIndex = ordered.firstIndex(where: { $0.id == sourceID }) else { return }
         let source = ordered.remove(at: sourceIndex)
         if let targetIndex = ordered.firstIndex(where: { $0.id == beforeTargetID }) {
@@ -273,8 +231,8 @@ struct DashboardView: View {
         } else {
             ordered.append(source)
         }
-        for (index, room) in ordered.enumerated() {
-            room.displayOrder = index
+        for (index, project) in ordered.enumerated() {
+            project.displayOrder = index
         }
         try? modelContext.save()
         buildProjectInfos()
@@ -283,8 +241,8 @@ struct DashboardView: View {
     // MARK: - Navigation
 
     private func navigateToProject(_ project: ProjectInfo) {
-        if let roomID = project.roomID {
-            appState.switchToRoom(roomID)
+        if let projectID = project.projectID {
+            appState.switchToProject(projectID)
         }
         if !project.bookmarkID.isEmpty {
             appState.selectedBookmarkID = project.bookmarkID
@@ -294,7 +252,7 @@ struct DashboardView: View {
 
 // MARK: - Shell Helper
 
-nonisolated private func shellOutput(_ command: String) throws -> String {
+nonisolated func shellOutput(_ command: String) throws -> String {
     let process = Process()
     let pipe = Pipe()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")

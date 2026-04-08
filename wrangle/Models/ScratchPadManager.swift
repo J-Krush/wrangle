@@ -5,7 +5,7 @@ struct ScratchPadItem: Identifiable, Sendable {
     let url: URL
     let name: String
     let modificationDate: Date
-    let roomID: String?
+    let projectID: String?
 }
 
 @MainActor
@@ -14,7 +14,7 @@ class ScratchPadManager {
     var scratchPads: [ScratchPadItem] = []
 
     private var fileWatcher: FileWatcher?
-    private var roomWatchers: [String: FileWatcher] = [:]
+    private var projectWatchers: [String: FileWatcher] = [:]
 
     static var scratchPadDirectory: URL {
         URL.applicationSupportDirectory
@@ -27,21 +27,21 @@ class ScratchPadManager {
         startWatching()
     }
 
-    /// Scratch pads for a specific room
-    func scratchPads(forRoom roomID: String) -> [ScratchPadItem] {
-        scratchPads.filter { $0.roomID == roomID }
+    /// Scratch pads for a specific project
+    func scratchPads(forProject projectID: String) -> [ScratchPadItem] {
+        scratchPads.filter { $0.projectID == projectID }
     }
 
     // MARK: - CRUD
 
     @discardableResult
-    func createScratchPad(name: String, roomID: String? = nil) -> URL {
+    func createScratchPad(name: String, projectID: String? = nil) -> URL {
         let sanitized = name
             .trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ":", with: "-")
         let baseName = sanitized.isEmpty ? "Scratch" : sanitized
-        let dir = directoryForRoom(roomID)
+        let dir = directoryForProject(projectID)
         let url = uniqueURL(for: baseName, in: dir)
 
         FileManager.default.createFile(atPath: url.path, contents: nil)
@@ -50,11 +50,11 @@ class ScratchPadManager {
     }
 
     @discardableResult
-    func createScratchPadWithTimestamp(roomID: String? = nil) -> URL {
+    func createScratchPadWithTimestamp(projectID: String? = nil) -> URL {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
         let name = "Scratch \(formatter.string(from: Date()))"
-        return createScratchPad(name: name, roomID: roomID)
+        return createScratchPad(name: name, projectID: projectID)
     }
 
     func renameScratchPad(at url: URL, to newName: String) -> URL? {
@@ -87,41 +87,41 @@ class ScratchPadManager {
     func loadScratchPads() {
         var items: [ScratchPadItem] = []
 
-        // Load legacy global scratch pads (no room)
-        items.append(contentsOf: loadPadsFromDirectory(Self.scratchPadDirectory, roomID: nil))
+        // Load legacy global scratch pads (no project)
+        items.append(contentsOf: loadPadsFromDirectory(Self.scratchPadDirectory, projectID: nil))
 
-        // Load room-scoped scratch pads from subdirectories
+        // Load project-scoped scratch pads from subdirectories
         let fm = FileManager.default
         if let subdirs = try? fm.contentsOfDirectory(at: Self.scratchPadDirectory, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) {
             for subdir in subdirs {
                 let isDir = (try? subdir.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
                 guard isDir else { continue }
-                let roomID = subdir.lastPathComponent
-                items.append(contentsOf: loadPadsFromDirectory(subdir, roomID: roomID))
-                ensureRoomWatcher(roomID: roomID, directory: subdir)
+                let projectID = subdir.lastPathComponent
+                items.append(contentsOf: loadPadsFromDirectory(subdir, projectID: projectID))
+                ensureProjectWatcher(projectID: projectID, directory: subdir)
             }
         }
 
         scratchPads = items.sorted { $0.modificationDate > $1.modificationDate }
     }
 
-    /// Ensures a room subdirectory exists and starts watching it.
-    func ensureRoomDirectory(for roomID: String) {
-        let dir = directoryForRoom(roomID)
+    /// Ensures a project subdirectory exists and starts watching it.
+    func ensureProjectDirectory(for projectID: String) {
+        let dir = directoryForProject(projectID)
         ensureDirectoryExists(dir)
-        ensureRoomWatcher(roomID: roomID, directory: dir)
+        ensureProjectWatcher(projectID: projectID, directory: dir)
     }
 
     // MARK: - Private
 
-    private func directoryForRoom(_ roomID: String?) -> URL {
-        guard let roomID else { return Self.scratchPadDirectory }
-        let dir = Self.scratchPadDirectory.appending(path: roomID, directoryHint: .isDirectory)
+    private func directoryForProject(_ projectID: String?) -> URL {
+        guard let projectID else { return Self.scratchPadDirectory }
+        let dir = Self.scratchPadDirectory.appending(path: projectID, directoryHint: .isDirectory)
         ensureDirectoryExists(dir)
         return dir
     }
 
-    private func loadPadsFromDirectory(_ dir: URL, roomID: String?) -> [ScratchPadItem] {
+    private func loadPadsFromDirectory(_ dir: URL, projectID: String?) -> [ScratchPadItem] {
         guard let contents = try? FileManager.default.contentsOfDirectory(
             at: dir,
             includingPropertiesForKeys: [.contentModificationDateKey],
@@ -134,7 +134,7 @@ class ScratchPadManager {
                 let values = try? url.resourceValues(forKeys: [.contentModificationDateKey])
                 let modDate = values?.contentModificationDate ?? Date.distantPast
                 let name = url.deletingPathExtension().lastPathComponent
-                return ScratchPadItem(url: url, name: name, modificationDate: modDate, roomID: roomID)
+                return ScratchPadItem(url: url, name: name, modificationDate: modDate, projectID: projectID)
             }
     }
 
@@ -152,13 +152,13 @@ class ScratchPadManager {
         fileWatcher = watcher
     }
 
-    private func ensureRoomWatcher(roomID: String, directory: URL) {
-        guard roomWatchers[roomID] == nil else { return }
+    private func ensureProjectWatcher(projectID: String, directory: URL) {
+        guard projectWatchers[projectID] == nil else { return }
         let watcher = FileWatcher(url: directory) { [weak self] in
             self?.loadScratchPads()
         }
         watcher.start()
-        roomWatchers[roomID] = watcher
+        projectWatchers[projectID] = watcher
     }
 
     private func uniqueURL(for baseName: String, in dir: URL, excluding: URL? = nil) -> URL {

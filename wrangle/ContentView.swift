@@ -24,14 +24,14 @@ struct ContentView: View {
     @State private var systemMetrics = SystemMetrics()
 
     /// Cached map: directory path -> (bookmarkID, bookmarkName)
-    @State private var bookmarkPathCache: [(path: String, id: String, name: String, roomID: String?)] = []
-    @Query private var rooms: [Room]
-    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = true
+    @State private var bookmarkPathCache: [(path: String, id: String, name: String, projectID: String?)] = []
+    @Query private var projects: [Project]
+    @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = false
 
     private var windowTitle: String {
-        if let roomID = appState.selectedRoomID,
-           let room = rooms.first(where: { $0.id == roomID }) {
-            return room.name
+        if let projectID = appState.selectedProjectID,
+           let project = projects.first(where: { $0.id == projectID }) {
+            return project.name
         }
         return "Wrangle"
     }
@@ -47,21 +47,21 @@ struct ContentView: View {
 
                 // Right side: tabs + detail
                 VStack(spacing: 0) {
-                    if appState.selectedRoomID != nil {
+                    if appState.selectedProjectID != nil {
                         TitleBarTabStrip()
                     }
                     NotificationBannerView()
 
                 ZStack {
                     // Keep all terminal NSViews alive to preserve process state and scrollback
-                    // These must live outside the room/viewMode conditionals so switching
-                    // rooms or going to project overview doesn't destroy the NSView hierarchy.
+                    // These must live outside the project/viewMode conditionals so switching
+                    // projects or going to project overview doesn't destroy the NSView hierarchy.
                     ForEach(appState.tabs) { tab in
                         if let session = tab.terminalSession {
-                            let isActive = appState.selectedRoomID != nil
+                            let isActive = appState.selectedProjectID != nil
                                 && appState.viewMode == .editor
                                 && appState.activeTab?.id == tab.id
-                            TerminalTabContentView(session: session)
+                            TerminalTabContentView(session: session, isActive: isActive)
                                 .opacity(isActive ? 1 : 0)
                                 .allowsHitTesting(isActive)
                                 .zIndex(isActive ? 1 : 0)
@@ -71,7 +71,7 @@ struct ContentView: View {
                     // Keep all browser WKWebViews alive to preserve page state
                     ForEach(appState.tabs) { tab in
                         if let session = tab.browserSession {
-                            let isActive = appState.selectedRoomID != nil
+                            let isActive = appState.selectedProjectID != nil
                                 && appState.viewMode == .editor
                                 && appState.activeTab?.id == tab.id
                             BrowserTabContentView(session: session)
@@ -81,8 +81,8 @@ struct ContentView: View {
                         }
                     }
 
-                    if appState.selectedRoomID == nil {
-                        // No room selected — show project overview
+                    if appState.selectedProjectID == nil {
+                        // No project selected — show project overview
                         DashboardView()
                     } else {
                     switch appState.viewMode {
@@ -105,14 +105,14 @@ struct ContentView: View {
                                 .transition(.identity)
                             case .terminal, .browser:
                                 EmptyView()
-                            case .roomOverview(let roomID):
-                                RoomOverviewView(roomID: roomID)
+                            case .projectOverview(let projectID):
+                                ProjectOverviewView(projectID: projectID)
                             }
                         } else {
                             DashboardView()
                         }
                     }
-                    } // end if selectedRoomID != nil
+                    } // end if selectedProjectID != nil
                 }
                 .animation(nil, value: appState.activeTabIndex)
             }
@@ -194,6 +194,7 @@ struct ContentView: View {
             }
             LicenseGateView()
             NotificationPermissionView()
+            WhatsNewView()
         }
         .navigationTitle(windowTitle)
         .toolbar {
@@ -233,14 +234,25 @@ struct ContentView: View {
                 Task { await coordinator.notificationManager.refreshStatus() }
             }
         }
+        .onChange(of: appState.pendingLocationAdd) { _, url in
+            guard let url, let projectID = appState.selectedProjectID else { return }
+            appState.pendingLocationAdd = nil
+            addLocationIfNeeded(url: url, projectID: projectID)
+        }
         .task {
             systemMetrics.coordinator = coordinator
-            systemMetrics.startMonitoring()
+        }
+        .onChange(of: showSystemMetrics, initial: true) { _, visible in
+            if visible {
+                systemMetrics.startMonitoring()
+            } else {
+                systemMetrics.stopMonitoring()
+            }
         }
         .onAppear {
             appState.coordinator = coordinator
             coordinator.register(appState)
-            RoomMigration.runIfNeeded(modelContext: modelContext)
+            ProjectMigration.runIfNeeded(modelContext: modelContext)
             rebuildBookmarkPathCache()
         }
         .onDisappear {
@@ -343,7 +355,7 @@ struct ContentView: View {
             guard !bookmark.isFile, let dirURL = bookmark.resolveURL() else { return nil }
             let dirPath = dirURL.path(percentEncoded: false)
             let id = bookmark.persistentModelID.hashValue.description
-            return (path: dirPath, id: id, name: bookmark.name, roomID: bookmark.roomID)
+            return (path: dirPath, id: id, name: bookmark.name, projectID: bookmark.projectID)
         }
 
         // Also populate the scoped URL cache on AppState for fallback resolution
@@ -360,8 +372,8 @@ struct ContentView: View {
             if filePath.hasPrefix(entry.path) {
                 appState.selectedBookmarkID = entry.id
                 appState.activeProjectName = entry.name
-                if let roomID = entry.roomID {
-                    appState.selectedRoomID = roomID
+                if let projectID = entry.projectID {
+                    appState.selectedProjectID = projectID
                 }
                 return
             }
@@ -382,6 +394,31 @@ struct ContentView: View {
             }
         }
         return handled
+    }
+
+    private func addLocationIfNeeded(url: URL, projectID: String) {
+        // Skip if this directory is already a location for this project
+        let dirPath = url.path(percentEncoded: false)
+        if bookmarkPathCache.contains(where: { $0.path == dirPath && $0.projectID == projectID }) {
+            return
+        }
+
+        do {
+            let data = try SecurityScopedBookmark.create(for: url)
+            let maxOrder = bookmarks.map(\.displayOrder).max() ?? -1
+            let bookmark = BookmarkedDirectory(
+                name: url.lastPathComponent,
+                bookmarkData: data,
+                displayOrder: maxOrder + 1,
+                isFile: false
+            )
+            bookmark.projectID = projectID
+            modelContext.insert(bookmark)
+            try? modelContext.save()
+            rebuildBookmarkPathCache()
+        } catch {
+            // Bookmark creation failed — user may not have granted access
+        }
     }
 }
 

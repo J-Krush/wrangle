@@ -20,7 +20,7 @@ struct TerminalSessionState: Codable {
     let emulatorTitle: String?
 }
 
-struct TerminalRoomState: Codable {
+struct TerminalProjectState: Codable {
     let sessions: [TerminalSessionState]
 }
 
@@ -28,11 +28,11 @@ struct TerminalRoomState: Codable {
 
 enum TerminalStateStore {
 
-    private static func key(for roomID: String) -> String {
-        "terminal-state-\(roomID)"
+    private static func key(for projectID: String) -> String {
+        "terminal-state-\(projectID)"
     }
 
-    static func save(sessions: [TerminalSession], forRoom roomID: String) {
+    static func save(sessions: [TerminalSession], forProject projectID: String) {
         let sessionStates = sessions.map { session in
             TerminalSessionState(
                 wrangleSessionID: session.id.uuidString,
@@ -48,22 +48,22 @@ enum TerminalStateStore {
             )
         }
 
-        let state = TerminalRoomState(sessions: sessionStates)
+        let state = TerminalProjectState(sessions: sessionStates)
 
         if let data = try? JSONEncoder().encode(state) {
-            UserDefaults.standard.set(data, forKey: key(for: roomID))
+            UserDefaults.standard.set(data, forKey: key(for: projectID))
         }
     }
 
-    static func restore(forRoom roomID: String) -> [TerminalSessionState] {
-        guard let data = UserDefaults.standard.data(forKey: key(for: roomID)),
-              let state = try? JSONDecoder().decode(TerminalRoomState.self, from: data) else {
+    static func restore(forProject projectID: String) -> [TerminalSessionState] {
+        guard let data = UserDefaults.standard.data(forKey: key(for: projectID)),
+              let state = try? JSONDecoder().decode(TerminalProjectState.self, from: data) else {
             return []
         }
         return state.sessions
     }
 
-    static func clear(forRoom roomID: String) {
-        UserDefaults.standard.removeObject(forKey: key(for: roomID))
+    static func clear(forProject projectID: String) {
+        UserDefaults.standard.removeObject(forKey: key(for: projectID))
     }
 }

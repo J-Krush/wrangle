@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Room {
+final class Project {
     var id: String
     var name: String
     var colorHex: String

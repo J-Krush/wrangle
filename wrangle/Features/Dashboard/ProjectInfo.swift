@@ -2,19 +2,17 @@ import Foundation
 import SwiftUI
 
 enum AgentStatus {
-    case running(TimeInterval)
-    case waiting
+    case running(count: Int)
+    case waiting(count: Int)
     case idle
     case none
 
     var displayText: String {
         switch self {
-        case .running(let duration):
-            let minutes = Int(duration / 60)
-            let seconds = Int(duration) % 60
-            return "Running \(minutes)m \(seconds)s"
-        case .waiting:
-            return "Waiting for input"
+        case .running(let count):
+            return count == 1 ? "1 agent running" : "\(count) agents running"
+        case .waiting(let count):
+            return count == 1 ? "1 agent waiting" : "\(count) agents waiting"
         case .idle:
             return "Idle"
         case .none:
@@ -44,7 +42,7 @@ struct ProjectInfo: Identifiable {
     let name: String
     let url: URL?
     let bookmarkID: String
-    let roomID: String?
+    let projectID: String?
     var terminalSessions: [TerminalSession]
     var agentStatus: AgentStatus
     var gitBranch: String?

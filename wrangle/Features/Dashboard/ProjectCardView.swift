@@ -23,50 +23,6 @@ struct ProjectCardView: View {
             }
 
             if !isCompact {
-                // Git branch
-                if let branch = project.gitBranch {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.triangle.branch")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(branch)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        if let count = project.uncommittedCount, count > 0 {
-                            Text("\(count) changes")
-                                .font(.caption2)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(.yellow.opacity(0.15))
-                                .foregroundStyle(.yellow)
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-
-                // Todo progress
-                if let total = project.todoTotal, total > 0 {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checklist")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text("\(project.todoDone ?? 0)/\(total) tasks")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        // Progress capsule
-                        GeometryReader { geo in
-                            Capsule()
-                                .fill(Color.secondary.opacity(0.15))
-                                .overlay(alignment: .leading) {
-                                    Capsule()
-                                        .fill(Color.green.opacity(0.6))
-                                        .frame(width: geo.size.width * Double(project.todoDone ?? 0) / Double(total))
-                                }
-                        }
-                        .frame(width: 40, height: 4)
-                    }
-                }
-
                 // Agent status
                 HStack(spacing: 6) {
                     Circle()
@@ -81,11 +37,27 @@ struct ProjectCardView: View {
             if !isCompact {
                 Spacer(minLength: 0)
 
-                // Last activity
-                if !project.lastActivityText.isEmpty {
-                    Text(project.lastActivityText)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                HStack {
+                    // Todo progress
+                    if let total = project.todoTotal, total > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text("\(project.todoDone ?? 0)/\(total)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    Spacer()
+
+                    // Last activity
+                    if !project.lastActivityText.isEmpty {
+                        Text(project.lastActivityText)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }

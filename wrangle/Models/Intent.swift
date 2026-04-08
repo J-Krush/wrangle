@@ -5,7 +5,7 @@ import SwiftData
 final class Intent {
     var id: String
     var name: String
-    var roomID: String
+    var projectID: String
     var statusRaw: String
     var displayOrder: Int
     var dateCreated: Date
@@ -29,13 +29,13 @@ final class Intent {
 
     init(
         name: String,
-        roomID: String,
+        projectID: String,
         status: Status = .active,
         displayOrder: Int = 0
     ) {
         self.id = UUID().uuidString
         self.name = name
-        self.roomID = roomID
+        self.projectID = projectID
         self.statusRaw = status.rawValue
         self.displayOrder = displayOrder
         self.dateCreated = .now

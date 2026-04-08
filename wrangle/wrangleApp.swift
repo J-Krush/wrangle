@@ -62,8 +62,9 @@ struct WrangleApp: App {
         let schema = Schema([
             BookmarkedDirectory.self,
             RecentFile.self,
-            Room.self,
+            Project.self,
             Intent.self,
+            TodoItem.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -98,6 +99,7 @@ struct WrangleApp: App {
                     updateSystemScheme()
                     coordinator.updateChecker.checkForUpdate()
                     coordinator.licenseManager.loadOnLaunch()
+                    coordinator.whatsNewManager.checkOnLaunch()
                     removeSystemCloseMenuItems()
 
 // Listen for macOS appearance changes
@@ -167,6 +169,10 @@ struct WrangleApp: App {
 
                 Button("Check for Updates...") {
                     coordinator.updateChecker.checkForUpdate(manual: true)
+                }
+
+                Button("What's New") {
+                    coordinator.whatsNewManager.shouldShowModal = true
                 }
             }
 

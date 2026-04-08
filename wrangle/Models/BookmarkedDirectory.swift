@@ -10,7 +10,7 @@ final class BookmarkedDirectory {
     var dateAdded: Date
     var isFile: Bool
     var customName: String?
-    var roomID: String?
+    var projectID: String?
 
     var displayName: String { customName ?? name }
 

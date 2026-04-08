@@ -27,10 +27,12 @@ enum ClaudeCodeLauncher {
     }
 
     /// Returns the command string to launch Claude Code (including trailing newline).
+    /// Prefixed with `clear;` so the shell's command echo doesn't overlap with
+    /// Claude Code's TUI banner on the first line.
     static func launchCommand(dangerousMode: Bool = false) -> String {
         if let path = claudePath() {
             let flags = dangerousMode ? " --dangerously-skip-permissions" : ""
-            return "\(path)\(flags)\n"
+            return "clear; \(path)\(flags)\n"
         } else {
             return """
             echo ""
@@ -51,7 +53,7 @@ enum ClaudeCodeLauncher {
     /// Returns the command string to resume a Claude Code session (including trailing newline).
     static func resumeCommand(sessionID: String) -> String {
         if let path = claudePath() {
-            return "\(path) --resume \(sessionID)\n"
+            return "clear; \(path) --resume \(sessionID)\n"
         }
         return launchCommand()
     }
@@ -84,7 +86,7 @@ enum GeminiCodeLauncher {
     /// Returns the command string to launch Gemini Code (including trailing newline).
     static func launchCommand() -> String {
         if let path = geminiPath() {
-            return "\(path)\n"
+            return "clear; \(path)\n"
         } else {
             return """
             echo ""

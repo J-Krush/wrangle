@@ -70,7 +70,7 @@ struct Theme {
         terminalForeground: NSColor(red: 0.10, green: 0.11, blue: 0.15, alpha: 1.0),  // #1a1b26
         terminalBackground: NSColor(red: 0.98, green: 0.98, blue: 0.96, alpha: 1.0),  // #fafaf5
         terminalCursor: NSColor(red: 0.22, green: 0.38, blue: 0.75, alpha: 1.0),
-        terminalSelection: NSColor(red: 0.71, green: 0.75, blue: 0.89, alpha: 0.5),   // #b6bfe2
+        terminalSelection: NSColor(red: 0.71, green: 0.75, blue: 0.89, alpha: 1.0),   // #b6bfe2
         terminalFont: monoFont,
         editorFont: NSFont.systemFont(ofSize: 15),
         codeFont: monoFont,
@@ -93,7 +93,7 @@ struct Theme {
         terminalForeground: NSColor(red: 0.78, green: 0.81, blue: 0.96, alpha: 1.0),  // #c8cff5
         terminalBackground: NSColor(red: 0.10, green: 0.11, blue: 0.15, alpha: 1.0),  // #1a1b26
         terminalCursor: NSColor(red: 0.75, green: 0.79, blue: 0.96, alpha: 1.0),       // #c0caf5
-        terminalSelection: NSColor(red: 0.20, green: 0.27, blue: 0.49, alpha: 0.6),    // #33467c
+        terminalSelection: NSColor(red: 0.20, green: 0.27, blue: 0.49, alpha: 1.0),    // #33467c
         terminalFont: monoFont,
         editorFont: NSFont.systemFont(ofSize: 15),
         codeFont: monoFont,
@@ -125,11 +125,7 @@ struct Theme {
     /// Shared sidebar selection background used by all sidebar rows.
     static func sidebarSelectionBackground(isSelected: Bool) -> some View {
         Rectangle()
-            .fill(isSelected ? Color.white.opacity(0.10) : Color.clear)
-            .overlay(
-                Rectangle()
-                    .strokeBorder(isSelected ? Color.white.opacity(0.25) : Color.clear, lineWidth: 1)
-            )
+            .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
     }
 
     /// Returns the appropriate theme based on the current system appearance.

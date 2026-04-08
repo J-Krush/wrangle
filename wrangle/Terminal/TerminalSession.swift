@@ -56,12 +56,8 @@ class TerminalSession: Identifiable {
 
     var displayTitle: String {
         if let customTitle { return customTitle }
-        // For Claude/Gemini sessions, prefer the OSC-set title (plan name)
-        if (isClaude || isGemini),
-           let oscTitle = emulator.title,
-           !oscTitle.isEmpty,
-           !Self.genericShells.contains(oscTitle.lowercased()) {
-            return oscTitle
+        if let title = sanitizedEmulatorTitle {
+            return title
         }
         if let dir = workingDirectory ?? emulator.workingDirectory {
             return dir.lastPathComponent
@@ -73,11 +69,20 @@ class TerminalSession: Identifiable {
     /// and isn't a generic shell name. Captures plan names set via OSC escape sequences.
     var emulatorSubtitle: String? {
         guard isClaude || isGemini,
-              let emulatorTitle = emulator.title,
-              !emulatorTitle.isEmpty,
-              emulatorTitle != displayTitle else { return nil }
-        if Self.genericShells.contains(emulatorTitle.lowercased()) { return nil }
-        return emulatorTitle
+              let title = sanitizedEmulatorTitle,
+              title != displayTitle else { return nil }
+        return title
+    }
+
+    private var sanitizedEmulatorTitle: String? {
+        guard let title = emulator.title, !title.isEmpty,
+              !Self.genericShells.contains(title.lowercased()) else { return nil }
+        guard isClaude || isGemini else { return title }
+        let cleaned = title
+            .replacingOccurrences(of: "✻ ", with: "")
+            .replacingOccurrences(of: "✻", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        return cleaned.isEmpty ? nil : cleaned
     }
 
     var displaySubtitle: String? {

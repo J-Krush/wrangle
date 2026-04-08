@@ -20,7 +20,7 @@ struct BrowserSessionState: Codable {
     let isDevToolsVisible: Bool
 }
 
-struct BrowserRoomState: Codable {
+struct BrowserProjectState: Codable {
     let sessions: [BrowserSessionState]
 }
 
@@ -28,11 +28,11 @@ struct BrowserRoomState: Codable {
 
 enum BrowserStateStore {
 
-    private static func key(for roomID: String) -> String {
-        "browser-state-\(roomID)"
+    private static func key(for projectID: String) -> String {
+        "browser-state-\(projectID)"
     }
 
-    static func save(sessions: [BrowserSession], forRoom roomID: String) {
+    static func save(sessions: [BrowserSession], forProject projectID: String) {
         let sessionStates = sessions.map { session in
             BrowserSessionState(
                 tabs: session.tabs.map { tab in
@@ -48,22 +48,22 @@ enum BrowserStateStore {
             )
         }
 
-        let state = BrowserRoomState(sessions: sessionStates)
+        let state = BrowserProjectState(sessions: sessionStates)
 
         if let data = try? JSONEncoder().encode(state) {
-            UserDefaults.standard.set(data, forKey: key(for: roomID))
+            UserDefaults.standard.set(data, forKey: key(for: projectID))
         }
     }
 
-    static func restore(forRoom roomID: String) -> [BrowserSessionState] {
-        guard let data = UserDefaults.standard.data(forKey: key(for: roomID)),
-              let state = try? JSONDecoder().decode(BrowserRoomState.self, from: data) else {
+    static func restore(forProject projectID: String) -> [BrowserSessionState] {
+        guard let data = UserDefaults.standard.data(forKey: key(for: projectID)),
+              let state = try? JSONDecoder().decode(BrowserProjectState.self, from: data) else {
             return []
         }
         return state.sessions
     }
 
-    static func clear(forRoom roomID: String) {
-        UserDefaults.standard.removeObject(forKey: key(for: roomID))
+    static func clear(forProject projectID: String) {
+        UserDefaults.standard.removeObject(forKey: key(for: projectID))
     }
 }

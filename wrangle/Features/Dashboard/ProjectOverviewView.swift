@@ -1,54 +1,73 @@
 //
-//  RoomOverviewView.swift
+//  ProjectOverviewView.swift
 //  Wrangle
 //
 
 import SwiftUI
 import SwiftData
 
-/// Per-room overview tab showing active sessions, open tabs, and project info.
-struct RoomOverviewView: View {
-    let roomID: String
+/// Per-project overview tab showing active sessions, open tabs, and project info.
+struct ProjectOverviewView: View {
+    let projectID: String
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
-    @Query(sort: \Room.displayOrder) private var rooms: [Room]
+    @Query(sort: \Project.displayOrder) private var projects: [Project]
 
+    @Query private var allTodos: [TodoItem]
     @State private var showTerminalPicker = false
     @State private var showNewMenu = false
     @State private var activeLocationMenuID: String?
     @State private var pendingLaunchClaude = false
     @State private var pendingLaunchGemini = false
     @State private var pendingDangerousMode = false
+    @State private var newTodoTitle = ""
+    @State private var showCompleted = false
+    @FocusState private var isAddTodoFocused: Bool
+    @State private var locationBranches: [String: (branch: String?, changes: Int?)] = [:]
+    @State private var gitRefreshTask: Task<Void, Never>?
 
-    private var room: Room? {
-        rooms.first { $0.id == roomID }
+    private var project: Project? {
+        projects.first { $0.id == projectID }
     }
 
-    private var roomBookmarks: [BookmarkedDirectory] {
-        bookmarks.filter { $0.roomID == roomID && !$0.isFile }
+    private var projectBookmarks: [BookmarkedDirectory] {
+        bookmarks.filter { $0.projectID == projectID && !$0.isFile }
     }
 
-    private var roomTabs: [WorkspaceTab] {
-        appState.tabs.filter { $0.roomID == roomID && !$0.isRoomOverview }
+    private var projectTodos: [TodoItem] {
+        allTodos.filter { $0.projectID == projectID }
+    }
+
+    private var incompleteTodos: [TodoItem] {
+        projectTodos.filter { !$0.isCompleted }.sorted { $0.displayOrder < $1.displayOrder }
+    }
+
+    private var completedTodos: [TodoItem] {
+        projectTodos.filter { $0.isCompleted }.sorted { ($0.dateCompleted ?? .distantPast) > ($1.dateCompleted ?? .distantPast) }
+    }
+
+    private var projectTabs: [WorkspaceTab] {
+        appState.tabs.filter { $0.projectID == projectID && !$0.isProjectOverview }
     }
 
     private var terminalSessions: [WorkspaceTab] {
-        roomTabs.filter(\.isTerminal)
+        projectTabs.filter(\.isTerminal)
     }
 
     private var browserTabs: [WorkspaceTab] {
-        roomTabs.filter(\.isBrowser)
+        projectTabs.filter(\.isBrowser)
     }
 
     private var documentTabs: [WorkspaceTab] {
-        roomTabs.filter { $0.document != nil }
+        projectTabs.filter { $0.document != nil }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
+                todosSection
                 if !terminalSessions.isEmpty { sessionsSection }
                 if !browserTabs.isEmpty { browsersSection }
                 if !documentTabs.isEmpty { documentsSection }
@@ -58,11 +77,16 @@ struct RoomOverviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color(nsColor: Theme.chromeBackground))
+        .onTapGesture {
+            isAddTodoFocused = false
+        }
+        .onAppear { startGitPolling() }
+        .onDisappear { gitRefreshTask?.cancel() }
         .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
             TerminalDirectoryPicker(
                 launchClaude: pendingLaunchClaude,
                 launchGemini: pendingLaunchGemini,
-                roomID: roomID
+                projectID: projectID
             ) { name, url, bookmarkID in
                 appState.openTerminal(
                     projectName: name,
@@ -81,7 +105,7 @@ struct RoomOverviewView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(room?.name ?? "Project")
+                Text(project?.name ?? "Project")
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
@@ -91,9 +115,10 @@ struct RoomOverviewView: View {
             // Stats
             HStack(spacing: 16) {
                 statBadge(count: terminalSessions.count, label: "terminals", icon: "terminal", color: .mint)
-                statBadge(count: browserTabs.count, label: "browsers", icon: "globe", color: .blue)
-                statBadge(count: documentTabs.count, label: "files", icon: "doc.text", color: .secondary)
-                statBadge(count: roomBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
+                statBadge(count: projectBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
+                if !projectTodos.isEmpty {
+                    todoStatBadge
+                }
             }
         }
     }
@@ -109,30 +134,13 @@ struct RoomOverviewView: View {
                 .padding(.vertical, 5)
                 .background {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(nsColor: .controlAccentColor))
+                        .fill(project.flatMap { Color(hex: $0.colorHex) } ?? .accentColor)
                 }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .popover(isPresented: $showNewMenu, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 0) {
-                popoverButton("Terminal", icon: "terminal", color: .mint) {
-                    showNewMenu = false
-                    launchInRoom(claude: false, gemini: false)
-                }
-                popoverButton("Claude Code Session", icon: "brain.head.profile", color: .orange) {
-                    showNewMenu = false
-                    launchInRoom(claude: true, gemini: false)
-                }
-                popoverButton("Gemini Code Session", icon: "sparkles", color: .blue) {
-                    showNewMenu = false
-                    launchInRoom(claude: false, gemini: true)
-                }
-                Divider().padding(.vertical, 4)
-                popoverButton("Browser", icon: "globe", color: .blue) {
-                    showNewMenu = false
-                    appState.openBrowser()
-                }
                 popoverButton("Scratch Pad", icon: "note.text", color: .yellow) {
                     showNewMenu = false
                     appState.newScratchPad()
@@ -183,6 +191,94 @@ struct RoomOverviewView: View {
         }
     }
 
+    private var todoStatBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "checkmark.circle")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text("\(completedTodos.count)/\(projectTodos.count)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+            Text("todos")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Todos
+
+    private var todosSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Todos")
+                .font(.headline)
+                .foregroundStyle(.secondary)
+
+            // Add new todo
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .foregroundStyle(.secondary)
+                    .font(.body)
+                TextField("Add a todo...", text: $newTodoTitle)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .focused($isAddTodoFocused)
+                    .onSubmit { addTodo() }
+            }
+            .padding(10)
+            .background {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: Theme.sidebarBackground).opacity(0.5))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.white.opacity(0.04), lineWidth: 1)
+            }
+
+            // Incomplete todos
+            ForEach(incompleteTodos, id: \.id) { todo in
+                TodoRowView(todo: todo)
+            }
+
+            // Completed section
+            if !completedTodos.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        showCompleted.toggle()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.right")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .rotationEffect(.degrees(showCompleted ? 90 : 0))
+                            Text("\(completedTodos.count) completed")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    if showCompleted {
+                        ForEach(completedTodos, id: \.id) { todo in
+                            TodoRowView(todo: todo)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.bottom, 8)
+    }
+
+    private func addTodo() {
+        let title = newTodoTitle.trimmingCharacters(in: .whitespaces)
+        guard !title.isEmpty else { return }
+        let maxOrder = incompleteTodos.map(\.displayOrder).max() ?? -1
+        let todo = TodoItem(title: title, projectID: projectID, displayOrder: maxOrder + 1)
+        modelContext.insert(todo)
+        try? modelContext.save()
+        newTodoTitle = ""
+    }
+
     // MARK: - Sessions
 
     private var sessionsSection: some View {
@@ -226,12 +322,21 @@ struct RoomOverviewView: View {
                             .fontWeight(.medium)
                             .lineLimit(1)
                         HStack(spacing: 6) {
-                            Circle()
-                                .fill(session.isRunning ? .green : .gray)
-                                .frame(width: 6, height: 6)
-                            Text(session.isRunning ? "Running" : "Stopped")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            if session.needsAttention {
+                                Circle()
+                                    .fill(.yellow)
+                                    .frame(width: 6, height: 6)
+                                Text("Waiting for input")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else if !(session.isClaude || session.isGemini) {
+                                Circle()
+                                    .fill(session.isRunning ? .green : .gray)
+                                    .frame(width: 6, height: 6)
+                                Text(session.isRunning ? "Active" : "Stopped")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             if let subtitle = session.displaySubtitle {
                                 Text(subtitle)
                                     .font(.caption)
@@ -345,22 +450,24 @@ struct RoomOverviewView: View {
 
     private var locationsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(spacing: 6) {
                 Text("Locations")
                     .font(.headline)
                     .foregroundStyle(.secondary)
-                Spacer()
+
                 Button {
                     addLocation()
                 } label: {
-                    Label("Add Location", systemImage: "plus")
+                    Image(systemName: "plus")
                         .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+
+                Spacer()
             }
 
-            if roomBookmarks.isEmpty {
+            if projectBookmarks.isEmpty {
                 HStack(spacing: 8) {
                     Image(systemName: "folder.badge.plus")
                         .font(.title3)
@@ -372,7 +479,7 @@ struct RoomOverviewView: View {
                 .padding(16)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
-                    ForEach(roomBookmarks) { bookmark in
+                    ForEach(projectBookmarks) { bookmark in
                         locationCard(bookmark)
                     }
                 }
@@ -383,6 +490,7 @@ struct RoomOverviewView: View {
     private func locationCard(_ bookmark: BookmarkedDirectory) -> some View {
         let bid = bookmark.persistentModelID.hashValue.description
         return Button {
+            appState.selectedBookmarkID = bid
             activeLocationMenuID = bid
         } label: {
             HStack(spacing: 12) {
@@ -405,6 +513,24 @@ struct RoomOverviewView: View {
                 }
 
                 Spacer()
+
+                if let info = locationBranches[bid] {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.branch")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            Text(info.branch ?? "—")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        if let count = info.changes, count > 0 {
+                            Text("\(count) changes")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
             }
             .modifier(CardStyle())
             .contentShape(Rectangle())
@@ -448,13 +574,42 @@ struct RoomOverviewView: View {
         }
     }
 
+    // MARK: - Git Info
+
+    private func startGitPolling() {
+        gitRefreshTask?.cancel()
+        gitRefreshTask = Task {
+            while !Task.isCancelled {
+                await fetchLocationBranches()
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
+    }
+
+    private func fetchLocationBranches() async {
+        for bookmark in projectBookmarks {
+            guard !Task.isCancelled else { return }
+            guard let url = bookmark.resolveURL() else { continue }
+            let bid = bookmark.persistentModelID.hashValue.description
+            let path = url.path(percentEncoded: false)
+            let result = await Task.detached {
+                let branch = try? shellOutput("git -C \"\(path)\" rev-parse --abbrev-ref HEAD 2>/dev/null")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let status = try? shellOutput("git -C \"\(path)\" status --porcelain 2>/dev/null")
+                let changes = status?.components(separatedBy: "\n").filter { !$0.isEmpty }.count
+                return (branch: branch, changes: changes)
+            }.value
+            locationBranches[bid] = result
+        }
+    }
+
     // MARK: - Actions
 
-    private func launchInRoom(claude: Bool, gemini: Bool) {
+    private func launchInProject(claude: Bool, gemini: Bool) {
         pendingLaunchClaude = claude
         pendingLaunchGemini = gemini
         pendingDangerousMode = false
-        if roomBookmarks.count == 1, let bookmark = roomBookmarks.first,
+        if projectBookmarks.count == 1, let bookmark = projectBookmarks.first,
            let url = bookmark.resolveURL() {
             let bookmarkID = bookmark.persistentModelID.hashValue.description
             appState.openTerminal(projectName: bookmark.name, directory: url, bookmarkID: bookmarkID, launchClaude: claude, launchGemini: gemini)
@@ -509,7 +664,7 @@ struct RoomOverviewView: View {
                 displayOrder: maxOrder + 1,
                 isFile: false
             )
-            bookmark.roomID = roomID
+            bookmark.projectID = projectID
             modelContext.insert(bookmark)
             try? modelContext.save()
             appState.selectedBookmarkID = bookmark.persistentModelID.hashValue.description

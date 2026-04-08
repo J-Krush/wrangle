@@ -6,11 +6,11 @@ struct ScratchPadSection: View {
     @State private var renameText: String = ""
 
     private var visiblePads: [ScratchPadItem] {
-        if let roomID = appState.selectedRoomID {
-            return appState.scratchPadManager.scratchPads(forRoom: roomID)
+        if let projectID = appState.selectedProjectID {
+            return appState.scratchPadManager.scratchPads(forProject: projectID)
         }
-        // Show unscoped (legacy) pads when no room is selected
-        return appState.scratchPadManager.scratchPads.filter { $0.roomID == nil }
+        // Show unscoped (legacy) pads when no project is selected
+        return appState.scratchPadManager.scratchPads.filter { $0.projectID == nil }
     }
 
     var body: some View {

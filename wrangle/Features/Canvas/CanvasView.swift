@@ -234,7 +234,7 @@ struct CanvasView: View {
                 name: bookmark.displayName,
                 url: bookmark.resolveURL(),
                 bookmarkID: bookmarkID,
-                roomID: bookmark.roomID,
+                projectID: bookmark.projectID,
                 terminalSessions: sessions,
                 agentStatus: agentStatus,
                 lastActivity: bookmark.dateAdded
@@ -243,13 +243,15 @@ struct CanvasView: View {
     }
 
     private func resolveAgentStatus(_ sessions: [TerminalSession]) -> AgentStatus {
-        for session in sessions {
-            if (session.isClaude || session.isGemini) && session.isRunning {
-                if session.needsAttention {
-                    return .waiting
-                }
-                return .running(0)
-            }
+        let agentSessions = sessions.filter { ($0.isClaude || $0.isGemini) && $0.isRunning }
+        let waitingCount = agentSessions.filter(\.needsAttention).count
+        let runningCount = agentSessions.count - waitingCount
+
+        if runningCount > 0 {
+            return .running(count: runningCount + waitingCount)
+        }
+        if waitingCount > 0 {
+            return .waiting(count: waitingCount)
         }
         if sessions.contains(where: \.isRunning) {
             return .idle
@@ -283,7 +285,7 @@ struct CanvasView: View {
 
     private func navigateToProject(_ project: ProjectInfo) {
         appState.selectedBookmarkID = project.bookmarkID
-        appState.selectedRoomID = project.roomID
+        appState.selectedProjectID = project.projectID
         appState.viewMode = .editor
     }
 }
