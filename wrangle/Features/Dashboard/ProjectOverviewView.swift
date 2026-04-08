@@ -14,7 +14,8 @@ struct ProjectOverviewView: View {
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
     @Query(sort: \Project.displayOrder) private var projects: [Project]
 
-    @Query private var allTodos: [TodoItem]
+    @Query private var incompleteTodos: [TodoItem]
+    @Query private var completedTodos: [TodoItem]
     @State private var showTerminalPicker = false
     @State private var showNewMenu = false
     @State private var activeLocationMenuID: String?
@@ -27,24 +28,29 @@ struct ProjectOverviewView: View {
     @State private var locationBranches: [String: (branch: String?, changes: Int?)] = [:]
     @State private var gitRefreshTask: Task<Void, Never>?
 
+    init(projectID: String) {
+        self.projectID = projectID
+        _incompleteTodos = Query(
+            filter: #Predicate<TodoItem> { todo in
+                todo.projectID == projectID && !todo.isCompleted
+            },
+            sort: \TodoItem.displayOrder
+        )
+        _completedTodos = Query(
+            filter: #Predicate<TodoItem> { todo in
+                todo.projectID == projectID && todo.isCompleted
+            },
+            sort: \TodoItem.dateCompleted,
+            order: .reverse
+        )
+    }
+
     private var project: Project? {
         projects.first { $0.id == projectID }
     }
 
     private var projectBookmarks: [BookmarkedDirectory] {
         bookmarks.filter { $0.projectID == projectID && !$0.isFile }
-    }
-
-    private var projectTodos: [TodoItem] {
-        allTodos.filter { $0.projectID == projectID }
-    }
-
-    private var incompleteTodos: [TodoItem] {
-        projectTodos.filter { !$0.isCompleted }.sorted { $0.displayOrder < $1.displayOrder }
-    }
-
-    private var completedTodos: [TodoItem] {
-        projectTodos.filter { $0.isCompleted }.sorted { ($0.dateCompleted ?? .distantPast) > ($1.dateCompleted ?? .distantPast) }
     }
 
     private var projectTabs: [WorkspaceTab] {
@@ -116,7 +122,7 @@ struct ProjectOverviewView: View {
             HStack(spacing: 16) {
                 statBadge(count: terminalSessions.count, label: "terminals", icon: "terminal", color: .mint)
                 statBadge(count: projectBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
-                if !projectTodos.isEmpty {
+                if !(incompleteTodos.isEmpty && completedTodos.isEmpty) {
                     todoStatBadge
                 }
             }
@@ -196,7 +202,7 @@ struct ProjectOverviewView: View {
             Image(systemName: "checkmark.circle")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text("\(completedTodos.count)/\(projectTodos.count)")
+            Text("\(completedTodos.count)/\(incompleteTodos.count + completedTodos.count)")
                 .font(.subheadline)
                 .fontWeight(.medium)
             Text("todos")
@@ -275,7 +281,6 @@ struct ProjectOverviewView: View {
         let maxOrder = incompleteTodos.map(\.displayOrder).max() ?? -1
         let todo = TodoItem(title: title, projectID: projectID, displayOrder: maxOrder + 1)
         modelContext.insert(todo)
-        try? modelContext.save()
         newTodoTitle = ""
     }
 

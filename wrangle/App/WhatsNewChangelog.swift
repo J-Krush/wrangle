@@ -20,7 +20,7 @@ enum ChangeCategory: String {
 enum WhatsNewChangelog {
     static let entries: [ChangelogEntry] = [
         ChangelogEntry(
-            version: "1.1.0",
+            version: "1.1.1",
             date: "April 8, 2026",
             sections: [
                 ChangelogSection(category: .new, items: [

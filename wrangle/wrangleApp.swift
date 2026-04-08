@@ -58,6 +58,9 @@ struct WrangleApp: App {
         }
     }
 
+    // Bump when SwiftData schema changes to force store recreation
+    private static let currentSchemaVersion = 2
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             BookmarkedDirectory.self,
@@ -68,10 +71,20 @@ struct WrangleApp: App {
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
+        let schemaKey = "wrangleSchemaVersion"
+        if UserDefaults.standard.integer(forKey: schemaKey) < currentSchemaVersion {
+            let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
+            for suffix in ["", "-shm", "-wal"] {
+                let fileURL = storeURL.deletingLastPathComponent().appending(path: "default.store\(suffix)")
+                try? FileManager.default.removeItem(at: fileURL)
+            }
+            UserDefaults.standard.set(currentSchemaVersion, forKey: schemaKey)
+        }
+
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            // Store is corrupted or schema changed — delete and recreate
+            // Store is corrupted — delete and recreate
             let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
             for suffix in ["", "-shm", "-wal"] {
                 let fileURL = storeURL.deletingLastPathComponent().appending(path: "default.store\(suffix)")
