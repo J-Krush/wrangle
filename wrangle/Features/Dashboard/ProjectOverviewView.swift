@@ -110,7 +110,7 @@ struct ProjectOverviewView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 Text(project?.name ?? "Project")
                     .font(.largeTitle)
                     .fontWeight(.bold)
@@ -465,7 +465,7 @@ struct ProjectOverviewView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
 

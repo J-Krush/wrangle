@@ -17,35 +17,31 @@ struct LocationSessionRow: View {
                 appState.selectTab(at: index)
             }
         } label: {
-            HStack(spacing: 6) {
-                if !(session.isClaude || session.isGemini) {
-                    Group {
-                        if session.isCustomIcon {
-                            Image(session.iconName)
-                                .resizable()
-                                .renderingMode(.template)
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 14, height: 14)
-                                .foregroundStyle(isActive ? session.iconColor : Color.secondary)
-                        } else {
-                            Image(systemName: session.iconName)
-                                .font(.caption2)
-                                .foregroundStyle(isActive ? session.iconColor : Color.secondary)
-                        }
-                    }
-                    .frame(width: 18, alignment: .center)
-                }
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(session.displayTitle)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    if let subtitle = session.emulatorSubtitle {
-                        Text(subtitle)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+            HStack {
+                Label {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(session.displayTitle)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                        if let subtitle = session.emulatorSubtitle {
+                            Text(subtitle)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                } icon: {
+                    if session.isCustomIcon {
+                        Image(session.iconName)
+                            .resizable()
+                            .renderingMode(.template)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 14, height: 14)
+                            .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                    } else {
+                        Image(systemName: session.iconName)
+                            .foregroundStyle(isActive ? session.iconColor : Color.secondary)
                     }
                 }
 
@@ -63,7 +59,7 @@ struct LocationSessionRow: View {
         }
         .buttonStyle(.plain)
         .help(session.displaySubtitle ?? session.displayTitle)
-        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 4))
         .listRowBackground(
             HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: 1.5)

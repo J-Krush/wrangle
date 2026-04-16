@@ -327,16 +327,13 @@ struct FileTreeNodeView: View {
     // MARK: - Node Label
 
     private var nodeLabel: some View {
-        HStack(spacing: 5) {
-            Image(systemName: node.icon)
-                .font(.system(size: 13))
-                .frame(width: 16, height: 16, alignment: .center)
-                .foregroundStyle(node.iconColor)
+        Label {
             Text(node.name)
-                .font(.system(size: 12))
                 .lineLimit(1)
                 .truncationMode(.middle)
-            Spacer()
+        } icon: {
+            Image(systemName: node.icon)
+                .foregroundStyle(node.iconColor)
         }
     }
 

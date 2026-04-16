@@ -35,10 +35,11 @@ struct SidebarView: View {
                     ScrollViewReader { scrollProxy in
                         List {
                             if let projectID = appState.selectedProjectID {
-                                // Section("Intents") {
-                                //     IntentListView(projectID: projectID)
-                                // }
-                                // .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+                                overviewRow(projectID: projectID)
+                                    .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 2, trailing: 4))
+                                    .listRowBackground(
+                                        Theme.sidebarSelectionBackground(isSelected: appState.activeTab?.projectOverviewID == projectID)
+                                    )
 
                                 BrowserSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
@@ -293,6 +294,28 @@ struct SidebarView: View {
                 .padding(8)
         )
         .allowsHitTesting(false)
+    }
+
+    // MARK: - Overview Row
+
+    private func overviewRow(projectID: String) -> some View {
+        let isActive = appState.activeTab?.projectOverviewID == projectID
+        return Button {
+            if let index = appState.tabs.firstIndex(where: { $0.projectOverviewID == projectID }) {
+                appState.selectTab(at: index)
+            }
+        } label: {
+            Label {
+                Text("Overview")
+                    .lineLimit(1)
+            } icon: {
+                Image(systemName: "square.grid.2x2")
+                    .foregroundStyle(.gray)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions

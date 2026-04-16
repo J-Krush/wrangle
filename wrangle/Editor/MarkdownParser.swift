@@ -304,6 +304,16 @@ final class MarkdownParser: @unchecked Sendable {
                 attrStr.addAttribute(.paragraphStyle, value: dataStyle, range: dataRange)
             }
 
+            // Add spacing after the table to prevent overlap with the next element.
+            // This must be OUTSIDE the table range so the card background doesn't grow.
+            let afterTable = NSMaxRange(range)
+            if afterTable < attrStr.length {
+                let afterLineRange = nsString.lineRange(for: NSRange(location: afterTable, length: 0))
+                let afterStyle = baseParagraphStyle(theme: theme)
+                afterStyle.paragraphSpacingBefore = 20
+                attrStr.addAttribute(.paragraphStyle, value: afterStyle, range: afterLineRange)
+            }
+
             // Mark pipe characters for replacement in writing mode
             if shouldHideMarkdownSyntax {
                 markPipeCharacters(in: attrStr, range: headerRange)
