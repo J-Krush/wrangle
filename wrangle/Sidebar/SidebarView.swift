@@ -191,9 +191,9 @@ struct SidebarView: View {
                     Button("New Scratch Pad") {
                         appState.newScratchPad()
                     }
-                    // Button("New Browser") {
-                    //     appState.openBrowser()
-                    // }
+                    Button("New Browser") {
+                        appState.openBrowser()
+                    }
                     Divider()
                     Button("Add Location...") {
                         addLocation()

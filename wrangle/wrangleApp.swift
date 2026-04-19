@@ -215,6 +215,12 @@ struct WrangleApp: App {
                 .keyboardShortcut("`", modifiers: .command)
                 .disabled(focusedAppState == nil)
 
+                Button("New Browser") {
+                    focusedAppState?.openBrowser()
+                }
+                .keyboardShortcut("b", modifiers: [.command, .option])
+                .disabled(focusedAppState == nil)
+
                 Button("New Window") {
                     openNewWindow()
                 }

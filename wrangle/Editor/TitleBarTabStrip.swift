@@ -139,9 +139,9 @@ struct TitleBarTabStrip: View {
                 Button("New Scratch Pad") {
                     appState.newScratchPad()
                 }
-                // Button("New Browser") {
-                //     appState.openBrowser()
-                // }
+                Button("New Browser") {
+                    appState.openBrowser()
+                }
                 Divider()
                 Button("New Terminal") {
                     pendingLaunchClaude = false
