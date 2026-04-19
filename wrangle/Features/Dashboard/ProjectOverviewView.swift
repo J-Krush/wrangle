@@ -155,6 +155,10 @@ struct ProjectOverviewView: View {
                     showNewMenu = false
                     appState.newDocument()
                 }
+                popoverButton("Browser", icon: "globe", color: .blue) {
+                    showNewMenu = false
+                    appState.openBrowser()
+                }
                 Divider().padding(.vertical, 4)
                 popoverButton("Location...", icon: "folder.badge.plus", color: .gray) {
                     showNewMenu = false
