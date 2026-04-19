@@ -25,9 +25,8 @@ struct LocationBrowserRow: View {
                     .truncationMode(.tail)
                     .foregroundStyle(isActive ? .primary : .secondary)
             } icon: {
-                Image(systemName: "globe")
-                    .foregroundStyle(.blue)
-                    .font(.system(size: 11))
+                Image(systemName: session.iconName)
+                    .foregroundStyle(session.iconColor)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())

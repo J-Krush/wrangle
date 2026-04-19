@@ -13,6 +13,7 @@ struct ProjectOverviewView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BookmarkedDirectory.displayOrder) private var bookmarks: [BookmarkedDirectory]
     @Query(sort: \Project.displayOrder) private var projects: [Project]
+    @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var browserBookmarks: [BrowserBookmark]
 
     @Query private var incompleteTodos: [TodoItem]
     @Query private var completedTodos: [TodoItem]
@@ -69,6 +70,10 @@ struct ProjectOverviewView: View {
         projectTabs.filter { $0.document != nil }
     }
 
+    private var projectBrowserBookmarks: [BrowserBookmark] {
+        browserBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -77,6 +82,7 @@ struct ProjectOverviewView: View {
                 if !terminalSessions.isEmpty { sessionsSection }
                 if !browserTabs.isEmpty { browsersSection }
                 if !documentTabs.isEmpty { documentsSection }
+                bookmarksSection
                 locationsSection
             }
             .padding(32)
@@ -122,6 +128,7 @@ struct ProjectOverviewView: View {
             HStack(spacing: 16) {
                 statBadge(count: terminalSessions.count, label: "terminals", icon: "terminal", color: .mint)
                 statBadge(count: browserTabs.count, label: browserTabs.count == 1 ? "browser" : "browsers", icon: "globe", color: .blue)
+                statBadge(count: projectBrowserBookmarks.count, label: "bookmarks", icon: "star.fill", color: .yellow)
                 statBadge(count: projectBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
                 if !(incompleteTodos.isEmpty && completedTodos.isEmpty) {
                     todoStatBadge
@@ -373,6 +380,103 @@ struct ProjectOverviewView: View {
             Button("Go To") { navigateToTab(tab) }
             Divider()
             Button("Close") { closeTab(tab) }
+        }
+    }
+
+    // MARK: - Bookmarks
+
+    private var bookmarksSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Bookmarks")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    appState.showBookmarkImport = true
+                } label: {
+                    Label("Import...", systemImage: "square.and.arrow.down")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+            }
+
+            if projectBrowserBookmarks.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "star")
+                        .font(.title3)
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 32)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("No bookmarks yet")
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                        Text("Star a page in the browser or import from another browser.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Spacer()
+                }
+                .modifier(CardStyle())
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                    ForEach(projectBrowserBookmarks.prefix(12), id: \.id) { bookmark in
+                        Button {
+                            guard let url = bookmark.url else { return }
+                            appState.openBrowser(url: url)
+                        } label: {
+                            HStack(spacing: 12) {
+                                if let data = bookmark.faviconData, let image = NSImage(data: data) {
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .frame(width: 20, height: 20)
+                                        .frame(width: 32)
+                                } else {
+                                    Image(systemName: "globe")
+                                        .font(.title3)
+                                        .foregroundStyle(.blue)
+                                        .frame(width: 32)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(bookmark.title.isEmpty
+                                        ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
+                                        : bookmark.title)
+                                        .font(.body)
+                                        .lineLimit(1)
+                                    Text(URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                            }
+                            .modifier(CardStyle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(bookmark.urlString)
+                        .contextMenu {
+                            Button("Open") {
+                                if let url = bookmark.url { appState.openBrowser(url: url) }
+                            }
+                            Button("Copy URL") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(bookmark.urlString, forType: .string)
+                            }
+                            Divider()
+                            Button("Delete", role: .destructive) {
+                                let store = BookmarkStore(context: modelContext)
+                                store.remove(bookmark)
+                            }
+                        }
+                    }
+                }
+
+                if projectBrowserBookmarks.count > 12 {
+                    Text("Showing 12 of \(projectBrowserBookmarks.count). Use the sidebar for the full list.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
         }
     }
 

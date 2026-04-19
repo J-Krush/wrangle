@@ -54,7 +54,7 @@ struct SidebarView: View {
                                 BookmarkSidebarSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
-                                Section("Locations") {
+                                Section {
                                     ProjectBookmarkListView(
                                         projectID: projectID,
                                         scrollProxy: scrollProxy,
@@ -64,6 +64,23 @@ struct SidebarView: View {
                                         showActiveSessionsOnly: appState.showActiveSessionsOnly,
                                         onAddLocation: addLocation
                                     )
+                                } header: {
+                                    HStack {
+                                        Text("Locations")
+                                        Spacer()
+                                        Menu {
+                                            Button("Add Location...") { addLocation() }
+                                        } label: {
+                                            Image(systemName: "ellipsis")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(.secondary)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .menuStyle(.borderlessButton)
+                                        .menuIndicator(.hidden)
+                                        .fixedSize()
+                                        .help("Location actions")
+                                    }
                                 }
                                 .id(projectID)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))

@@ -63,24 +63,9 @@ struct BookmarkSidebarSection: View {
 
     @ViewBuilder
     private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("No bookmarks yet")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-            Text("Open a page and tap the star button to save it, or import from another browser.")
-                .font(.system(size: 10))
-                .foregroundStyle(.tertiary)
-                .fixedSize(horizontal: false, vertical: true)
-            Button {
-                appState.showBookmarkImport = true
-            } label: {
-                Label("Import Bookmarks...", systemImage: "square.and.arrow.down")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.borderless)
-            .controlSize(.small)
-        }
-        .padding(.vertical, 2)
+        Text("No bookmarks yet")
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -127,23 +112,21 @@ private struct BookmarkRow: View {
         Button {
             openInActive()
         } label: {
-            HStack(spacing: 6) {
+            Label {
+                Text(bookmark.title.isEmpty ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString) : bookmark.title)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            } icon: {
                 if let favicon {
                     Image(nsImage: favicon)
                         .resizable()
                         .frame(width: 13, height: 13)
                 } else {
                     Image(systemName: "globe")
-                        .font(.system(size: 11))
                         .foregroundStyle(.secondary)
-                        .frame(width: 13)
                 }
-                Text(bookmark.title.isEmpty ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString) : bookmark.title)
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

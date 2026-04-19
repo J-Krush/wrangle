@@ -58,20 +58,27 @@ final class ImportedFolder: Identifiable {
     }
 
     /// Recursive total count of bookmarks in this subtree (selection-aware).
+    /// Unlike selection cascading, count descends into children regardless of
+    /// the parent's own selection — a child folder can be selected even when
+    /// its ancestor is not.
     func totalBookmarkCount(selectedOnly: Bool = false) -> Int {
-        if selectedOnly && !isSelected { return 0 }
-        var count = bookmarks.count
+        var count = (selectedOnly && !isSelected) ? 0 : bookmarks.count
         for child in children {
             count += child.totalBookmarkCount(selectedOnly: selectedOnly)
         }
         return count
     }
 
-    /// Flatten into ImportedBookmark list, filtering by current selection tree.
+    /// Flatten into ImportedBookmark list, respecting per-folder selection.
+    /// A folder contributes its own bookmarks only when `isSelected`, but we
+    /// always descend into children so a checked subfolder still imports
+    /// when its parent is unchecked.
     func flattenSelected(pathPrefix: [String] = []) -> [ImportedBookmark] {
-        guard isSelected else { return [] }
         let path = pathPrefix + [name]
-        var result = bookmarks.map { ImportedBookmark(title: $0.title, url: $0.url, folderPath: path) }
+        var result: [ImportedBookmark] = []
+        if isSelected {
+            result = bookmarks.map { ImportedBookmark(title: $0.title, url: $0.url, folderPath: path) }
+        }
         for child in children {
             result.append(contentsOf: child.flattenSelected(pathPrefix: path))
         }
