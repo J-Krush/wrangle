@@ -8,13 +8,24 @@ import SwiftData
 
 struct NewBookmarkSheet: View {
     let projectID: String?
+    let prefillURL: String
+    let prefillTitle: String
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    @State private var title: String = ""
-    @State private var urlString: String = ""
+    @State private var title: String
+    @State private var urlString: String
     @State private var folderID: String?
     @State private var folders: [BrowserBookmarkFolder] = []
     @FocusState private var titleFocused: Bool
+    @FocusState private var urlFocused: Bool
+
+    init(projectID: String?, prefillURL: String = "", prefillTitle: String = "") {
+        self.projectID = projectID
+        self.prefillURL = prefillURL
+        self.prefillTitle = prefillTitle
+        _title = State(initialValue: prefillTitle)
+        _urlString = State(initialValue: prefillURL)
+    }
 
     private var resolvedURL: URL? {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -45,6 +56,7 @@ struct NewBookmarkSheet: View {
                 TextField("https://example.com", text: $urlString)
                     .textFieldStyle(.roundedBorder)
                     .font(.system(size: 12, design: .monospaced))
+                    .focused($urlFocused)
                     .onSubmit { save() }
             }
 
@@ -71,7 +83,11 @@ struct NewBookmarkSheet: View {
         .frame(width: 420)
         .onAppear {
             loadFolders()
-            titleFocused = true
+            if !prefillTitle.isEmpty {
+                urlFocused = true       // title already filled; land cursor in URL
+            } else {
+                titleFocused = true     // existing behavior
+            }
         }
     }
 
