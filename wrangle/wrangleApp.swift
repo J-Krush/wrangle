@@ -59,7 +59,7 @@ struct WrangleApp: App {
     }
 
     // Bump when SwiftData schema changes to force store recreation
-    private static let currentSchemaVersion = 2
+    private static let currentSchemaVersion = 3
 
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -68,6 +68,8 @@ struct WrangleApp: App {
             Project.self,
             Intent.self,
             TodoItem.self,
+            BrowserBookmark.self,
+            BrowserBookmarkFolder.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

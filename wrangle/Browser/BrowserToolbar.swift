@@ -72,6 +72,9 @@ struct BrowserToolbar: View {
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
+            // Star (bookmark)
+            StarButton(session: session)
+
             // DevTools toggle
             Button {
                 session.isDevToolsVisible.toggle()

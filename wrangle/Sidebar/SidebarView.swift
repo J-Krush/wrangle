@@ -51,6 +51,9 @@ struct SidebarView: View {
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                                 }
 
+                                BookmarkSidebarSection()
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+
                                 Section("Locations") {
                                     ProjectBookmarkListView(
                                         projectID: projectID,
