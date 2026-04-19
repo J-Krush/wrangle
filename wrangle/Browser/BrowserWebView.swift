@@ -30,9 +30,10 @@ struct BrowserWebView: NSViewRepresentable {
     let session: BrowserSession
     var isActive: Bool = false
     var modelContext: ModelContext? = nil
+    weak var appState: AppState? = nil
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(session: session, modelContext: modelContext)
+        Coordinator(session: session, modelContext: modelContext, appState: appState)
     }
 
     func makeNSView(context: Context) -> BrowserContainerView {
@@ -88,9 +89,11 @@ struct BrowserWebView: NSViewRepresentable {
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, BrowserController {
         let session: BrowserSession
         let modelContext: ModelContext?
+        weak var appState: AppState?
         weak var container: BrowserContainerView?
         private var webViews: [UUID: WKWebView] = [:]
         private var observations: [UUID: [NSKeyValueObservation]] = [:]
+        private var appearanceObservation: NSKeyValueObservation?
 
         /// JavaScript injected to capture console output
         private static let consoleScript: String = """
@@ -171,10 +174,23 @@ struct BrowserWebView: NSViewRepresentable {
         })();
         """
 
-        init(session: BrowserSession, modelContext: ModelContext?) {
+        init(session: BrowserSession, modelContext: ModelContext?, appState: AppState?) {
             self.session = session
             self.modelContext = modelContext
+            self.appState = appState
             super.init()
+
+            // Keep every managed webview in sync with the app's current
+            // appearance whenever macOS or the user toggles dark mode.
+            appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    let appearance = NSApp.effectiveAppearance
+                    for webView in self.webViews.values {
+                        webView.appearance = appearance
+                    }
+                }
+            }
         }
 
         // MARK: - WebView Lifecycle
@@ -223,6 +239,11 @@ struct BrowserWebView: NSViewRepresentable {
             if let customUA = BrowserUserAgent.resolved() {
                 webView.customUserAgent = customUA
             }
+
+            // Match the app's current appearance so web content picks up the
+            // `prefers-color-scheme` media query correctly (dark mode in-app →
+            // dark mode web content for sites that honor the hint).
+            webView.appearance = NSApp.effectiveAppearance
 
             // Set up KVO observations
             let obs = setupObservations(for: webView, tab: tab)
@@ -282,6 +303,8 @@ struct BrowserWebView: NSViewRepresentable {
             observations.removeAll()
             webViews.values.forEach { $0.removeFromSuperview() }
             webViews.removeAll()
+            appearanceObservation?.invalidate()
+            appearanceObservation = nil
         }
 
         // MARK: - Navigation Execution
@@ -437,10 +460,12 @@ struct BrowserWebView: NSViewRepresentable {
 
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                      for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            // Open target=_blank links in a new internal tab
+            // Open target=_blank links as a new workspace-level browser tab,
+            // inheriting the private/non-private mode of this session.
             if let url = navigationAction.request.url {
-                Task { @MainActor in
-                    session.addTab(url: url)
+                let isPrivate = session.isPrivate
+                Task { @MainActor [weak self] in
+                    self?.appState?.openBrowser(url: url, isPrivate: isPrivate)
                 }
             }
             return nil

@@ -26,12 +26,6 @@ struct BrowserTabContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Internal tab bar (only show if multiple tabs)
-            if session.tabs.count > 1 {
-                BrowserInternalTabBar(session: session)
-                Divider()
-            }
-
             // Toolbar with address bar
             BrowserToolbar(session: session)
             Divider()
@@ -51,7 +45,7 @@ struct BrowserTabContentView: View {
 
             // WebView with optional New Tab overlay
             ZStack {
-                BrowserWebView(session: session, isActive: isActive, modelContext: modelContext)
+                BrowserWebView(session: session, isActive: isActive, modelContext: modelContext, appState: appState)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 if showsNewTabPage {
@@ -157,13 +151,10 @@ private final class KeyHandler {
             toggleFind()
             return nil
         case "t":
-            session.addTab()
+            appState.openBrowser(isPrivate: session.isPrivate)
             return nil
         case "w":
-            if session.tabs.count > 1 {
-                session.closeTab(at: session.activeTabIndex)
-                return nil
-            }
+            // Close the workspace tab. Falls through to global Cmd+W.
             return event
         case "[":
             if session.activeTab?.canGoBack == true {

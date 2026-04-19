@@ -112,16 +112,6 @@ struct BrowserToolbar: View {
             }
             .buttonStyle(.plain)
             .help("Toggle Developer Tools")
-
-            // New tab
-            Button {
-                session.addTab()
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .medium))
-            }
-            .buttonStyle(.plain)
-            .help("New Tab")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
