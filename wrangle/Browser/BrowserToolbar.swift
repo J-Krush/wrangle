@@ -95,6 +95,9 @@ struct BrowserToolbar: View {
             // Star (bookmark)
             StarButton(session: session)
 
+            // Downloads
+            DownloadsPopoverButton()
+
             // DevTools toggle
             Button {
                 session.isDevToolsVisible.toggle()

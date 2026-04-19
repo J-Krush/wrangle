@@ -302,6 +302,24 @@ struct BrowserWebView: NSViewRepresentable {
             .allow
         }
 
+        func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse) async -> WKNavigationResponsePolicy {
+            // Divert non-renderable MIME types (e.g., .zip, .dmg) into downloads.
+            if !navigationResponse.canShowMIMEType {
+                return .download
+            }
+            return .allow
+        }
+
+        func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+            DownloadManager.shared.modelContext = modelContext
+            DownloadManager.shared.begin(download, suggestedURL: navigationAction.request.url)
+        }
+
+        func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+            DownloadManager.shared.modelContext = modelContext
+            DownloadManager.shared.begin(download, suggestedURL: navigationResponse.response.url)
+        }
+
         nonisolated func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
             // Capture server trust for padlock display, then let the system do default evaluation.
             if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,

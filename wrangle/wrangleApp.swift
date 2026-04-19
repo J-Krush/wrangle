@@ -71,6 +71,7 @@ struct WrangleApp: App {
             BrowserBookmark.self,
             BrowserBookmarkFolder.self,
             BrowsingHistoryEntry.self,
+            BrowserDownloadRecord.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
