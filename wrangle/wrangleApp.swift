@@ -236,6 +236,11 @@ struct WrangleApp: App {
                 .keyboardShortcut("o")
                 .disabled(focusedAppState == nil)
 
+                Button("Import Bookmarks...") {
+                    focusedAppState?.showBookmarkImport = true
+                }
+                .disabled(focusedAppState == nil)
+
                 Menu("Open Recent") {
                     let context = sharedModelContainer.mainContext
                     let descriptor = FetchDescriptor<RecentFile>(

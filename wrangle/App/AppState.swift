@@ -56,6 +56,7 @@ class AppState {
     var projectExpandedBookmarks: [String: Set<String>] = [:]
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
+    var showBookmarkImport: Bool = false
     var searchQuery: String = ""
     var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing

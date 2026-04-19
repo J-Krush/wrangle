@@ -128,6 +128,10 @@ struct ContentView: View {
                 Color(nsColor: Theme.chromeBackground),
                 ignoresSafeAreaEdges: .all
             )
+            .sheet(isPresented: $appState.showBookmarkImport) {
+                BookmarkImportSheet()
+                    .environment(appState)
+            }
             .alert(
                 "Close Terminal?",
                 isPresented: Binding(
