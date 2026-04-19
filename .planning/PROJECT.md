@@ -21,6 +21,7 @@ Every surface — editor, terminal, file tree, browser — serves a developer dr
 - Downloads with `WKDownloadDelegate`, progress popover, and persistence.
 - Private / incognito tabs using `WKWebsiteDataStore.nonPersistent()`.
 - Dev-tools keyboard shortcuts (Cmd+Option+I/J/C) targeting the in-app panel.
+- **Pre-release UX polish pass (Phases 10–12):** collapse scattered creation affordances into two unified `+` menus (sidebar + overview); hide empty sections; nest browser bookmarks under Browsers; normalize section-header chrome.
 
 ## Requirements
 
@@ -57,6 +58,7 @@ v1.2 Browser Support — requirements detailed in `.planning/REQUIREMENTS.md`. S
 - [ ] **BW-01…04** — Browsing history (auto-record, grouped view, clear actions, URL suggestions).
 - [ ] **BD-01…05** — Downloads (WKDownloadDelegate, progress popover, persistence).
 - [ ] **BP-01…04** — Private / incognito mode (non-persistent data store, visual distinction).
+- [ ] **UIX-01…23** — Interaction polish pass: unified `+` menus, hide-when-empty sections, bookmarks nested under Browsers, section-header parity. (Phases 10–12.)
 
 ### Out of Scope
 
@@ -116,4 +118,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-04-19 at milestone v1.2 kickoff*
+*Last updated: 2026-04-19 — UIX polish phases (10–12) appended to v1.2*

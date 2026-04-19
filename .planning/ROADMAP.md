@@ -6,7 +6,7 @@
 
 ## Overview
 
-v1.2 re-exposes and hardens Wrangle's embedded browser. Phase 1 unblocks everything by restoring "New Browser" entry points in `+`/File menus. Phases 2–4 harden the existing WKWebView wrapper (find-in-page, tab shortcuts, favicon cache, New Tab page, dev-tools shortcuts, security indicators, user-agent). Phases 5–6 deliver bookmarks (local SwiftData + star button, then import from Safari/Brave/Chrome/Firefox). Phases 7–9 complete the "real browser" feel with browsing history, downloads, and private / incognito mode.
+v1.2 re-exposes and hardens Wrangle's embedded browser. Phase 1 unblocks everything by restoring "New Browser" entry points in `+`/File menus. Phases 2–4 harden the existing WKWebView wrapper (find-in-page, tab shortcuts, favicon cache, New Tab page, dev-tools shortcuts, security indicators, user-agent). Phases 5–6 deliver bookmarks (local SwiftData + star button, then import from Safari/Brave/Chrome/Firefox). Phases 7–9 complete the "real browser" feel with browsing history, downloads, and private / incognito mode. Phases 10–12 are a pre-release UX polish pass: collapse the five scattered creation affordances into two unified `+` menus, hide empty sections, nest browser bookmarks inside the Browsers section, and normalize section-header chrome.
 
 ## Phases
 
@@ -25,6 +25,9 @@ Decimal phases appear between their surrounding integers in numeric order. v1.2 
 - [ ] **Phase 7: Browsing History** — Auto-recording, grouped view, clear actions, URL-bar suggestions.
 - [ ] **Phase 8: Downloads** — WKDownloadDelegate, progress popover, `BrowserDownloadRecord` persistence.
 - [ ] **Phase 9: Private / Incognito Mode** — `WKWebsiteDataStore.nonPersistent()`, visual distinction, history suppression.
+- [ ] **Phase 10: Unified Creation Pattern** — Collapse 5 scattered add affordances into two unified `+` menus (sidebar bottom-bar + overview header); remove `New` pill.
+- [ ] **Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers** — Sections disappear when empty; top-level Bookmarks folds into Browsers as a sub-section in both sidebar and overview.
+- [ ] **Phase 12: Section Parity & Polish** — Canonical `SidebarSectionHeader` treatment, Scratch Pad rename/delete parity with Bookmarks, consistent `@AppStorage` expansion keys.
 
 ## Phase Details
 
@@ -167,10 +170,56 @@ Plans:
 Plans:
 - [ ] 09-01: Thread `isPrivate` through `BrowserSession` → `BrowserWebView.Coordinator`, set `nonPersistent()` data store, add visual distinctions and entry point.
 
+### Phase 10: Unified Creation Pattern
+**Goal**: Two — and only two — `+` menus exist in the app: the sidebar bottom-bar `+` and the Project Overview header `+`. Every per-section `…` / `+` / `Import…` affordance is removed. The blue `New` pill is replaced by a single `+` IconButton.
+**Depends on**: Phases 1–9 (entire browser surface shipped; polish pass runs over real content).
+**Requirements**: UIX-01, UIX-02, UIX-03, UIX-04, UIX-05
+**Success Criteria** (what must be TRUE):
+  1. User looking at a project sees exactly two `+` buttons on the main workspace: one at the sidebar bottom, one in the Project Overview header. No other `+`, `…`, or `Import…` buttons appear on section headers.
+  2. User clicks the sidebar `+` and sees Scratch Pad, Browser, Bookmark (enabled only when a browser tab is focused), Terminal…, Location…, File…, Import Bookmarks….
+  3. User clicks the overview `+` and sees the identical menu (same items, same order).
+  4. User looking at the Project Overview no longer sees a blue `New` pill beside the project title; the `+` button sits in its place with consistent visual weight to the sidebar `+`.
+  5. Existing keyboard shortcuts (File → New …, Cmd+Option+B, etc.) continue to work unchanged.
+**Plans**: TBD (expected: 2 plans — (a) unify the `+` menu content in a shared model, (b) remove per-section / per-card chrome).
+
+Plans:
+- [ ] 10-01: Shared `UnifiedAddMenu` view + consolidate sidebar `+` and overview `+` against it. Replace `New` pill with `+` IconButton.
+- [ ] 10-02: Remove `…` menus on `SidebarSectionHeader`, inline `Import…` / `+` on Project Overview Bookmarks + Locations cards. Route those actions through the unified menu.
+
+### Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers
+**Goal**: Sidebar and overview show only non-empty sections. Browser bookmarks live inside Browsers, not as a top-level peer. Discovery moves to the `+` menu.
+**Depends on**: Phase 10 (unified `+` must exist before empty-state fallback rows are removed).
+**Requirements**: UIX-10, UIX-11, UIX-12, UIX-13, UIX-14, UIX-15
+**Success Criteria** (what must be TRUE):
+  1. A fresh project with no content shows no Scratch Pads, Browsers, Bookmarks, or Locations sections in the sidebar — just the Overview row and the `+` bottom bar.
+  2. A fresh project's Overview page shows a single centered empty state with a "Press + to add your first…" message; no empty section cards are rendered.
+  3. Creating a first Browser tab makes the Browsers section appear in the sidebar; creating a first bookmark from that browser makes a `Bookmarks (n)` sub-section appear nested under Browsers — not as a top-level section.
+  4. Deleting the last item in any section removes the section from the sidebar and overview on the next render tick.
+  5. Project Overview's Bookmarks card is visually grouped with Browsers (either nested inside or stacked immediately below with shared chrome) and collapses/expands independently.
+**Plans**: TBD (expected: 2 plans — (a) sidebar hide-when-empty + nesting, (b) overview hide-when-empty + card regrouping).
+
+Plans:
+- [ ] 11-01: Sidebar — hide-when-empty logic for Scratch Pads, Browsers, Locations; remove top-level `BookmarkSidebarSection`, inline it under `BrowserSessionsSection` as a collapsible child.
+- [ ] 11-02: Project Overview — hide empty section cards; introduce project-level empty hero; regroup bookmarks card under browsers card.
+
+### Phase 12: Section Parity & Polish
+**Goal**: Remaining visual + interaction parity across section types — canonical header styling, Scratch Pad CRUD parity, and consistent expansion-state persistence.
+**Depends on**: Phase 11 (section structure settled before visual normalization).
+**Requirements**: UIX-20, UIX-21, UIX-22, UIX-23
+**Success Criteria** (what must be TRUE):
+  1. Every sidebar section header (Browsers, Bookmarks-within-Browsers, Locations, Scratch Pads, Orphaned Sessions) uses the same `SidebarSectionHeader` and looks pixel-identical (font, color, chevron, row height) across the four sections.
+  2. User can rename a Scratch Pad row by pressing Return, and delete via Delete key or context menu — matching the Bookmarks row affordances already present in the codebase.
+  3. Toggling collapse/expand on any section persists across app relaunch; all expansion-state keys follow the `sidebar.<section>.expanded` convention.
+  4. No section ever renders both a header row AND an inline empty-state row simultaneously (contradicts UIX-10…13).
+**Plans**: TBD (expected: 1 plan).
+
+Plans:
+- [ ] 12-01: Canonicalize `SidebarSectionHeader` usage; Scratch Pad row rename/delete; `@AppStorage` key audit; assert no residual empty-state rows survive.
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9. Phases 2, 3, 4, 8 are independent of each other and can be parallelized after Phase 1. Phase 6 requires Phase 5. Phase 9 requires Phase 7.
+Phases 1 → 9 execute in numeric order (browser core; already shipped per STATE.md). Phases 10 → 11 → 12 are the polish pass and execute strictly sequentially after 9. Phases 2, 3, 4, 8 are independent of each other and can be parallelized after Phase 1. Phase 6 requires Phase 5. Phase 9 requires Phase 7. Phase 11 requires Phase 10. Phase 12 requires Phase 11.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -183,3 +232,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | 7. Browsing History | 0/2 | Not started | - |
 | 8. Downloads | 0/2 | Not started | - |
 | 9. Private / Incognito Mode | 0/1 | Not started | - |
+| 10. Unified Creation Pattern | 0/2 | Not started | - |
+| 11. Hide-When-Empty + Bookmarks Nested | 0/2 | Not started | - |
+| 12. Section Parity & Polish | 0/1 | Not started | - |

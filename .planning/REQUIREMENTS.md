@@ -78,6 +78,34 @@ Requirements for the v1.2 Browser Support milestone. Each maps to exactly one ro
 - [ ] **BP-03**: Private tabs are visually distinct (purple accent on tab chrome, "Private" label in URL bar, Private glyph on workspace tab).
 - [ ] **BP-04**: Private sessions do not record history (BW-01); explicit bookmark actions still save, tagged "from private".
 
+### UIX — Interaction Polish (v1.2 UX pass)
+
+A consistency pass across sidebar + Project Overview. Collapses five scattered creation affordances into two unified '+' menus, hides empty sections, nests browser bookmarks under Browsers, and normalizes section-header chrome.
+
+**UIX-01…05 — Unified creation pattern**
+
+- [ ] **UIX-01**: Sidebar bottom-bar `+` is the sole creation entry point in the sidebar chrome; its menu exposes every creatable type: Scratch Pad, Browser, Bookmark (current page, only when a browser tab is focused), Terminal…, Location…, File…, Import Bookmarks….
+- [ ] **UIX-02**: Project Overview header `+` is the sole creation entry point in the overview; its menu content and ordering match UIX-01.
+- [ ] **UIX-03**: All sidebar section headers (Browsers, Locations, Scratch Pads, Orphaned Sessions, and any Bookmarks subsection) are navigation-only — no `+`, `…`, or inline `Import…` buttons remain on section headers.
+- [ ] **UIX-04**: Project Overview section cards show no inline `+`, `…`, or `Import…` buttons on card headers; the overview header `+` is the sole add entry in the overview.
+- [ ] **UIX-05**: The blue "New" pill beside the Project title in `ProjectOverviewView.header` is removed; creation from the Overview header uses a single `+` IconButton whose visual treatment matches the sidebar `+`.
+
+**UIX-10…15 — Hide-when-empty + Bookmarks nested under Browsers**
+
+- [ ] **UIX-10**: Sidebar Scratch Pads section renders only when the active project has ≥1 scratch pad.
+- [ ] **UIX-11**: Sidebar Browsers section renders only when the active project has ≥1 open browser tab OR ≥1 browser bookmark.
+- [ ] **UIX-12**: Sidebar Locations section renders only when the active project has ≥1 location.
+- [ ] **UIX-13**: The sidebar top-level "Bookmarks" section is removed; browser bookmarks render as a collapsible sub-section inside Browsers, which renders only when ≥1 bookmark exists for the active project.
+- [ ] **UIX-14**: Project Overview hides empty section cards entirely; a single overview-level empty state ("Press + to add your first Scratch Pad, Browser, Bookmark, or Location.") replaces per-section empty rows.
+- [ ] **UIX-15**: Project Overview Bookmarks card is visually nested under (or directly adjacent to) the Browsers card, mirroring the sidebar hierarchy, using the existing `CollapsibleVStackSection` pattern.
+
+**UIX-20…23 — Section parity + polish**
+
+- [ ] **UIX-20**: All sidebar section headers use a single `SidebarSectionHeader` treatment (font size, foreground color, chevron size, row height, horizontal insets) — no per-section visual overrides remain.
+- [ ] **UIX-21**: Scratch Pads rows support the same rename (Return) and delete (Delete / context-menu) affordances already available on Bookmarks rows.
+- [ ] **UIX-22**: Expansion state for every collapsible sidebar section (Scratch Pads, Browsers, Bookmarks-within-Browsers, Locations) is persisted via `@AppStorage` using the `sidebar.<section>.expanded` key convention.
+- [ ] **UIX-23**: No section renders both a header row and an inline empty-state row — sections either hide (when empty, per UIX-10…13) or show their contents with no empty-state placeholder row.
+
 ## Future Requirements (v1.3+)
 
 Deferred from v1.2 — acknowledged, not in current roadmap.
@@ -164,13 +192,28 @@ Mapping of each requirement to its roadmap phase. Updated during roadmap creatio
 | BP-02 | Phase 9 | Pending |
 | BP-03 | Phase 9 | Pending |
 | BP-04 | Phase 9 | Pending |
+| UIX-01 | Phase 10 | Pending |
+| UIX-02 | Phase 10 | Pending |
+| UIX-03 | Phase 10 | Pending |
+| UIX-04 | Phase 10 | Pending |
+| UIX-05 | Phase 10 | Pending |
+| UIX-10 | Phase 11 | Pending |
+| UIX-11 | Phase 11 | Pending |
+| UIX-12 | Phase 11 | Pending |
+| UIX-13 | Phase 11 | Pending |
+| UIX-14 | Phase 11 | Pending |
+| UIX-15 | Phase 11 | Pending |
+| UIX-20 | Phase 12 | Pending |
+| UIX-21 | Phase 12 | Pending |
+| UIX-22 | Phase 12 | Pending |
+| UIX-23 | Phase 12 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 42 total
-- Mapped to phases: 42
+- v1.2 requirements: 57 total (42 browser core + 15 UX polish)
+- Mapped to phases: 57
 - Unmapped: 0 ✓
 
 ---
 
 *Requirements defined: 2026-04-19*
-*Last updated: 2026-04-19 after milestone v1.2 kickoff*
+*Last updated: 2026-04-19 — UIX polish category added (Phases 10–12)*
