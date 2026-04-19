@@ -207,6 +207,12 @@ struct BrowserWebView: NSViewRepresentable {
 
             config.userContentController = userContent
 
+            // Private/incognito: use a non-persistent data store so cookies,
+            // cache, and localStorage are discarded at session teardown.
+            if session.isPrivate {
+                config.websiteDataStore = .nonPersistent()
+            }
+
             let webView = WKWebView(frame: .zero, configuration: config)
             webView.navigationDelegate = self
             webView.uiDelegate = self

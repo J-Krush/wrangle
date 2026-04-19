@@ -685,14 +685,15 @@ class AppState {
 
     // MARK: - Browser Methods
 
-    func openBrowser(url: URL? = nil, bookmarkID: String? = nil) {
+    func openBrowser(url: URL? = nil, bookmarkID: String? = nil, isPrivate: Bool = false) {
         viewMode = .editor
 
         let session = BrowserSession(
             url: url,
             bookmarkID: bookmarkID ?? selectedBookmarkID,
             intentID: activeIntentID,
-            projectID: selectedProjectID
+            projectID: selectedProjectID,
+            isPrivate: isPrivate
         )
 
         let tab = WorkspaceTab(content: .browser(session))

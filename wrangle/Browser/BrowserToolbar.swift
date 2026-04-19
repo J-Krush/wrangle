@@ -14,6 +14,10 @@ struct BrowserToolbar: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            if session.isPrivate {
+                privateBadge
+            }
+
             // Back
             Button {
                 session.activeTab?.pendingNavigation = .goBack
@@ -121,6 +125,20 @@ struct BrowserToolbar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
+    }
+
+    private var privateBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "theatermasks.fill")
+                .font(.system(size: 10))
+            Text("Private")
+                .font(.system(size: 10, weight: .medium))
+        }
+        .foregroundStyle(Color.purple)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 2)
+        .background(Color.purple.opacity(0.15), in: Capsule())
+        .help("Private session — no cookies, history, or cache persisted.")
     }
 
     private func navigateToInput() {

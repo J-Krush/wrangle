@@ -55,8 +55,8 @@ class BrowserSession: Identifiable {
         return activeTab?.displayTitle ?? "Browser"
     }
 
-    var iconName: String { "globe" }
-    var iconColor: Color { .blue }
+    var iconName: String { isPrivate ? "theatermasks.fill" : "globe" }
+    var iconColor: Color { isPrivate ? .purple : .blue }
 
     // MARK: - Tab Management
 
