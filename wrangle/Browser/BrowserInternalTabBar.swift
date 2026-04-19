@@ -99,6 +99,7 @@ private struct BrowserInternalTabItem: View {
                 Text(tab.displayTitle)
                     .font(.system(size: 11))
                     .lineLimit(1)
+                    .truncationMode(.tail)
                     .frame(maxWidth: 120)
 
                 // Loading indicator
@@ -129,5 +130,6 @@ private struct BrowserInternalTabItem: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
+        .help(tab.url?.absoluteString ?? tab.displayTitle)
     }
 }

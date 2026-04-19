@@ -48,26 +48,29 @@ struct BrowserToolbar: View {
             .buttonStyle(.plain)
             .help(session.activeTab?.isLoading == true ? "Stop" : "Reload")
 
-            // URL field
-            TextField("Enter URL or search", text: $urlText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12, design: .monospaced))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .focused($isURLFieldFocused)
-                .onSubmit {
-                    navigateToInput()
-                }
-                .onChange(of: session.activeTab?.url) { _, newURL in
-                    if !isURLFieldFocused {
-                        urlText = newURL?.absoluteString ?? ""
+            // URL field with leading padlock
+            HStack(spacing: 6) {
+                PadlockView(session: session)
+                TextField("Enter URL or search", text: $urlText)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12, design: .monospaced))
+                    .focused($isURLFieldFocused)
+                    .onSubmit {
+                        navigateToInput()
                     }
-                }
-                .onAppear {
-                    urlText = session.activeTab?.url?.absoluteString ?? ""
-                }
+                    .onChange(of: session.activeTab?.url) { _, newURL in
+                        if !isURLFieldFocused {
+                            urlText = newURL?.absoluteString ?? ""
+                        }
+                    }
+                    .onAppear {
+                        urlText = session.activeTab?.url?.absoluteString ?? ""
+                    }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
 
             // DevTools toggle
             Button {

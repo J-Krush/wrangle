@@ -8,6 +8,8 @@ struct GeneralSettingsView: View {
     @AppStorage("autoSaveEnabled") private var autoSaveEnabled: Bool = false
     @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = false
     @AppStorage("showHiddenFiles") private var showHiddenFiles: Bool = false
+    @AppStorage(BrowserUserAgent.modeDefaultsKey) private var userAgentModeRaw: String = BrowserUserAgentMode.safari.rawValue
+    @AppStorage(BrowserUserAgent.customValueDefaultsKey) private var customUserAgent: String = ""
 
     var body: some View {
         @Bindable var coordinator = coordinator
@@ -43,6 +45,22 @@ struct GeneralSettingsView: View {
 
             Section("Title Bar") {
                 Toggle("Show System Metrics", isOn: $showSystemMetrics)
+            }
+
+            Section("Browser") {
+                Picker("User Agent", selection: $userAgentModeRaw) {
+                    ForEach(BrowserUserAgentMode.allCases) { mode in
+                        Text(mode.label).tag(mode.rawValue)
+                    }
+                }
+                if userAgentModeRaw == BrowserUserAgentMode.custom.rawValue {
+                    TextField("Custom User Agent", text: $customUserAgent)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 11, design: .monospaced))
+                }
+                Text("Applies to new browser tabs. Existing tabs keep their current agent until they reload.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Updates") {

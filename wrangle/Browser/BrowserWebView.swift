@@ -210,6 +210,9 @@ struct BrowserWebView: NSViewRepresentable {
             if #available(macOS 13.3, *) {
                 webView.isInspectable = true
             }
+            if let customUA = BrowserUserAgent.resolved() {
+                webView.customUserAgent = customUA
+            }
 
             // Set up KVO observations
             let obs = setupObservations(for: webView, tab: tab)
@@ -295,8 +298,59 @@ struct BrowserWebView: NSViewRepresentable {
             .allow
         }
 
+        nonisolated func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+            // Capture server trust for padlock display, then let the system do default evaluation.
+            if challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+               let trust = challenge.protectionSpace.serverTrust {
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
+                    if let tab = self.tab(for: webView) {
+                        tab.serverTrust = trust
+                    }
+                }
+            }
+            return (.performDefaultHandling, nil)
+        }
+
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            // Reset security state at the start of a new navigation.
+            guard let tab = tab(for: webView) else { return }
+            tab.serverTrust = nil
+            if let url = webView.url ?? (navigation.value(forKey: "request") as? URLRequest)?.url {
+                tab.securityState = Self.securityState(for: url, trust: nil)
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
+            guard let tab = tab(for: webView) else { return }
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain,
+               (nsError.code == NSURLErrorServerCertificateUntrusted
+                || nsError.code == NSURLErrorServerCertificateHasBadDate
+                || nsError.code == NSURLErrorServerCertificateNotYetValid
+                || nsError.code == NSURLErrorServerCertificateHasUnknownRoot
+                || nsError.code == NSURLErrorSecureConnectionFailed) {
+                tab.securityState = .invalid
+            }
+        }
+
+        static func securityState(for url: URL, trust: SecTrust?) -> SecurityState {
+            let scheme = url.scheme?.lowercased()
+            switch scheme {
+            case "https": return .secure
+            case "http": return .insecure
+            case "file", "about": return .fileLocal
+            default: return .unknown
+            }
+        }
+
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             guard let tab = tab(for: webView) else { return }
+
+            // Update security state from the finished URL (may have redirected).
+            if let url = webView.url {
+                tab.securityState = Self.securityState(for: url, trust: tab.serverTrust)
+            }
 
             // Use cached favicon immediately if we already have one for this host.
             if let pageURL = webView.url, let cached = FaviconCache.shared.cached(for: pageURL) {
