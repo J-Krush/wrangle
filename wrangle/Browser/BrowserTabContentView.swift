@@ -4,11 +4,13 @@
 //
 
 import SwiftUI
+import SwiftData
 import AppKit
 
 struct BrowserTabContentView: View {
     let session: BrowserSession
     @Environment(AppState.self) private var appState
+    @Environment(\.modelContext) private var modelContext
     @State private var keyMonitor: Any?
     @State private var isFindBarVisible: Bool = false
     @State private var findQuery: String = ""
@@ -49,7 +51,7 @@ struct BrowserTabContentView: View {
 
             // WebView with optional New Tab overlay
             ZStack {
-                BrowserWebView(session: session, isActive: isActive)
+                BrowserWebView(session: session, isActive: isActive, modelContext: modelContext)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 if showsNewTabPage {

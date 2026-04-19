@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import SwiftData
 import WebKit
 
 // MARK: - Weak Script Message Handler
@@ -28,9 +29,10 @@ private class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
 struct BrowserWebView: NSViewRepresentable {
     let session: BrowserSession
     var isActive: Bool = false
+    var modelContext: ModelContext? = nil
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(session: session)
+        Coordinator(session: session, modelContext: modelContext)
     }
 
     func makeNSView(context: Context) -> BrowserContainerView {
@@ -85,6 +87,7 @@ struct BrowserWebView: NSViewRepresentable {
 
     class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, BrowserController {
         let session: BrowserSession
+        let modelContext: ModelContext?
         weak var container: BrowserContainerView?
         private var webViews: [UUID: WKWebView] = [:]
         private var observations: [UUID: [NSKeyValueObservation]] = [:]
@@ -168,8 +171,9 @@ struct BrowserWebView: NSViewRepresentable {
         })();
         """
 
-        init(session: BrowserSession) {
+        init(session: BrowserSession, modelContext: ModelContext?) {
             self.session = session
+            self.modelContext = modelContext
             super.init()
         }
 
@@ -350,6 +354,20 @@ struct BrowserWebView: NSViewRepresentable {
             // Update security state from the finished URL (may have redirected).
             if let url = webView.url {
                 tab.securityState = Self.securityState(for: url, trust: tab.serverTrust)
+            }
+
+            // Record to history unless this is a private session.
+            if !session.isPrivate, let url = webView.url, let context = modelContext {
+                let store = HistoryStore(context: context)
+                let snapshotTitle = tab.title
+                let snapshotFavicon = tab.favicon
+                let snapshotProjectID = session.projectID
+                store.record(
+                    url: url,
+                    title: snapshotTitle,
+                    favicon: snapshotFavicon,
+                    projectID: snapshotProjectID
+                )
             }
 
             // Use cached favicon immediately if we already have one for this host.

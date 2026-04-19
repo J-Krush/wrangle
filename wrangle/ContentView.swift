@@ -132,6 +132,10 @@ struct ContentView: View {
                 BookmarkImportSheet()
                     .environment(appState)
             }
+            .sheet(isPresented: $appState.showBrowserHistory) {
+                HistoryView()
+                    .environment(appState)
+            }
             .alert(
                 "Close Terminal?",
                 isPresented: Binding(

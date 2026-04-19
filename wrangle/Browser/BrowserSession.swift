@@ -27,16 +27,20 @@ class BrowserSession: Identifiable {
     var isDevToolsVisible: Bool = false
     var devToolsHeight: CGFloat = 250
     var activeDevTool: DevToolType = .console
+    /// Private/incognito session — uses a non-persistent data store and skips
+    /// history recording. Wired up in Phase 9.
+    var isPrivate: Bool = false
 
     /// Set by the BrowserWebView Coordinator
     weak var controller: BrowserController?
 
-    init(url: URL? = nil, bookmarkID: String? = nil, intentID: String? = nil, projectID: String? = nil) {
+    init(url: URL? = nil, bookmarkID: String? = nil, intentID: String? = nil, projectID: String? = nil, isPrivate: Bool = false) {
         let initialTab = BrowserTab(url: url)
         self.tabs = [initialTab]
         self.bookmarkID = bookmarkID
         self.intentID = intentID
         self.projectID = projectID
+        self.isPrivate = isPrivate
     }
 
     // MARK: - Computed Properties

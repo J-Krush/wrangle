@@ -70,6 +70,7 @@ struct WrangleApp: App {
             TodoItem.self,
             BrowserBookmark.self,
             BrowserBookmarkFolder.self,
+            BrowsingHistoryEntry.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -239,6 +240,12 @@ struct WrangleApp: App {
                 Button("Import Bookmarks...") {
                     focusedAppState?.showBookmarkImport = true
                 }
+                .disabled(focusedAppState == nil)
+
+                Button("Show History") {
+                    focusedAppState?.showBrowserHistory = true
+                }
+                .keyboardShortcut("y", modifiers: .command)
                 .disabled(focusedAppState == nil)
 
                 Menu("Open Recent") {

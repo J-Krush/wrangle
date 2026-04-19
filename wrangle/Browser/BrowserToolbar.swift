@@ -7,7 +7,9 @@ import SwiftUI
 
 struct BrowserToolbar: View {
     let session: BrowserSession
+    @Environment(AppState.self) private var appState
     @State private var urlText: String = ""
+    @State private var showSuggestions: Bool = false
     @FocusState private var isURLFieldFocused: Bool
 
     var body: some View {
@@ -56,12 +58,19 @@ struct BrowserToolbar: View {
                     .font(.system(size: 12, design: .monospaced))
                     .focused($isURLFieldFocused)
                     .onSubmit {
+                        showSuggestions = false
                         navigateToInput()
                     }
                     .onChange(of: session.activeTab?.url) { _, newURL in
                         if !isURLFieldFocused {
                             urlText = newURL?.absoluteString ?? ""
                         }
+                    }
+                    .onChange(of: urlText) { _, _ in
+                        if isURLFieldFocused { showSuggestions = true }
+                    }
+                    .onChange(of: isURLFieldFocused) { _, focused in
+                        showSuggestions = focused
                     }
                     .onAppear {
                         urlText = session.activeTab?.url?.absoluteString ?? ""
@@ -71,6 +80,17 @@ struct BrowserToolbar: View {
             .padding(.vertical, 4)
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 6))
+            .popover(isPresented: $showSuggestions, arrowEdge: .top) {
+                URLSuggestionPopover(
+                    query: urlText,
+                    projectID: appState.selectedProjectID,
+                    onChoose: { url in
+                        urlText = url.absoluteString
+                        showSuggestions = false
+                        session.activeTab?.pendingNavigation = .load(url)
+                    }
+                )
+            }
 
             // Star (bookmark)
             StarButton(session: session)

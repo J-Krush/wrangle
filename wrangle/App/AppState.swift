@@ -57,6 +57,7 @@ class AppState {
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
     var showBookmarkImport: Bool = false
+    var showBrowserHistory: Bool = false
     var searchQuery: String = ""
     var detailAreaLeading: CGFloat = 240
     var editingMode: EditingMode = .writing
