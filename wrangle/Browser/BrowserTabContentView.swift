@@ -121,8 +121,34 @@ private final class KeyHandler {
         guard appState.activeTab?.browserSession?.id == session.id else { return event }
 
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard mods == .command else { return event }
+        let cmd: NSEvent.ModifierFlags = .command
+        let cmdOpt: NSEvent.ModifierFlags = [.command, .option]
         let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+        if mods == cmdOpt {
+            switch key {
+            case "i":
+                session.isDevToolsVisible.toggle()
+                return nil
+            case "j":
+                session.isDevToolsVisible = true
+                session.activeDevTool = .console
+                return nil
+            case "c":
+                session.isDevToolsVisible = true
+                session.activeDevTool = .elements
+                NotificationCenter.default.post(
+                    name: .browserRequestElementPick,
+                    object: nil,
+                    userInfo: ["sessionID": session.id.uuidString]
+                )
+                return nil
+            default:
+                return event
+            }
+        }
+
+        guard mods == cmd else { return event }
 
         switch key {
         case "f":
@@ -153,4 +179,10 @@ private final class KeyHandler {
             return event
         }
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let browserRequestElementPick = Notification.Name("browserRequestElementPick")
 }

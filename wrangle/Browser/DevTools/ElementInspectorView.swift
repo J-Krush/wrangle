@@ -227,6 +227,13 @@ struct ElementInspectorView: View {
         .onReceive(NotificationCenter.default.publisher(for: .browserElementEvent)) { notification in
             handleElementEvent(notification.userInfo as? [String: Any] ?? [:])
         }
+        .onReceive(NotificationCenter.default.publisher(for: .browserRequestElementPick)) { notification in
+            let requestedID = notification.userInfo?["sessionID"] as? String
+            guard requestedID == nil || requestedID == session.id.uuidString else { return }
+            if !isSelectMode {
+                toggleSelectMode()
+            }
+        }
     }
 
     private func toggleSelectMode() {
