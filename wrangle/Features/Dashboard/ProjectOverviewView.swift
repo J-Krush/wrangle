@@ -121,6 +121,7 @@ struct ProjectOverviewView: View {
             // Stats
             HStack(spacing: 16) {
                 statBadge(count: terminalSessions.count, label: "terminals", icon: "terminal", color: .mint)
+                statBadge(count: browserTabs.count, label: browserTabs.count == 1 ? "browser" : "browsers", icon: "globe", color: .blue)
                 statBadge(count: projectBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
                 if !(incompleteTodos.isEmpty && completedTodos.isEmpty) {
                     todoStatBadge
