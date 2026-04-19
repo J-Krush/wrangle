@@ -40,11 +40,8 @@ struct BookmarksPopoverButton: View {
     }
 
     private func navigate(to url: URL) {
-        if let session = appState.activeTab?.browserSession {
-            session.activeTab?.pendingNavigation = .load(url)
-        } else {
-            appState.openBrowser(url: url)
-        }
+        // Default: open in a new workspace browser tab.
+        appState.openBrowser(url: url)
     }
 }
 

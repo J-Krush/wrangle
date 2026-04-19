@@ -70,26 +70,110 @@ struct BookmarkSidebarSection: View {
 
     @ViewBuilder
     private var content: some View {
-        // Unfiled first, then each folder in order
-        let grouped = Dictionary(grouping: visibleBookmarks) { $0.folderID }
-        let unfiled = grouped[nil] ?? []
+        let bookmarksByFolder = Dictionary(grouping: visibleBookmarks) { $0.folderID }
+        let childFoldersByParent = Dictionary(grouping: visibleFolders) { $0.parentFolderID }
 
-        if !unfiled.isEmpty {
+        // Unfiled bookmarks first, rendered inline
+        if let unfiled = bookmarksByFolder[nil], !unfiled.isEmpty {
             ForEach(unfiled, id: \.id) { bookmark in
                 BookmarkRow(bookmark: bookmark, edit: { editing = $0 })
             }
         }
 
-        ForEach(visibleFolders, id: \.id) { folder in
-            if let bookmarksInFolder = grouped[folder.id], !bookmarksInFolder.isEmpty {
-                DisclosureGroup(folder.name) {
-                    ForEach(bookmarksInFolder, id: \.id) { bookmark in
-                        BookmarkRow(bookmark: bookmark, edit: { editing = $0 })
-                    }
-                }
-                .font(.system(size: 11, weight: .medium))
+        // Top-level folders, each may recurse
+        let topLevelFolders = (childFoldersByParent[nil] ?? []).filter { folder in
+            folderHasAnyBookmarks(folder,
+                                  childFoldersByParent: childFoldersByParent,
+                                  bookmarksByFolder: bookmarksByFolder)
+        }
+        ForEach(topLevelFolders, id: \.id) { folder in
+            BookmarkFolderNode(
+                folder: folder,
+                childFoldersByParent: childFoldersByParent,
+                bookmarksByFolder: bookmarksByFolder,
+                onEdit: { editing = $0 }
+            )
+        }
+    }
+
+    private func folderHasAnyBookmarks(
+        _ folder: BrowserBookmarkFolder,
+        childFoldersByParent: [String?: [BrowserBookmarkFolder]],
+        bookmarksByFolder: [String?: [BrowserBookmark]]
+    ) -> Bool {
+        if !(bookmarksByFolder[folder.id]?.isEmpty ?? true) { return true }
+        for child in childFoldersByParent[folder.id] ?? [] {
+            if folderHasAnyBookmarks(child,
+                                     childFoldersByParent: childFoldersByParent,
+                                     bookmarksByFolder: bookmarksByFolder) {
+                return true
             }
         }
+        return false
+    }
+}
+
+// MARK: - Folder Node (recursive)
+
+private struct BookmarkFolderNode: View {
+    let folder: BrowserBookmarkFolder
+    let childFoldersByParent: [String?: [BrowserBookmarkFolder]]
+    let bookmarksByFolder: [String?: [BrowserBookmark]]
+    let onEdit: (BrowserBookmark) -> Void
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var isExpanded: Bool = false
+
+    private var directBookmarks: [BrowserBookmark] {
+        bookmarksByFolder[folder.id] ?? []
+    }
+
+    private var childFolders: [BrowserBookmarkFolder] {
+        (childFoldersByParent[folder.id] ?? []).filter { child in
+            !(bookmarksByFolder[child.id]?.isEmpty ?? true)
+                || !(childFoldersByParent[child.id]?.isEmpty ?? true)
+        }
+    }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            ForEach(directBookmarks, id: \.id) { bookmark in
+                BookmarkRow(bookmark: bookmark, edit: onEdit)
+            }
+            ForEach(childFolders, id: \.id) { child in
+                BookmarkFolderNode(
+                    folder: child,
+                    childFoldersByParent: childFoldersByParent,
+                    bookmarksByFolder: bookmarksByFolder,
+                    onEdit: onEdit
+                )
+            }
+        } label: {
+            Label {
+                Text(folder.name)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            } icon: {
+                Image(systemName: "folder.fill")
+                    .foregroundStyle(.gray)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .contextMenu {
+            Button("Delete Folder", role: .destructive) {
+                deleteFolder()
+            }
+        }
+    }
+
+    private func deleteFolder() {
+        // Promote direct bookmarks to parent folder (move, don't delete them).
+        for bookmark in directBookmarks {
+            bookmark.folderID = folder.parentFolderID
+        }
+        modelContext.delete(folder)
+        try? modelContext.save()
     }
 }
 
@@ -110,10 +194,12 @@ private struct BookmarkRow: View {
 
     var body: some View {
         Button {
-            openInActive()
+            openInNewTab()
         } label: {
             Label {
-                Text(bookmark.title.isEmpty ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString) : bookmark.title)
+                Text(bookmark.title.isEmpty
+                    ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
+                    : bookmark.title)
                     .lineLimit(1)
                     .truncationMode(.tail)
             } icon: {
@@ -133,8 +219,8 @@ private struct BookmarkRow: View {
         .onHover { isHovering = $0 }
         .help(bookmark.urlString)
         .contextMenu {
-            Button("Open in Active Tab") { openInActive() }
             Button("Open in New Tab") { openInNewTab() }
+            Button("Open in Active Tab") { openInActive() }
             Divider()
             Button("Copy URL") { copyURL() }
             Button("Edit...") { edit(bookmark) }
@@ -144,6 +230,11 @@ private struct BookmarkRow: View {
         .modifier(DeleteKeyHandler(enabled: isHovering, action: delete))
     }
 
+    private func openInNewTab() {
+        guard let url = bookmark.url else { return }
+        appState.openBrowser(url: url)
+    }
+
     private func openInActive() {
         guard let url = bookmark.url else { return }
         if let session = appState.activeTab?.browserSession {
@@ -151,11 +242,6 @@ private struct BookmarkRow: View {
         } else {
             appState.openBrowser(url: url)
         }
-    }
-
-    private func openInNewTab() {
-        guard let url = bookmark.url else { return }
-        appState.openBrowser(url: url)
     }
 
     private func copyURL() {

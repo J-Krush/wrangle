@@ -245,11 +245,66 @@ struct BookmarkImportSheet: View {
         var added = 0
         var skipped = 0
 
-        // Collect unique folder names (the last segment of each path) so we can
-        // create BrowserBookmarkFolder entries to assign bookmarks to.
-        var folderByName: [String: BrowserBookmarkFolder] = [:]
-        for folder in store.folders(forProject: scopedProjectID) {
-            folderByName[folder.name] = folder
+        // Path-key → folder.id cache, built from existing folders so repeat
+        // imports reuse the same hierarchy instead of creating duplicates.
+        var folderIDByPath: [String: String] = [:]
+        var existingFolders = store.folders(forProject: scopedProjectID)
+
+        // Seed cache with any existing folders that already have a parent
+        // chain we can compute. We walk bottom-up: for each folder we know,
+        // resolve its path via parentFolderID chain.
+        func computePath(for folder: BrowserBookmarkFolder, all: [BrowserBookmarkFolder]) -> String? {
+            var segments: [String] = []
+            var cursor: BrowserBookmarkFolder? = folder
+            var safety = 0
+            while let current = cursor, safety < 64 {
+                segments.insert(current.name, at: 0)
+                if let parentID = current.parentFolderID {
+                    cursor = all.first(where: { $0.id == parentID })
+                } else {
+                    cursor = nil
+                }
+                safety += 1
+            }
+            return segments.isEmpty ? nil : "/" + segments.joined(separator: "/")
+        }
+        for folder in existingFolders {
+            if let key = computePath(for: folder, all: existingFolders) {
+                folderIDByPath[key] = folder.id
+            }
+        }
+
+        // Helper: resolve a path (e.g., ["Bookmarks", "Mesh Networks"]) to a
+        // folder.id, creating nested BrowserBookmarkFolder records as needed.
+        func folderID(for segments: [String]) -> String? {
+            guard !segments.isEmpty else { return nil }
+            var parentID: String? = nil
+            var accumulated = ""
+            for segment in segments {
+                accumulated += "/" + segment
+                if let existingID = folderIDByPath[accumulated] {
+                    parentID = existingID
+                    continue
+                }
+                // Look for a folder with this name and parent (bridge to seeded cache).
+                if let match = existingFolders.first(where: {
+                    $0.name == segment && $0.parentFolderID == parentID
+                }) {
+                    folderIDByPath[accumulated] = match.id
+                    parentID = match.id
+                    continue
+                }
+                let folder = BrowserBookmarkFolder(
+                    name: segment,
+                    projectID: scopedProjectID,
+                    parentFolderID: parentID
+                )
+                modelContext.insert(folder)
+                existingFolders.append(folder)
+                folderIDByPath[accumulated] = folder.id
+                parentID = folder.id
+            }
+            return parentID
         }
 
         for bookmark in flat {
@@ -257,23 +312,19 @@ struct BookmarkImportSheet: View {
                 skipped += 1
                 continue
             }
-            let folderName = bookmark.folderPath.dropFirst().joined(separator: " › ")
-            var folderID: String?
-            if !folderName.isEmpty {
-                let folder = folderByName[folderName]
-                    ?? store.createFolder(name: folderName, projectID: scopedProjectID)
-                folderByName[folderName] = folder
-                folderID = folder.id
-            }
+            // Drop the synthetic "All Bookmarks" root at the front of the path.
+            let segments = Array(bookmark.folderPath.dropFirst())
+            let targetFolderID = folderID(for: segments)
             store.addOrUpdate(
                 title: bookmark.title,
                 url: bookmark.url,
-                folderID: folderID,
+                folderID: targetFolderID,
                 projectID: scopedProjectID,
                 favicon: nil
             )
             added += 1
         }
+        try? modelContext.save()
 
         importedTree = nil
         importResult = ImportResult(added: added, skipped: skipped)
