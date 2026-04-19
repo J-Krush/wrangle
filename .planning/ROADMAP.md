@@ -180,11 +180,11 @@ Plans:
   3. User clicks the overview `+` and sees the identical menu (same items, same order).
   4. User looking at the Project Overview no longer sees a blue `New` pill beside the project title; the `+` button sits in its place with consistent visual weight to the sidebar `+`.
   5. Existing keyboard shortcuts (File → New …, Cmd+Option+B, etc.) continue to work unchanged.
-**Plans**: TBD (expected: 2 plans — (a) unify the `+` menu content in a shared model, (b) remove per-section / per-card chrome).
+**Plans**: 2 plans.
 
 Plans:
-- [ ] 10-01: Shared `UnifiedAddMenu` view + consolidate sidebar `+` and overview `+` against it. Replace `New` pill with `+` IconButton.
-- [ ] 10-02: Remove `…` menus on `SidebarSectionHeader`, inline `Import…` / `+` on Project Overview Bookmarks + Locations cards. Route those actions through the unified menu.
+- [ ] 10-01-PLAN.md — Create `UnifiedAddMenu` shared view, wire into sidebar bottom-bar `+`, tab strip `+`, and Project Overview header (replacing blue `New` pill). Extend `NewBookmarkSheet` with optional prefill.
+- [ ] 10-02-PLAN.md — Strip per-section chrome: Locations `...` (sidebar), Bookmarks `...` (sidebar), Bookmarks `Import…` + Locations `+` (overview cards). Audit `SidebarSectionHeader` accessory parameter.
 
 ### Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers
 **Goal**: Sidebar and overview show only non-empty sections. Browser bookmarks live inside Browsers, not as a top-level peer. Discovery moves to the `+` menu.
