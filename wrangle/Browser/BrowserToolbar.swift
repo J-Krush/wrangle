@@ -77,8 +77,11 @@ struct BrowserToolbar: View {
             .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Star (bookmark)
+            // Star (bookmark current page)
             StarButton(session: session)
+
+            // Bookmarks list
+            BookmarksPopoverButton()
 
             // History
             HistoryPopoverButton()

@@ -25,22 +25,62 @@ struct BookmarkSidebarSection: View {
     }
 
     var body: some View {
-        if !visibleBookmarks.isEmpty {
-            Section {
+        Section {
+            if visibleBookmarks.isEmpty {
+                emptyState
+            } else {
                 content
-            } header: {
-                HStack {
-                    Text("Bookmarks")
-                    Spacer()
+            }
+        } header: {
+            HStack {
+                Text("Bookmarks")
+                Spacer()
+                if !visibleBookmarks.isEmpty {
                     Text("\(visibleBookmarks.count)")
                         .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
                 }
-            }
-            .sheet(item: $editing) { bookmark in
-                BookmarkEditSheet(bookmark: bookmark)
+                Menu {
+                    Button("Import Bookmarks...") {
+                        appState.showBookmarkImport = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Bookmark actions")
             }
         }
+        .sheet(item: $editing) { bookmark in
+            BookmarkEditSheet(bookmark: bookmark)
+        }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No bookmarks yet")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Text("Open a page and tap the star button to save it, or import from another browser.")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                appState.showBookmarkImport = true
+            } label: {
+                Label("Import Bookmarks...", systemImage: "square.and.arrow.down")
+                    .font(.system(size: 11))
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+        }
+        .padding(.vertical, 2)
     }
 
     @ViewBuilder
@@ -132,11 +172,7 @@ private struct BookmarkRow: View {
 
     private func openInNewTab() {
         guard let url = bookmark.url else { return }
-        if let session = appState.activeTab?.browserSession {
-            session.addTab(url: url)
-        } else {
-            appState.openBrowser(url: url)
-        }
+        appState.openBrowser(url: url)
     }
 
     private func copyURL() {
