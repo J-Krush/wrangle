@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import UniformTypeIdentifiers
 
 struct BookmarkSidebarSection: View {
     @Environment(AppState.self) private var appState
@@ -13,6 +14,9 @@ struct BookmarkSidebarSection: View {
     @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
     @Query(sort: \BrowserBookmarkFolder.displayOrder) private var allFolders: [BrowserBookmarkFolder]
     @State private var editing: BrowserBookmark?
+    @State private var newFolderName: String = ""
+    @State private var showingNewFolderAlert: Bool = false
+    @AppStorage("sidebar.bookmarks.expanded") private var isSectionExpanded: Bool = true
 
     private var visibleBookmarks: [BrowserBookmark] {
         let projectID = appState.selectedProjectID
@@ -26,21 +30,42 @@ struct BookmarkSidebarSection: View {
 
     var body: some View {
         Section {
-            if visibleBookmarks.isEmpty {
-                emptyState
-            } else {
-                content
+            if isSectionExpanded {
+                if visibleBookmarks.isEmpty {
+                    emptyState
+                } else {
+                    content
+                }
             }
         } header: {
-            HStack {
-                Text("Bookmarks")
-                Spacer()
-                if !visibleBookmarks.isEmpty {
-                    Text("\(visibleBookmarks.count)")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                Button {
+                    withAnimation(.snappy(duration: 0.15)) {
+                        isSectionExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .rotationEffect(.degrees(isSectionExpanded ? 90 : 0))
+                        Text("Bookmarks")
+                        if !visibleBookmarks.isEmpty {
+                            Text("\(visibleBookmarks.count)")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                Spacer()
                 Menu {
+                    Button("New Folder...") {
+                        newFolderName = ""
+                        showingNewFolderAlert = true
+                    }
+                    Divider()
                     Button("Import Bookmarks...") {
                         appState.showBookmarkImport = true
                     }
@@ -55,10 +80,29 @@ struct BookmarkSidebarSection: View {
                 .fixedSize()
                 .help("Bookmark actions")
             }
+            .onDrop(of: [.text], delegate: BookmarkFolderDropDelegate(
+                targetFolderID: nil,
+                modelContext: modelContext
+            ))
         }
         .sheet(item: $editing) { bookmark in
             BookmarkEditSheet(bookmark: bookmark)
         }
+        .alert("New Bookmark Folder", isPresented: $showingNewFolderAlert) {
+            TextField("Folder name", text: $newFolderName)
+            Button("Cancel", role: .cancel) { }
+            Button("Create") { createFolder() }
+        } message: {
+            Text("Enter a name for the new folder.")
+        }
+    }
+
+    private func createFolder() {
+        let trimmed = newFolderName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let store = BookmarkStore(context: modelContext)
+        store.createFolder(name: trimmed, projectID: appState.selectedProjectID)
+        newFolderName = ""
     }
 
     @ViewBuilder
@@ -149,31 +193,101 @@ private struct BookmarkFolderNode: View {
                 )
             }
         } label: {
-            Label {
-                Text(folder.name)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            } icon: {
-                Image(systemName: "folder.fill")
-                    .foregroundStyle(.gray)
+            Button {
+                withAnimation(.snappy(duration: 0.15)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                Label {
+                    Text(folder.name)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "folder.fill")
+                        .foregroundStyle(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
         }
         .contextMenu {
-            Button("Delete Folder", role: .destructive) {
-                deleteFolder()
+            Button("Delete Folder and All Bookmarks", role: .destructive) {
+                deleteRecursively()
+            }
+            Button("Delete Folder Only (Keep Bookmarks)") {
+                deleteKeepingBookmarks()
             }
         }
+        .onDrop(of: [.text], delegate: BookmarkFolderDropDelegate(
+            targetFolderID: folder.id,
+            modelContext: modelContext
+        ))
     }
 
-    private func deleteFolder() {
-        // Promote direct bookmarks to parent folder (move, don't delete them).
+    /// Delete this folder, all nested subfolders, and every bookmark contained
+    /// (directly or transitively). Matches user expectation of "remove folder".
+    private func deleteRecursively() {
+        var foldersToDelete: [BrowserBookmarkFolder] = [folder]
+        var bookmarksToDelete: [BrowserBookmark] = []
+        var queue: [BrowserBookmarkFolder] = [folder]
+        while let current = queue.popLast() {
+            bookmarksToDelete.append(contentsOf: bookmarksByFolder[current.id] ?? [])
+            for child in childFoldersByParent[current.id] ?? [] {
+                foldersToDelete.append(child)
+                queue.append(child)
+            }
+        }
+        for bookmark in bookmarksToDelete {
+            modelContext.delete(bookmark)
+        }
+        for target in foldersToDelete {
+            modelContext.delete(target)
+        }
+        try? modelContext.save()
+    }
+
+    /// Delete just this folder; move its direct bookmarks to the parent folder
+    /// (child folders keep their structure and are reparented).
+    private func deleteKeepingBookmarks() {
         for bookmark in directBookmarks {
             bookmark.folderID = folder.parentFolderID
         }
+        for child in childFoldersByParent[folder.id] ?? [] {
+            child.parentFolderID = folder.parentFolderID
+        }
         modelContext.delete(folder)
         try? modelContext.save()
+    }
+}
+
+// MARK: - Drop Delegate
+
+/// Accepts a bookmark-ID string drag payload and reparents the bookmark into
+/// the target folder (or unfiled when `targetFolderID == nil`).
+private struct BookmarkFolderDropDelegate: DropDelegate {
+    let targetFolderID: String?
+    let modelContext: ModelContext
+
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.text])
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let provider = info.itemProviders(for: [.text]).first else { return false }
+        let target = targetFolderID
+        let ctx = modelContext
+        _ = provider.loadObject(ofClass: NSString.self) { object, _ in
+            guard let idString = object as? String else { return }
+            Task { @MainActor in
+                let descriptor = FetchDescriptor<BrowserBookmark>()
+                guard let all = try? ctx.fetch(descriptor),
+                      let bookmark = all.first(where: { $0.id == idString }) else { return }
+                bookmark.folderID = target
+                try? ctx.save()
+            }
+        }
+        return true
     }
 }
 
@@ -228,6 +342,9 @@ private struct BookmarkRow: View {
             Button("Delete", role: .destructive) { delete() }
         }
         .modifier(DeleteKeyHandler(enabled: isHovering, action: delete))
+        .onDrag {
+            NSItemProvider(object: bookmark.id as NSString)
+        }
     }
 
     private func openInNewTab() {

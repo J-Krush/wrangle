@@ -226,11 +226,8 @@ struct ProjectOverviewView: View {
     // MARK: - Todos
 
     private var todosSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Todos")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
+        CollapsibleVStackSection("Todos", storageKey: "overview.todos.expanded.\(projectID)") {
+            VStack(alignment: .leading, spacing: 12) {
             // Add new todo
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
@@ -283,8 +280,9 @@ struct ProjectOverviewView: View {
                     }
                 }
             }
+            }
+            .padding(.bottom, 8)
         }
-        .padding(.bottom, 8)
     }
 
     private func addTodo() {
@@ -299,11 +297,7 @@ struct ProjectOverviewView: View {
     // MARK: - Sessions
 
     private var sessionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Terminal Sessions")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
+        CollapsibleVStackSection("Terminal Sessions", storageKey: "overview.sessions.expanded.\(projectID)") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                 ForEach(terminalSessions) { tab in
                     sessionCard(tab)
@@ -386,12 +380,10 @@ struct ProjectOverviewView: View {
     // MARK: - Bookmarks
 
     private var bookmarksSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Bookmarks")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-                Spacer()
+        CollapsibleVStackSection(
+            "Bookmarks",
+            storageKey: "overview.bookmarks.expanded.\(projectID)",
+            accessory: {
                 Button {
                     appState.showBookmarkImport = true
                 } label: {
@@ -400,7 +392,14 @@ struct ProjectOverviewView: View {
                 }
                 .buttonStyle(.borderless)
             }
+        ) {
+            bookmarksContent
+        }
+    }
 
+    @ViewBuilder
+    private var bookmarksContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
             if projectBrowserBookmarks.isEmpty {
                 HStack(spacing: 12) {
                     Image(systemName: "star")
@@ -483,11 +482,7 @@ struct ProjectOverviewView: View {
     // MARK: - Browsers
 
     private var browsersSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Browsers")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
+        CollapsibleVStackSection("Browsers", storageKey: "overview.browsers.expanded.\(projectID)") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                 ForEach(browserTabs) { tab in
                     Button { navigateToTab(tab) } label: {
@@ -517,11 +512,7 @@ struct ProjectOverviewView: View {
     // MARK: - Documents
 
     private var documentsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Open Files")
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
+        CollapsibleVStackSection("Open Files", storageKey: "overview.documents.expanded.\(projectID)") {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                 ForEach(documentTabs) { tab in
                     Button { navigateToTab(tab) } label: {
@@ -563,12 +554,10 @@ struct ProjectOverviewView: View {
     // MARK: - Locations
 
     private var locationsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
-                Text("Locations")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-
+        CollapsibleVStackSection(
+            "Locations",
+            storageKey: "overview.locations.expanded.\(projectID)",
+            accessory: {
                 Button {
                     addLocation()
                 } label: {
@@ -577,10 +566,8 @@ struct ProjectOverviewView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-
-                Spacer()
             }
-
+        ) {
             if projectBookmarks.isEmpty {
                 HStack(spacing: 8) {
                     Image(systemName: "folder.badge.plus")

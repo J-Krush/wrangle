@@ -15,6 +15,7 @@ struct SidebarView: View {
     @State private var dropDebounceTask: Task<Void, Never>?
     @State private var isSearchExpanded = false
     @FocusState private var isSearchFieldFocused: Bool
+    @AppStorage("sidebar.locations.expanded") private var isLocationsExpanded: Bool = true
 
     enum DropState {
         case idle
@@ -55,18 +56,34 @@ struct SidebarView: View {
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 Section {
-                                    ProjectBookmarkListView(
-                                        projectID: projectID,
-                                        scrollProxy: scrollProxy,
-                                        filterText: appState.sidebarFilterText,
-                                        activeFileTypeFilters: activeFileTypeFilters,
-                                        isFinderDragActive: dropState == .hovering,
-                                        showActiveSessionsOnly: appState.showActiveSessionsOnly,
-                                        onAddLocation: addLocation
-                                    )
+                                    if isLocationsExpanded {
+                                        ProjectBookmarkListView(
+                                            projectID: projectID,
+                                            scrollProxy: scrollProxy,
+                                            filterText: appState.sidebarFilterText,
+                                            activeFileTypeFilters: activeFileTypeFilters,
+                                            isFinderDragActive: dropState == .hovering,
+                                            showActiveSessionsOnly: appState.showActiveSessionsOnly,
+                                            onAddLocation: addLocation
+                                        )
+                                    }
                                 } header: {
-                                    HStack {
-                                        Text("Locations")
+                                    HStack(spacing: 4) {
+                                        Button {
+                                            withAnimation(.snappy(duration: 0.15)) {
+                                                isLocationsExpanded.toggle()
+                                            }
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 9, weight: .semibold))
+                                                    .foregroundStyle(.secondary)
+                                                    .rotationEffect(.degrees(isLocationsExpanded ? 90 : 0))
+                                                Text("Locations")
+                                            }
+                                            .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
                                         Spacer()
                                         Menu {
                                             Button("Add Location...") { addLocation() }
