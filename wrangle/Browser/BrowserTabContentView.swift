@@ -4,13 +4,22 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct BrowserTabContentView: View {
     let session: BrowserSession
     @Environment(AppState.self) private var appState
+    @State private var keyMonitor: Any?
+    @State private var isFindBarVisible: Bool = false
+    @State private var findQuery: String = ""
 
     private var isActive: Bool {
         appState.activeTab?.browserSession?.id == session.id
+    }
+
+    private var showsNewTabPage: Bool {
+        guard let tab = session.activeTab else { return false }
+        return tab.url == nil && !tab.isLoading
     }
 
     var body: some View {
@@ -25,6 +34,11 @@ struct BrowserTabContentView: View {
             BrowserToolbar(session: session)
             Divider()
 
+            // Find bar (Cmd+F)
+            if isFindBarVisible {
+                BrowserFindBar(session: session, isVisible: $isFindBarVisible, query: $findQuery)
+            }
+
             // Progress bar
             if let tab = session.activeTab, tab.isLoading {
                 ProgressView(value: tab.estimatedProgress)
@@ -33,9 +47,16 @@ struct BrowserTabContentView: View {
                     .frame(height: 2)
             }
 
-            // WebView
-            BrowserWebView(session: session, isActive: isActive)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // WebView with optional New Tab overlay
+            ZStack {
+                BrowserWebView(session: session, isActive: isActive)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if showsNewTabPage {
+                    NewTabPage(session: session)
+                        .transition(.opacity)
+                }
+            }
 
             // DevTools panel
             if session.isDevToolsVisible {
@@ -49,5 +70,87 @@ struct BrowserTabContentView: View {
             BrowserStatusBar(session: session)
         }
         .background(Color(nsColor: Theme.chromeBackground))
+        .onAppear { installKeyMonitor() }
+        .onDisappear { removeKeyMonitor() }
+    }
+
+    // MARK: - Keyboard shortcuts
+
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        let session = session
+        let handler = KeyHandler(session: session, appState: appState)
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [handler] event in
+            MainActor.assumeIsolated {
+                handler.handle(event, toggleFind: toggleFindBar)
+            }
+        }
+    }
+
+    private func removeKeyMonitor() {
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
+            keyMonitor = nil
+        }
+    }
+
+    private func toggleFindBar() {
+        isFindBarVisible.toggle()
+        if !isFindBarVisible {
+            findQuery = ""
+        }
+    }
+}
+
+// MARK: - Key Handler
+
+/// Owns the event-monitor logic separately from the View struct so we don't
+/// have to capture `self` across actor boundaries.
+@MainActor
+private final class KeyHandler {
+    weak var session: BrowserSession?
+    weak var appState: AppState?
+
+    init(session: BrowserSession, appState: AppState) {
+        self.session = session
+        self.appState = appState
+    }
+
+    func handle(_ event: NSEvent, toggleFind: @MainActor () -> Void) -> NSEvent? {
+        guard let session, let appState else { return event }
+        guard appState.activeTab?.browserSession?.id == session.id else { return event }
+
+        let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard mods == .command else { return event }
+        let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
+
+        switch key {
+        case "f":
+            toggleFind()
+            return nil
+        case "t":
+            session.addTab()
+            return nil
+        case "w":
+            if session.tabs.count > 1 {
+                session.closeTab(at: session.activeTabIndex)
+                return nil
+            }
+            return event
+        case "[":
+            if session.activeTab?.canGoBack == true {
+                session.activeTab?.pendingNavigation = .goBack
+                return nil
+            }
+            return event
+        case "]":
+            if session.activeTab?.canGoForward == true {
+                session.activeTab?.pendingNavigation = .goForward
+                return nil
+            }
+            return event
+        default:
+            return event
+        }
     }
 }

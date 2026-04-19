@@ -296,29 +296,44 @@ struct BrowserWebView: NSViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            // Favicon extraction via injected JS
             guard let tab = tab(for: webView) else { return }
+
+            // Use cached favicon immediately if we already have one for this host.
+            if let pageURL = webView.url, let cached = FaviconCache.shared.cached(for: pageURL) {
+                tab.favicon = cached
+            }
+
+            // Ask the page for its icon link; FaviconCache dedupes per host.
             webView.evaluateJavaScript("""
                 (function() {
                     var link = document.querySelector('link[rel~="icon"]');
                     return link ? link.href : null;
                 })();
             """) { [weak self] result, _ in
-                guard let urlString = result as? String, let url = URL(string: urlString) else { return }
                 Task { @MainActor [weak self] in
-                    _ = self // Keep reference
-                    self?.loadFavicon(from: url, for: tab)
+                    guard let self else { return }
+                    let linkHref: URL?
+                    if let urlString = result as? String {
+                        linkHref = URL(string: urlString)
+                    } else {
+                        linkHref = nil
+                    }
+                    await self.loadFavicon(pageURL: webView.url, linkHref: linkHref, for: tab)
                 }
             }
         }
 
-        private func loadFavicon(from url: URL, for tab: BrowserTab) {
-            Task.detached {
-                guard let (data, _) = try? await URLSession.shared.data(from: url),
-                      let image = NSImage(data: data) else { return }
-                await MainActor.run {
-                    tab.favicon = image
-                }
+        private func loadFavicon(pageURL: URL?, linkHref: URL?, for tab: BrowserTab) async {
+            guard let pageURL else { return }
+            if let cached = FaviconCache.shared.cached(for: pageURL) {
+                tab.favicon = cached
+                return
+            }
+            // Fall back to `/favicon.ico` off the page origin if page didn't declare one.
+            let href = linkHref ?? URL(string: "/favicon.ico", relativeTo: pageURL)?.absoluteURL
+            guard let href else { return }
+            if let image = await FaviconCache.shared.favicon(for: pageURL, linkHref: href) {
+                tab.favicon = image
             }
         }
 
