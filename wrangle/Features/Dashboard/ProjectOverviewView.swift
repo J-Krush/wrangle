@@ -401,22 +401,15 @@ struct ProjectOverviewView: View {
     private var bookmarksContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             if projectBrowserBookmarks.isEmpty {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     Image(systemName: "star")
                         .font(.title3)
                         .foregroundStyle(.tertiary)
-                        .frame(width: 32)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("No bookmarks yet")
-                            .font(.body)
-                            .foregroundStyle(.secondary)
-                        Text("Star a page in the browser or import from another browser.")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    Spacer()
+                    Text("No bookmarks yet. Star a page or import from another browser.")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
                 }
-                .modifier(CardStyle())
+                .padding(16)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                     ForEach(projectBrowserBookmarks.prefix(12), id: \.id) { bookmark in

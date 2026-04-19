@@ -16,6 +16,7 @@ struct SidebarView: View {
     @State private var isSearchExpanded = false
     @FocusState private var isSearchFieldFocused: Bool
     @AppStorage("sidebar.locations.expanded") private var isLocationsExpanded: Bool = true
+    @AppStorage("sidebar.scratchPads.expanded") private var isScratchPadsExpanded: Bool = true
 
     enum DropState {
         case idle
@@ -46,8 +47,15 @@ struct SidebarView: View {
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 if !appState.scratchPadManager.scratchPads(forProject: projectID).isEmpty {
-                                    Section("Scratch Pads") {
-                                        ScratchPadSection()
+                                    Section {
+                                        if isScratchPadsExpanded {
+                                            ScratchPadSection()
+                                        }
+                                    } header: {
+                                        SidebarSectionHeader(
+                                            title: "Scratch Pads",
+                                            isExpanded: $isScratchPadsExpanded
+                                        )
                                     }
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                                 }
@@ -68,23 +76,10 @@ struct SidebarView: View {
                                         )
                                     }
                                 } header: {
-                                    HStack(spacing: 4) {
-                                        Button {
-                                            withAnimation(.snappy(duration: 0.15)) {
-                                                isLocationsExpanded.toggle()
-                                            }
-                                        } label: {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: "chevron.right")
-                                                    .font(.system(size: 9, weight: .semibold))
-                                                    .foregroundStyle(.secondary)
-                                                    .rotationEffect(.degrees(isLocationsExpanded ? 90 : 0))
-                                                Text("Locations")
-                                            }
-                                            .contentShape(Rectangle())
-                                        }
-                                        .buttonStyle(.plain)
-                                        Spacer()
+                                    SidebarSectionHeader(
+                                        title: "Locations",
+                                        isExpanded: $isLocationsExpanded
+                                    ) {
                                         Menu {
                                             Button("Add Location...") { addLocation() }
                                         } label: {
@@ -565,14 +560,19 @@ private struct SpacesSection: View {
 
 private struct BrowserSessionsSection: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("sidebar.browsers.expanded") private var isExpanded: Bool = true
 
     var body: some View {
         let browsers = appState.projectBrowserSessions
         if !browsers.isEmpty {
-            Section("Browsers") {
-                ForEach(browsers) { session in
-                    LocationBrowserRow(session: session)
+            Section {
+                if isExpanded {
+                    ForEach(browsers) { session in
+                        LocationBrowserRow(session: session)
+                    }
                 }
+            } header: {
+                SidebarSectionHeader(title: "Browsers", isExpanded: $isExpanded)
             }
         }
     }
@@ -582,14 +582,19 @@ private struct BrowserSessionsSection: View {
 
 private struct OrphanedSessionsSection: View {
     @Environment(AppState.self) private var appState
+    @AppStorage("sidebar.otherSessions.expanded") private var isExpanded: Bool = true
 
     var body: some View {
         let orphaned = appState.orphanedTerminalSessions
         if !orphaned.isEmpty {
-            Section("Other Sessions") {
-                ForEach(orphaned) { session in
-                    LocationSessionRow(session: session)
+            Section {
+                if isExpanded {
+                    ForEach(orphaned) { session in
+                        LocationSessionRow(session: session)
+                    }
                 }
+            } header: {
+                SidebarSectionHeader(title: "Other Sessions", isExpanded: $isExpanded)
             }
         }
     }

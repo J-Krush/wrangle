@@ -16,6 +16,7 @@ struct BookmarkSidebarSection: View {
     @State private var editing: BrowserBookmark?
     @State private var newFolderName: String = ""
     @State private var showingNewFolderAlert: Bool = false
+    @State private var showingNewBookmarkSheet: Bool = false
     @AppStorage("sidebar.bookmarks.expanded") private var isSectionExpanded: Bool = true
 
     private var visibleBookmarks: [BrowserBookmark] {
@@ -30,12 +31,8 @@ struct BookmarkSidebarSection: View {
 
     var body: some View {
         Section {
-            if isSectionExpanded {
-                if visibleBookmarks.isEmpty {
-                    emptyState
-                } else {
-                    content
-                }
+            if isSectionExpanded && !visibleBookmarks.isEmpty {
+                content
             }
         } header: {
             HStack(spacing: 4) {
@@ -47,7 +44,6 @@ struct BookmarkSidebarSection: View {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.secondary)
                             .rotationEffect(.degrees(isSectionExpanded ? 90 : 0))
                         Text("Bookmarks")
                         if !visibleBookmarks.isEmpty {
@@ -61,6 +57,9 @@ struct BookmarkSidebarSection: View {
                 .buttonStyle(.plain)
                 Spacer()
                 Menu {
+                    Button("New Bookmark...") {
+                        showingNewBookmarkSheet = true
+                    }
                     Button("New Folder...") {
                         newFolderName = ""
                         showingNewFolderAlert = true
@@ -88,6 +87,9 @@ struct BookmarkSidebarSection: View {
         .sheet(item: $editing) { bookmark in
             BookmarkEditSheet(bookmark: bookmark)
         }
+        .sheet(isPresented: $showingNewBookmarkSheet) {
+            NewBookmarkSheet(projectID: appState.selectedProjectID)
+        }
         .alert("New Bookmark Folder", isPresented: $showingNewFolderAlert) {
             TextField("Folder name", text: $newFolderName)
             Button("Cancel", role: .cancel) { }
@@ -103,13 +105,6 @@ struct BookmarkSidebarSection: View {
         let store = BookmarkStore(context: modelContext)
         store.createFolder(name: trimmed, projectID: appState.selectedProjectID)
         newFolderName = ""
-    }
-
-    @ViewBuilder
-    private var emptyState: some View {
-        Text("No bookmarks yet")
-            .font(.system(size: 11))
-            .foregroundStyle(.secondary)
     }
 
     @ViewBuilder

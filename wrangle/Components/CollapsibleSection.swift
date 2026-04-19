@@ -30,7 +30,7 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Button {
                     withAnimation(.snappy(duration: 0.18)) {
                         isExpanded.toggle()
@@ -38,8 +38,8 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
                         Text(title)
                             .font(.headline)
@@ -48,8 +48,8 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Spacer()
                 accessory()
+                Spacer()
             }
             if isExpanded {
                 content()
