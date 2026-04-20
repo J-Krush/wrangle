@@ -196,11 +196,11 @@ Plans:
   3. Creating a first Browser tab makes the Browsers section appear in the sidebar; creating a first bookmark from that browser makes a `Bookmarks (n)` sub-section appear nested under Browsers — not as a top-level section.
   4. Deleting the last item in any section removes the section from the sidebar and overview on the next render tick.
   5. Project Overview's Bookmarks card is visually grouped with Browsers (either nested inside or stacked immediately below with shared chrome) and collapses/expands independently.
-**Plans**: TBD (expected: 2 plans — (a) sidebar hide-when-empty + nesting, (b) overview hide-when-empty + card regrouping).
+**Plans**: 2 plans.
 
 Plans:
-- [ ] 11-01: Sidebar — hide-when-empty logic for Scratch Pads, Browsers, Locations; remove top-level `BookmarkSidebarSection`, inline it under `BrowserSessionsSection` as a collapsible child.
-- [ ] 11-02: Project Overview — hide empty section cards; introduce project-level empty hero; regroup bookmarks card under browsers card.
+- [ ] 11-01-PLAN.md — Sidebar: hide-when-empty for Scratch Pads / Browsers / Locations; remove top-level BookmarkSidebarSection, render nested NestedBookmarkSubSection inside BrowserSessionsSection.
+- [ ] 11-02-PLAN.md — Project Overview: hide empty section cards, introduce centered empty-hero below Todos, regroup Bookmarks card as nested CollapsibleVStackSection inside Browsers card.
 
 ### Phase 12: Section Parity & Polish
 **Goal**: Remaining visual + interaction parity across section types — canonical header styling, Scratch Pad CRUD parity, and consistent expansion-state persistence.
