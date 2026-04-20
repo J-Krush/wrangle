@@ -244,10 +244,17 @@ private struct BookmarkRow: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @State private var isHovering: Bool = false
+    @State private var pendingDelete: Bool = false
 
     private var favicon: NSImage? {
         guard let data = bookmark.faviconData else { return nil }
         return NSImage(data: data)
+    }
+
+    private var displayName: String {
+        bookmark.title.isEmpty
+            ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
+            : bookmark.title
     }
 
     var body: some View {
@@ -255,9 +262,7 @@ private struct BookmarkRow: View {
             openInNewTab()
         } label: {
             Label {
-                Text(bookmark.title.isEmpty
-                    ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
-                    : bookmark.title)
+                Text(displayName)
                     .lineLimit(1)
                     .truncationMode(.tail)
             } icon: {
@@ -283,11 +288,24 @@ private struct BookmarkRow: View {
             Button("Copy URL") { copyURL() }
             Button("Edit...") { edit(bookmark) }
             Divider()
+            // D-09: context-menu Delete stays immediate — deliberate action.
             Button("Delete", role: .destructive) { delete() }
         }
-        .modifier(DeleteKeyHandler(enabled: isHovering, action: delete))
+        // UIX-21: Return = open edit sheet, Delete = confirm alert (when hovered).
+        .rowKeyboardCommands(
+            enabled: isHovering,
+            onReturn: { edit(bookmark) },
+            onDelete: { pendingDelete = true }
+        )
         .onDrag {
             NSItemProvider(object: bookmark.id as NSString)
+        }
+        .alert(
+            "Delete bookmark '\(displayName)'?",
+            isPresented: $pendingDelete
+        ) {
+            Button("Delete", role: .destructive) { delete() }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -316,19 +334,3 @@ private struct BookmarkRow: View {
     }
 }
 
-// MARK: - Delete Key Handler
-
-private struct DeleteKeyHandler: ViewModifier {
-    let enabled: Bool
-    let action: () -> Void
-
-    func body(content: Content) -> some View {
-        content.focusable(enabled).onKeyPress(.delete) {
-            if enabled {
-                action()
-                return .handled
-            }
-            return .ignored
-        }
-    }
-}

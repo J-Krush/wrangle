@@ -4,6 +4,8 @@ struct ScratchPadSection: View {
     @Environment(AppState.self) private var appState
     @State private var renamingURL: URL?
     @State private var renameText: String = ""
+    @State private var hoveredURL: URL?
+    @State private var pendingDelete: ScratchPadItem?
 
     private var visiblePads: [ScratchPadItem] {
         if let projectID = appState.selectedProjectID {
@@ -21,10 +23,24 @@ struct ScratchPadSection: View {
                 padRow(pad: pad)
             }
         }
+        // Phase 12 D-08: Delete-key path routes through an alert for accident
+        // protection; context-menu Delete stays immediate (D-09).
+        .alert(
+            "Move '\(pendingDelete?.name ?? "")' to Trash?",
+            isPresented: Binding(
+                get: { pendingDelete != nil },
+                set: { if !$0 { pendingDelete = nil } }
+            ),
+            presenting: pendingDelete
+        ) { pad in
+            Button("Move to Trash", role: .destructive) { deletePad(pad) }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     private func padRow(pad: ScratchPadItem) -> some View {
         let isActive = appState.activeDocument?.fileURL == pad.url
+        let isHovering = hoveredURL == pad.url
         return Button {
             appState.openFile(url: pad.url)
         } label: {
@@ -41,6 +57,13 @@ struct ScratchPadSection: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isActive))
+        .onHover { hovering in
+            if hovering {
+                hoveredURL = pad.url
+            } else if hoveredURL == pad.url {
+                hoveredURL = nil
+            }
+        }
         .contextMenu {
             Button("Rename...") {
                 renameText = pad.name
@@ -50,10 +73,20 @@ struct ScratchPadSection: View {
                 NSWorkspace.shared.activateFileViewerSelecting([pad.url])
             }
             Divider()
+            // D-09: context-menu Delete stays immediate — deliberate action.
             Button("Delete", role: .destructive) {
                 deletePad(pad)
             }
         }
+        // UIX-21: Return = rename, Delete = confirm alert (when hovered).
+        .rowKeyboardCommands(
+            enabled: isHovering,
+            onReturn: {
+                renameText = pad.name
+                renamingURL = pad.url
+            },
+            onDelete: { pendingDelete = pad }
+        )
     }
 
     private func renameRow(pad: ScratchPadItem) -> some View {
