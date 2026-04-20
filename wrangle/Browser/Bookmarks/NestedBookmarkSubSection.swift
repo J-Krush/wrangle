@@ -1,6 +1,9 @@
 //
-//  BookmarkSidebarSection.swift
+//  NestedBookmarkSubSection.swift
 //  Wrangle
+//
+//  Nested Bookmarks sub-section rendered inside BrowserSessionsSection (sidebar).
+//  Hides itself when no bookmarks exist for the active project (D-02/D-09/UIX-13).
 //
 
 import SwiftUI
@@ -8,13 +11,14 @@ import SwiftData
 import AppKit
 import UniformTypeIdentifiers
 
-struct BookmarkSidebarSection: View {
+struct NestedBookmarkSubSection: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
     @Query(sort: \BrowserBookmarkFolder.displayOrder) private var allFolders: [BrowserBookmarkFolder]
     @State private var editing: BrowserBookmark?
-    @AppStorage("sidebar.bookmarks.expanded") private var isSectionExpanded: Bool = true
+    // D-05: new key; independent from sidebar.browsers.expanded
+    @AppStorage("sidebar.browsers.bookmarks.expanded") private var isExpanded: Bool = true
 
     private var visibleBookmarks: [BrowserBookmark] {
         let projectID = appState.selectedProjectID
@@ -27,37 +31,41 @@ struct BookmarkSidebarSection: View {
     }
 
     var body: some View {
-        Section {
-            if isSectionExpanded && !visibleBookmarks.isEmpty {
-                content
-            }
-        } header: {
-            HStack(spacing: 4) {
+        // .sheet attached to a Group so the edit sheet stays mounted for the whole sub-section scope.
+        Group {
+            // D-02/D-09/UIX-13: hide-when-empty at the sub-section level
+            if !visibleBookmarks.isEmpty {
+                // Sub-header: chevron + "Bookmarks" + count-only-when-collapsed (D-04).
                 Button {
                     withAnimation(.snappy(duration: 0.15)) {
-                        isSectionExpanded.toggle()
+                        isExpanded.toggle()
                     }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .semibold))
-                            .rotationEffect(.degrees(isSectionExpanded ? 90 : 0))
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
                         Text("Bookmarks")
-                        if !visibleBookmarks.isEmpty {
+                        // D-04: count rendered only when collapsed
+                        if !isExpanded {
                             Text("\(visibleBookmarks.count)")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
                         }
+                        Spacer()
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                Spacer()
+                .onDrop(of: [.text], delegate: BookmarkFolderDropDelegate(
+                    targetFolderID: nil,
+                    modelContext: modelContext
+                ))
+
+                if isExpanded {
+                    content
+                }
             }
-            .onDrop(of: [.text], delegate: BookmarkFolderDropDelegate(
-                targetFolderID: nil,
-                modelContext: modelContext
-            ))
         }
         .sheet(item: $editing) { bookmark in
             BookmarkEditSheet(bookmark: bookmark)
@@ -66,17 +74,16 @@ struct BookmarkSidebarSection: View {
 
     @ViewBuilder
     private var content: some View {
+        // D-06: unfiled bookmarks first (inline, no wrapper folder), then top-level folders.
         let bookmarksByFolder = Dictionary(grouping: visibleBookmarks) { $0.folderID }
         let childFoldersByParent = Dictionary(grouping: visibleFolders) { $0.parentFolderID }
 
-        // Unfiled bookmarks first, rendered inline
         if let unfiled = bookmarksByFolder[nil], !unfiled.isEmpty {
             ForEach(unfiled, id: \.id) { bookmark in
                 BookmarkRow(bookmark: bookmark, edit: { editing = $0 })
             }
         }
 
-        // Top-level folders, each may recurse
         let topLevelFolders = (childFoldersByParent[nil] ?? []).filter { folder in
             folderHasAnyBookmarks(folder,
                                   childFoldersByParent: childFoldersByParent,
