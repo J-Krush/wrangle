@@ -18,7 +18,6 @@ struct ProjectOverviewView: View {
     @Query private var incompleteTodos: [TodoItem]
     @Query private var completedTodos: [TodoItem]
     @State private var showTerminalPicker = false
-    @State private var showNewMenu = false
     @State private var activeLocationMenuID: String?
     @State private var pendingLaunchClaude = false
     @State private var pendingLaunchGemini = false
@@ -138,44 +137,9 @@ struct ProjectOverviewView: View {
     }
 
     private var newButton: some View {
-        Button {
-            showNewMenu = true
-        } label: {
-            Text("New")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(project.flatMap { Color(hex: $0.colorHex) } ?? .accentColor)
-                }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $showNewMenu, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 0) {
-                popoverButton("Scratch Pad", icon: "note.text", color: .yellow) {
-                    showNewMenu = false
-                    appState.newScratchPad()
-                }
-                popoverButton("File...", icon: "doc.badge.plus", color: .secondary) {
-                    showNewMenu = false
-                    appState.newDocument()
-                }
-                popoverButton("Browser", icon: "globe", color: .blue) {
-                    showNewMenu = false
-                    appState.openBrowser()
-                }
-                Divider().padding(.vertical, 4)
-                popoverButton("Location...", icon: "folder.badge.plus", color: .gray) {
-                    showNewMenu = false
-                    addLocation()
-                }
-            }
-            .padding(6)
-            .frame(width: 220)
-        }
+        // Shared creation menu — identical content across sidebar, overview, and tab strip.
+        // Replaces the blue `New` pill (D-05 / D-12); visual treatment matches sidebar `+`.
+        UnifiedAddMenu()
     }
 
     private func popoverButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {

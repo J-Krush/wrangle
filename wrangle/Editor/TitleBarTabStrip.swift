@@ -70,10 +70,6 @@ private class WindowAccessorView: NSView {
 
 struct TitleBarTabStrip: View {
     @Environment(AppState.self) private var appState
-    @State private var showTerminalPicker = false
-    @State private var pendingLaunchClaude = false
-    @State private var pendingLaunchGemini = false
-    @State private var pendingDangerousMode = false
     @State private var draggingTabID: UUID?
     @State private var dropTargetTabID: UUID?
     @State private var isEndDropTargeted = false
@@ -131,79 +127,9 @@ struct TitleBarTabStrip: View {
                 return true
             }
 
-            // "+" menu for new tab options
-            Menu {
-                Button("New File") {
-                    appState.newDocument()
-                }
-                Button("New Scratch Pad") {
-                    appState.newScratchPad()
-                }
-                Button("New Browser") {
-                    appState.openBrowser()
-                }
-                Divider()
-                Button("New Terminal") {
-                    pendingLaunchClaude = false
-                    pendingLaunchGemini = false
-                    pendingDangerousMode = false
-                    showTerminalPicker = true
-                }
-                Button("New Claude Code Session") {
-                    pendingLaunchClaude = true
-                    pendingLaunchGemini = false
-                    pendingDangerousMode = false
-                    showTerminalPicker = true
-                }
-                Button("New Gemini Code Session") {
-                    pendingLaunchClaude = false
-                    pendingLaunchGemini = true
-                    pendingDangerousMode = false
-                    showTerminalPicker = true
-                }
-                Divider()
-                Button {
-                    pendingLaunchClaude = true
-                    pendingLaunchGemini = false
-                    pendingDangerousMode = true
-                    showTerminalPicker = true
-                } label: {
-                    Label {
-                        Text("Claude (Skip Permissions)")
-                    } icon: {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                    }
-                }
-                .help("Runs claude --dangerously-skip-permissions")
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 28, height: 22)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 4)
-                            .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
-                    )
-                    .contentShape(Rectangle())
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .help("New Tab")
-            .accessibilityLabel("New tab")
-            .padding(.horizontal, 6)
-            .popover(isPresented: $showTerminalPicker, arrowEdge: .bottom) {
-                TerminalDirectoryPicker(launchClaude: pendingLaunchClaude, launchGemini: pendingLaunchGemini, projectID: appState.selectedProjectID) { name, url, bookmarkID in
-                    appState.openTerminal(
-                        projectName: name,
-                        directory: url,
-                        bookmarkID: bookmarkID,
-                        launchClaude: pendingLaunchClaude,
-                        launchGemini: pendingLaunchGemini,
-                        dangerousMode: pendingDangerousMode
-                    )
-                }
-            }
+            // Shared creation menu — identical content across sidebar, overview, and tab strip (D-03).
+            UnifiedAddMenu()
+                .padding(.horizontal, 6)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)

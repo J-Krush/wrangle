@@ -219,29 +219,7 @@ struct SidebarView: View {
             }
 
             HStack(spacing: 4) {
-                Menu {
-                    Button("New Scratch Pad") {
-                        appState.newScratchPad()
-                    }
-                    Button("New Browser") {
-                        appState.openBrowser()
-                    }
-                    Divider()
-                    Button("Add Location...") {
-                        addLocation()
-                    }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 28, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("Add...")
-                .accessibilityLabel("Add")
+                UnifiedAddMenu()
 
                 Spacer()
 
