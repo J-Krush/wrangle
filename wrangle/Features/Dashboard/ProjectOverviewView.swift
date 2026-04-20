@@ -341,116 +341,97 @@ struct ProjectOverviewView: View {
         }
     }
 
-    // MARK: - Bookmarks
+    // MARK: - Browsers
 
-    private var bookmarksSection: some View {
-        CollapsibleVStackSection(
-            "Bookmarks",
-            storageKey: "overview.bookmarks.expanded.\(projectID)"
-        ) {
-            bookmarksContent
-        }
-    }
-
-    @ViewBuilder
-    private var bookmarksContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if projectBrowserBookmarks.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "star")
-                        .font(.title3)
-                        .foregroundStyle(.tertiary)
-                    Text("No bookmarks yet. Star a page or import from another browser.")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(16)
-            } else {
+    private var browsersSection: some View {
+        CollapsibleVStackSection("Browsers", storageKey: "overview.browsers.expanded.\(projectID)") {
+            // D-18/D-19: tab grid renders only when tabs exist.
+            if !browserTabs.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
-                    ForEach(projectBrowserBookmarks.prefix(12), id: \.id) { bookmark in
-                        Button {
-                            guard let url = bookmark.url else { return }
-                            appState.openBrowser(url: url)
-                        } label: {
+                    ForEach(browserTabs) { tab in
+                        Button { navigateToTab(tab) } label: {
                             HStack(spacing: 12) {
-                                if let data = bookmark.faviconData, let image = NSImage(data: data) {
-                                    Image(nsImage: image)
-                                        .resizable()
-                                        .frame(width: 20, height: 20)
-                                        .frame(width: 32)
-                                } else {
-                                    Image(systemName: "globe")
-                                        .font(.title3)
-                                        .foregroundStyle(.blue)
-                                        .frame(width: 32)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(bookmark.title.isEmpty
-                                        ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
-                                        : bookmark.title)
-                                        .font(.body)
-                                        .lineLimit(1)
-                                    Text(URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
+                                Image(systemName: "globe")
+                                    .font(.title3)
+                                    .foregroundStyle(.blue)
+                                    .frame(width: 32)
+                                Text(tab.displayName)
+                                    .font(.body)
+                                    .lineLimit(1)
                                 Spacer()
                             }
                             .modifier(CardStyle())
                         }
                         .buttonStyle(.plain)
-                        .help(bookmark.urlString)
                         .contextMenu {
-                            Button("Open") {
-                                if let url = bookmark.url { appState.openBrowser(url: url) }
-                            }
-                            Button("Copy URL") {
-                                NSPasteboard.general.clearContents()
-                                NSPasteboard.general.setString(bookmark.urlString, forType: .string)
-                            }
+                            Button("Go To") { navigateToTab(tab) }
                             Divider()
-                            Button("Delete", role: .destructive) {
-                                let store = BookmarkStore(context: modelContext)
-                                store.remove(bookmark)
-                            }
+                            Button("Close") { closeTab(tab) }
                         }
                     }
-                }
-
-                if projectBrowserBookmarks.count > 12 {
-                    Text("Showing 12 of \(projectBrowserBookmarks.count). Use the sidebar for the full list.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
                 }
             }
-        }
-    }
 
-    // MARK: - Browsers
-
-    private var browsersSection: some View {
-        CollapsibleVStackSection("Browsers", storageKey: "overview.browsers.expanded.\(projectID)") {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
-                ForEach(browserTabs) { tab in
-                    Button { navigateToTab(tab) } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "globe")
-                                .font(.title3)
-                                .foregroundStyle(.blue)
-                                .frame(width: 32)
-                            Text(tab.displayName)
-                                .font(.body)
-                                .lineLimit(1)
-                            Spacer()
+            // UIX-15 / D-16/D-17/D-18: nested Bookmarks sub-section — renders only when bookmarks exist.
+            // Key: per-project, independent from the outer overview.browsers.expanded.{projectID} key (D-21).
+            if !projectBrowserBookmarks.isEmpty {
+                CollapsibleVStackSection("Bookmarks", storageKey: "overview.browsers.bookmarks.expanded.\(projectID)") {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                        ForEach(projectBrowserBookmarks.prefix(12), id: \.id) { bookmark in
+                            Button {
+                                guard let url = bookmark.url else { return }
+                                appState.openBrowser(url: url)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    if let data = bookmark.faviconData, let image = NSImage(data: data) {
+                                        Image(nsImage: image)
+                                            .resizable()
+                                            .frame(width: 20, height: 20)
+                                            .frame(width: 32)
+                                    } else {
+                                        Image(systemName: "globe")
+                                            .font(.title3)
+                                            .foregroundStyle(.blue)
+                                            .frame(width: 32)
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(bookmark.title.isEmpty
+                                            ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
+                                            : bookmark.title)
+                                            .font(.body)
+                                            .lineLimit(1)
+                                        Text(URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                }
+                                .modifier(CardStyle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(bookmark.urlString)
+                            .contextMenu {
+                                Button("Open") {
+                                    if let url = bookmark.url { appState.openBrowser(url: url) }
+                                }
+                                Button("Copy URL") {
+                                    NSPasteboard.general.clearContents()
+                                    NSPasteboard.general.setString(bookmark.urlString, forType: .string)
+                                }
+                                Divider()
+                                Button("Delete", role: .destructive) {
+                                    let store = BookmarkStore(context: modelContext)
+                                    store.remove(bookmark)
+                                }
+                            }
                         }
-                        .modifier(CardStyle())
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Go To") { navigateToTab(tab) }
-                        Divider()
-                        Button("Close") { closeTab(tab) }
+
+                    if projectBrowserBookmarks.count > 12 {
+                        Text("Showing 12 of \(projectBrowserBookmarks.count). Use the sidebar for the full list.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
