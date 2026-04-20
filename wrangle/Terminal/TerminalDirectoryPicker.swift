@@ -129,6 +129,9 @@ struct TerminalDirectoryPicker: View {
                 displayOrder: maxOrder + 1,
                 isFile: false
             )
+            // Scope the new location to the active project so it appears in the
+            // sidebar Locations section, not as an orphan Global location.
+            bookmark.projectID = projectID
             modelContext.insert(bookmark)
             try? modelContext.save()
 

@@ -91,15 +91,8 @@ struct UnifiedAddMenu: View {
             } label: {
                 Label("Location…", systemImage: "folder.badge.plus")
             }
-
-            Divider()
-
-            // Group 4 — import
-            Button {
-                appState.showBookmarkImport = true
-            } label: {
-                Label("Import Bookmarks…", systemImage: "square.and.arrow.down")
-            }
+            // "Import Bookmarks…" removed from UnifiedAddMenu — now reached
+            // exclusively via the Bookmarks popover (book icon) "…" menu.
         } label: {
             // Match sidebar `+` treatment from SidebarView.sidebarBottomBar (D-12).
             Image(systemName: "plus")

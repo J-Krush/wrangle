@@ -55,6 +55,7 @@ private struct BookmarksPopoverContent: View {
     @Query(sort: \BrowserBookmarkFolder.displayOrder) private var allFolders: [BrowserBookmarkFolder]
     @State private var filter: String = ""
     @State private var editing: BrowserBookmark?
+    @State private var confirmingRemoveAll: Bool = false
 
     private var visibleBookmarks: [BrowserBookmark] {
         let projectID = appState.selectedProjectID
@@ -71,6 +72,12 @@ private struct BookmarksPopoverContent: View {
         return allFolders.filter { $0.projectID == projectID || $0.projectID == nil }
     }
 
+    /// Project-scoped bookmarks (ignores filter). Target set for "Remove All".
+    private var projectBookmarks: [BrowserBookmark] {
+        let projectID = appState.selectedProjectID
+        return allBookmarks.filter { $0.projectID == projectID }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -83,6 +90,15 @@ private struct BookmarksPopoverContent: View {
         }
         .sheet(item: $editing) { bookmark in
             BookmarkEditSheet(bookmark: bookmark)
+        }
+        .alert(
+            "Remove \(projectBookmarks.count) bookmark\(projectBookmarks.count == 1 ? "" : "s")?",
+            isPresented: $confirmingRemoveAll
+        ) {
+            Button("Remove All", role: .destructive) { removeAll() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes every bookmark tied to this project. Global bookmarks are not affected.")
         }
     }
 
@@ -100,6 +116,12 @@ private struct BookmarksPopoverContent: View {
                 .frame(maxWidth: 160)
             Menu {
                 Button("Import Bookmarks...") { onImport() }
+                if !projectBookmarks.isEmpty {
+                    Divider()
+                    Button("Remove All...", role: .destructive) {
+                        confirmingRemoveAll = true
+                    }
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
                     .font(.system(size: 12))
@@ -109,6 +131,13 @@ private struct BookmarksPopoverContent: View {
             .fixedSize()
         }
         .padding(10)
+    }
+
+    private func removeAll() {
+        let store = BookmarkStore(context: modelContext)
+        for bookmark in projectBookmarks {
+            store.remove(bookmark)
+        }
     }
 
     @ViewBuilder
