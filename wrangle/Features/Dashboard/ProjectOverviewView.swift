@@ -205,7 +205,9 @@ struct ProjectOverviewView: View {
     // MARK: - Todos
 
     private var todosSection: some View {
-        CollapsibleVStackSection("Todos", storageKey: "overview.todos.expanded.\(projectID)") {
+        // D-B: Todos intentionally has no `count:` — stat badge in overview header
+        // already surfaces the count, and Todos is the primary capture surface.
+        CollapsibleVStackSection("Todos", storageKey: OverviewStorageKeys.todosExpanded(projectID)) {
             VStack(alignment: .leading, spacing: 12) {
             // Add new todo
             HStack(spacing: 8) {
@@ -276,7 +278,11 @@ struct ProjectOverviewView: View {
     // MARK: - Sessions
 
     private var sessionsSection: some View {
-        CollapsibleVStackSection("Terminal Sessions", storageKey: "overview.sessions.expanded.\(projectID)") {
+        CollapsibleVStackSection(
+            "Terminal Sessions",
+            storageKey: OverviewStorageKeys.sessionsExpanded(projectID),
+            count: terminalSessions.count
+        ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                 ForEach(terminalSessions) { tab in
                     sessionCard(tab)
@@ -379,7 +385,12 @@ struct ProjectOverviewView: View {
     // MARK: - Browsers
 
     private var browsersSection: some View {
-        CollapsibleVStackSection("Browsers", storageKey: "overview.browsers.expanded.\(projectID)") {
+        // Phase 12 D-A6: count = tabs only; nested Bookmarks shows its own count.
+        CollapsibleVStackSection(
+            "Browsers",
+            storageKey: OverviewStorageKeys.browsersExpanded(projectID),
+            count: browserTabs.count
+        ) {
             // D-18/D-19: tab grid renders only when tabs exist.
             if !browserTabs.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
@@ -410,7 +421,11 @@ struct ProjectOverviewView: View {
             // UIX-15 / D-16/D-17/D-18: nested Bookmarks sub-section — renders only when bookmarks exist.
             // Key: per-project, independent from the outer overview.browsers.expanded.{projectID} key (D-21).
             if !projectBrowserBookmarks.isEmpty {
-                CollapsibleVStackSection("Bookmarks", storageKey: "overview.browsers.bookmarks.expanded.\(projectID)") {
+                CollapsibleVStackSection(
+                    "Bookmarks",
+                    storageKey: OverviewStorageKeys.browserBookmarksExpanded(projectID),
+                    count: projectBrowserBookmarks.count
+                ) {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                         ForEach(projectBrowserBookmarks.prefix(12), id: \.id) { bookmark in
                             Button {
@@ -476,7 +491,11 @@ struct ProjectOverviewView: View {
     // MARK: - Documents
 
     private var documentsSection: some View {
-        CollapsibleVStackSection("Open Files", storageKey: "overview.documents.expanded.\(projectID)") {
+        CollapsibleVStackSection(
+            "Open Files",
+            storageKey: OverviewStorageKeys.documentsExpanded(projectID),
+            count: documentTabs.count
+        ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                 ForEach(documentTabs) { tab in
                     Button { navigateToTab(tab) } label: {
@@ -522,7 +541,8 @@ struct ProjectOverviewView: View {
         // by `if !projectBookmarks.isEmpty` — reaching here means non-empty.
         CollapsibleVStackSection(
             "Locations",
-            storageKey: "overview.locations.expanded.\(projectID)"
+            storageKey: OverviewStorageKeys.locationsExpanded(projectID),
+            count: projectBookmarks.count
         ) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
                 ForEach(projectBookmarks) { bookmark in
