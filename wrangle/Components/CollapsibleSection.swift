@@ -7,9 +7,13 @@ import SwiftUI
 
 /// Collapsible VStack-style section used on the Project Overview page and
 /// any other non-List layout. Persists expanded state under `storageKey`.
+///
+/// Optional `count` renders only when collapsed (Phase 12 D-04), styled
+/// `.system(size: 10)` + `.tertiary` to match the sidebar count treatment.
 struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
     let title: String
     private let storage: String
+    let count: Int?
     @AppStorage private var isExpanded: Bool
     @ViewBuilder let content: () -> Content
     @ViewBuilder let accessory: () -> Accessory
@@ -18,11 +22,13 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
         _ title: String,
         storageKey: String,
         defaultExpanded: Bool = true,
+        count: Int? = nil,
         @ViewBuilder accessory: @escaping () -> Accessory,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.title = title
         self.storage = storageKey
+        self.count = count
         self.content = content
         self.accessory = accessory
         _isExpanded = AppStorage(wrappedValue: defaultExpanded, storageKey)
@@ -44,6 +50,11 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
                         Text(title)
                             .font(.headline)
                             .foregroundStyle(.secondary)
+                        if let count, !isExpanded {
+                            Text("\(count)")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .contentShape(Rectangle())
                 }
@@ -63,12 +74,14 @@ extension CollapsibleVStackSection where Accessory == EmptyView {
         _ title: String,
         storageKey: String,
         defaultExpanded: Bool = true,
+        count: Int? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.init(
             title,
             storageKey: storageKey,
             defaultExpanded: defaultExpanded,
+            count: count,
             accessory: { EmptyView() },
             content: content
         )
