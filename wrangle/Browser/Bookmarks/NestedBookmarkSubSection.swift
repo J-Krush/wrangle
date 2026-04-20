@@ -18,7 +18,7 @@ struct NestedBookmarkSubSection: View {
     @Query(sort: \BrowserBookmarkFolder.displayOrder) private var allFolders: [BrowserBookmarkFolder]
     @State private var editing: BrowserBookmark?
     // D-05: new key; independent from sidebar.browsers.expanded
-    @AppStorage("sidebar.browsers.bookmarks.expanded") private var isExpanded: Bool = true
+    @AppStorage(SidebarStorageKeys.browserBookmarksExpanded) private var isExpanded: Bool = true
 
     private var visibleBookmarks: [BrowserBookmark] {
         let projectID = appState.selectedProjectID
@@ -35,28 +35,13 @@ struct NestedBookmarkSubSection: View {
         Group {
             // D-02/D-09/UIX-13: hide-when-empty at the sub-section level
             if !visibleBookmarks.isEmpty {
-                // Sub-header: chevron + "Bookmarks" + count-only-when-collapsed (D-04).
-                Button {
-                    withAnimation(.snappy(duration: 0.15)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        Text("Bookmarks")
-                        // D-04: count rendered only when collapsed
-                        if !isExpanded {
-                            Text("\(visibleBookmarks.count)")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
-                        }
-                        Spacer()
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                // Shared canonical header (Phase 12 D-01/D-03): chevron + "Bookmarks" +
+                // count-only-when-collapsed. Drop target for bookmark re-parenting preserved.
+                SidebarSectionHeader(
+                    title: "Bookmarks",
+                    isExpanded: $isExpanded,
+                    count: visibleBookmarks.count
+                )
                 .onDrop(of: [.text], delegate: BookmarkFolderDropDelegate(
                     targetFolderID: nil,
                     modelContext: modelContext

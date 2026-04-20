@@ -15,8 +15,8 @@ struct SidebarView: View {
     @State private var dropDebounceTask: Task<Void, Never>?
     @State private var isSearchExpanded = false
     @FocusState private var isSearchFieldFocused: Bool
-    @AppStorage("sidebar.locations.expanded") private var isLocationsExpanded: Bool = true
-    @AppStorage("sidebar.scratchPads.expanded") private var isScratchPadsExpanded: Bool = true
+    @AppStorage(SidebarStorageKeys.locationsExpanded) private var isLocationsExpanded: Bool = true
+    @AppStorage(SidebarStorageKeys.scratchPadsExpanded) private var isScratchPadsExpanded: Bool = true
 
     enum DropState {
         case idle
@@ -54,7 +54,8 @@ struct SidebarView: View {
                                 BrowserSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
-                                if !appState.scratchPadManager.scratchPads(forProject: projectID).isEmpty {
+                                let scratchPadsForProject = appState.scratchPadManager.scratchPads(forProject: projectID)
+                                if !scratchPadsForProject.isEmpty {
                                     Section {
                                         if isScratchPadsExpanded {
                                             ScratchPadSection()
@@ -62,7 +63,8 @@ struct SidebarView: View {
                                     } header: {
                                         SidebarSectionHeader(
                                             title: "Scratch Pads",
-                                            isExpanded: $isScratchPadsExpanded
+                                            isExpanded: $isScratchPadsExpanded,
+                                            count: scratchPadsForProject.count
                                         )
                                     }
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
@@ -85,7 +87,8 @@ struct SidebarView: View {
                                     } header: {
                                         SidebarSectionHeader(
                                             title: "Locations",
-                                            isExpanded: $isLocationsExpanded
+                                            isExpanded: $isLocationsExpanded,
+                                            count: projectLocations.count
                                         )
                                     }
                                     .id(projectID)
@@ -534,7 +537,7 @@ private struct SpacesSection: View {
 private struct BrowserSessionsSection: View {
     @Environment(AppState.self) private var appState
     @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
-    @AppStorage("sidebar.browsers.expanded") private var isExpanded: Bool = true
+    @AppStorage(SidebarStorageKeys.browsersExpanded) private var isExpanded: Bool = true
 
     // Mirrors NestedBookmarkSubSection.visibleBookmarks so the outer guard can test
     // bookmark presence without prop-drilling. Same filter (projectID match OR nil/Global).
@@ -558,7 +561,12 @@ private struct BrowserSessionsSection: View {
                 }
             } header: {
                 // D-07: label stays literal "Browsers" in all branches — no dynamic relabeling.
-                SidebarSectionHeader(title: "Browsers", isExpanded: $isExpanded)
+                // Phase 12 D-A6: count = tabs only; nested Bookmarks shows its own count.
+                SidebarSectionHeader(
+                    title: "Browsers",
+                    isExpanded: $isExpanded,
+                    count: browsers.count
+                )
             }
         }
     }
@@ -568,7 +576,7 @@ private struct BrowserSessionsSection: View {
 
 private struct OrphanedSessionsSection: View {
     @Environment(AppState.self) private var appState
-    @AppStorage("sidebar.otherSessions.expanded") private var isExpanded: Bool = true
+    @AppStorage(SidebarStorageKeys.otherSessionsExpanded) private var isExpanded: Bool = true
 
     var body: some View {
         let orphaned = appState.orphanedTerminalSessions
@@ -580,7 +588,11 @@ private struct OrphanedSessionsSection: View {
                     }
                 }
             } header: {
-                SidebarSectionHeader(title: "Other Sessions", isExpanded: $isExpanded)
+                SidebarSectionHeader(
+                    title: "Other Sessions",
+                    isExpanded: $isExpanded,
+                    count: orphaned.count
+                )
             }
         }
     }
