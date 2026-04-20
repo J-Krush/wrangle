@@ -14,9 +14,6 @@ struct BookmarkSidebarSection: View {
     @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
     @Query(sort: \BrowserBookmarkFolder.displayOrder) private var allFolders: [BrowserBookmarkFolder]
     @State private var editing: BrowserBookmark?
-    @State private var newFolderName: String = ""
-    @State private var showingNewFolderAlert: Bool = false
-    @State private var showingNewBookmarkSheet: Bool = false
     @AppStorage("sidebar.bookmarks.expanded") private var isSectionExpanded: Bool = true
 
     private var visibleBookmarks: [BrowserBookmark] {
@@ -56,28 +53,6 @@ struct BookmarkSidebarSection: View {
                 }
                 .buttonStyle(.plain)
                 Spacer()
-                Menu {
-                    Button("New Bookmark...") {
-                        showingNewBookmarkSheet = true
-                    }
-                    Button("New Folder...") {
-                        newFolderName = ""
-                        showingNewFolderAlert = true
-                    }
-                    Divider()
-                    Button("Import Bookmarks...") {
-                        appState.showBookmarkImport = true
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .help("Bookmark actions")
             }
             .onDrop(of: [.text], delegate: BookmarkFolderDropDelegate(
                 targetFolderID: nil,
@@ -87,24 +62,6 @@ struct BookmarkSidebarSection: View {
         .sheet(item: $editing) { bookmark in
             BookmarkEditSheet(bookmark: bookmark)
         }
-        .sheet(isPresented: $showingNewBookmarkSheet) {
-            NewBookmarkSheet(projectID: appState.selectedProjectID)
-        }
-        .alert("New Bookmark Folder", isPresented: $showingNewFolderAlert) {
-            TextField("Folder name", text: $newFolderName)
-            Button("Cancel", role: .cancel) { }
-            Button("Create") { createFolder() }
-        } message: {
-            Text("Enter a name for the new folder.")
-        }
-    }
-
-    private func createFolder() {
-        let trimmed = newFolderName.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        let store = BookmarkStore(context: modelContext)
-        store.createFolder(name: trimmed, projectID: appState.selectedProjectID)
-        newFolderName = ""
     }
 
     @ViewBuilder
