@@ -27,15 +27,21 @@ struct SidebarSectionHeader<Trailing: View>: View {
                     isExpanded.toggle()
                 }
             } label: {
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                // Chevron centers against the title+count group (outer HStack
+                // defaults to .center). Count baseline-aligns with title via
+                // the inner HStack so the smaller number sits on the title
+                // baseline instead of center-aligned against its own bounds.
+                HStack(spacing: 4) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    Text(title)
-                    if let count, !isExpanded {
-                        Text("\(count)")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(title)
+                        if let count, !isExpanded {
+                            Text("\(count)")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
                 .contentShape(Rectangle())

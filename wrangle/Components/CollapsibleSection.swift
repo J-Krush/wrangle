@@ -42,18 +42,23 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
                         isExpanded.toggle()
                     }
                 } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    // Chevron centers against the title+count group (outer HStack
+                    // defaults to .center). Count baseline-aligns with the larger
+                    // title inside an inner HStack.
+                    HStack(spacing: 6) {
                         Image(systemName: "chevron.right")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        Text(title)
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
-                        if let count, !isExpanded {
-                            Text("\(count)")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(title)
+                                .font(.headline)
+                                .foregroundStyle(.secondary)
+                            if let count, !isExpanded {
+                                Text("\(count)")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.tertiary)
+                            }
                         }
                     }
                     .contentShape(Rectangle())
