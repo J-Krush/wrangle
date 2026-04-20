@@ -199,7 +199,7 @@ Plans:
 **Plans**: 2 plans.
 
 Plans:
-- [ ] 11-01-PLAN.md — Sidebar: hide-when-empty for Scratch Pads / Browsers / Locations; remove top-level BookmarkSidebarSection, render nested NestedBookmarkSubSection inside BrowserSessionsSection.
+- [x] 11-01-PLAN.md — Sidebar: hide-when-empty for Scratch Pads / Browsers / Locations; remove top-level BookmarkSidebarSection, render nested NestedBookmarkSubSection inside BrowserSessionsSection.
 - [ ] 11-02-PLAN.md — Project Overview: hide empty section cards, introduce centered empty-hero below Todos, regroup Bookmarks card as nested CollapsibleVStackSection inside Browsers card.
 
 ### Phase 12: Section Parity & Polish
@@ -233,5 +233,5 @@ Phases 1 → 9 execute in numeric order (browser core; already shipped per STATE
 | 8. Downloads | 0/2 | Not started | - |
 | 9. Private / Incognito Mode | 0/1 | Not started | - |
 | 10. Unified Creation Pattern | 2/2 | Complete | 2026-04-20 |
-| 11. Hide-When-Empty + Bookmarks Nested | 0/2 | Not started | - |
+| 11. Hide-When-Empty + Bookmarks Nested | 1/2 | In progress | - |
 | 12. Section Parity & Polish | 0/1 | Not started | - |

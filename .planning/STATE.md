@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Browser Support
 status: executing
-stopped_at: Phase 11 UI-SPEC approved
-last_updated: "2026-04-20T03:19:30.269Z"
-last_activity: 2026-04-20 -- Phase 11 planning complete
+stopped_at: Phase 11 plan 11-01 complete; plan 11-02 pending
+last_updated: "2026-04-20T03:25:19Z"
+last_activity: 2026-04-20 -- Phase 11 Plan 11-01 complete (sidebar hide-when-empty + nested Bookmarks)
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 10 — Unified Creation Pattern
+**Current focus:** Phase 11 — Hide-When-Empty + Bookmarks Nested Under Browsers
 
 ## Current Position
 
-Phase: 10 (Unified Creation Pattern) — COMPLETE
-Plan: 2 of 2 (10-01 + 10-02 complete)
-Status: Ready to execute
-Last activity: 2026-04-20 -- Phase 11 planning complete
+Phase: 11 (Hide-When-Empty + Bookmarks Nested Under Browsers) — EXECUTING
+Plan: 2 of 2 (11-01 complete; 11-02 pending)
+Status: Executing Phase 11
+Last activity: 2026-04-20 -- Phase 11 Plan 11-01 complete (sidebar hide-when-empty + nested Bookmarks)
 
-Progress: [██████████] 100% (2/2 plans of phase 10 complete; build passing)
+Progress: [█████░░░░░] 50% (11-01 of phase 11 complete; build passing)
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██████████] 100% (2/2 plans of phase 10 complete;
 | 9. Private / Incognito Mode | 5 files (AppState, BrowserSession, BrowserWebView, BrowserToolbar, wrangleApp) |
 | 10-01. Unified Creation Pattern (1/2) | 5 files (UnifiedAddMenu created + NewBookmarkSheet, SidebarView, TitleBarTabStrip, ProjectOverviewView edits) — 3 task commits, build green |
 | 10-02. Per-Section Chrome Removal (2/2) | 4 files edited (SidebarView, ProjectOverviewView, BookmarkSidebarSection, SidebarSectionHeader) — 4 task commits, build green; ~3min |
+| 11-01. Sidebar Hide-When-Empty + Nested Bookmarks (1/2) | 2 files (BookmarkSidebarSection renamed → NestedBookmarkSubSection + SidebarView edited) — 2 task commits, build green; ~4min |
 
 ## Accumulated Context
 
@@ -67,6 +68,7 @@ Progress: [██████████] 100% (2/2 plans of phase 10 complete;
 - Dev tools shortcuts (Cmd+Opt+I/J/C) toggle the in-app DevToolsPanel; right-click Inspect Element uses WebKit's default menu which routes to Safari Web Inspector (`isInspectable=true` already on).
 - **Plan 10-01 (UnifiedAddMenu):** single shared SwiftUI view renders the 11-item `+` menu across sidebar / tab strip / Project Overview; per-instance @State chosen over AppState centralization to avoid cross-presenter collisions. `addLocation()` inlined verbatim (not `appState.pendingLocationAdd` — that shortcut silently no-ops at top level). `NewBookmarkSheet` extended with optional URL/Title prefill so Bookmark… pre-fills from the focused browser tab.
 - **Plan 10-02 (per-section chrome removal):** stripped per-section add controls — Locations sidebar `...`, Bookmarks sidebar `...`, Project Overview Bookmarks `Import…` and Locations `+`. `SidebarSectionHeader` simplified (preferred path): generic `Accessory: View` parameter + `@ViewBuilder accessory` closure dropped entirely. All four call sites (Scratch Pads, Locations, Browsers, Other Sessions) compile against the simplified signature. `BookmarkSidebarSection` keeps its bespoke header (count badge is bookmark-specific); Phase 12 may unify. `addLocation()` helpers in both `SidebarView` and `ProjectOverviewView` retained — the former has a surviving empty-state caller, the latter is kept for Phase 11's empty-state hero. `New Folder…` path has no UI affordance post-Phase-10 — accepted gap; users can assign existing folder via `BookmarkEditSheet`.
+- **Plan 11-01 (sidebar hide-when-empty + nested bookmarks):** Renamed `BookmarkSidebarSection.swift` → `NestedBookmarkSubSection.swift` via `git mv` (89% similarity; blame preserved for the four helper structs). Dropped the top-level `Section { } header: { }` wrapper — the new struct is a sibling inside `BrowserSessionsSection`'s existing Section. New `@AppStorage("sidebar.browsers.bookmarks.expanded")` key (default true), independent from `sidebar.browsers.expanded` (D-05). Outer `BrowserSessionsSection` guard widened to `!browsers.isEmpty || !visibleBookmarks.isEmpty` via a duplicated `@Query<BrowserBookmark>` at that scope — accepted trade-off (T-11-03) vs. prop-drilling or AppState hoisting. `SidebarView` gains `private var projectLocations` computed property mirroring `ProjectOverviewView.projectBookmarks`; Locations Section wrapped in `if !projectLocations.isEmpty`. No `withAnimation` wraps section show/hide — instant swap per D-22 / user memory `feedback_no_slide_transitions`. Xcode 16 `fileSystemSynchronizedRootGroup` meant no `pbxproj` edits were required (plan's Task 1 action step 3 skipped as non-applicable — documented as Rule 3 deviation). Build green; UIX-10/11/12/13 satisfied.
 
 ### Pending Todos
 
@@ -83,6 +85,6 @@ Progress: [██████████] 100% (2/2 plans of phase 10 complete;
 
 ## Session Continuity
 
-Last session: 2026-04-20T00:48:44.491Z
-Stopped at: Phase 11 UI-SPEC approved
-Resume file: .planning/phases/11-hide-when-empty-bookmarks-nested-under-browsers/11-UI-SPEC.md
+Last session: 2026-04-20T03:25:19Z
+Stopped at: Phase 11 plan 11-01 complete; plan 11-02 pending (Project Overview hide-when-empty + centered empty-hero + nested Bookmarks card)
+Resume file: .planning/phases/11-hide-when-empty-bookmarks-nested-under-browsers/11-02-PLAN.md
