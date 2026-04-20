@@ -25,6 +25,14 @@ struct SidebarView: View {
 
     @State private var startWidth: CGFloat?
 
+    // UIX-12 / D-01: project-scoped locations count for the hide-when-empty guard.
+    // Mirrors ProjectOverviewView.projectBookmarks — in-view filter rather than
+    // @Query(filter:) to keep consistent with the rest of the codebase.
+    private var projectLocations: [BookmarkedDirectory] {
+        guard let projectID = appState.selectedProjectID else { return [] }
+        return bookmarks.filter { $0.projectID == projectID && !$0.isFile }
+    }
+
     var body: some View {
         @Bindable var appState = appState
         HStack(spacing: 0) {
@@ -60,29 +68,29 @@ struct SidebarView: View {
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                                 }
 
-                                BookmarkSidebarSection()
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
-
-                                Section {
-                                    if isLocationsExpanded {
-                                        ProjectBookmarkListView(
-                                            projectID: projectID,
-                                            scrollProxy: scrollProxy,
-                                            filterText: appState.sidebarFilterText,
-                                            activeFileTypeFilters: activeFileTypeFilters,
-                                            isFinderDragActive: dropState == .hovering,
-                                            showActiveSessionsOnly: appState.showActiveSessionsOnly,
-                                            onAddLocation: addLocation
+                                // UIX-12 / D-01: hide-when-empty for Locations.
+                                if !projectLocations.isEmpty {
+                                    Section {
+                                        if isLocationsExpanded {
+                                            ProjectBookmarkListView(
+                                                projectID: projectID,
+                                                scrollProxy: scrollProxy,
+                                                filterText: appState.sidebarFilterText,
+                                                activeFileTypeFilters: activeFileTypeFilters,
+                                                isFinderDragActive: dropState == .hovering,
+                                                showActiveSessionsOnly: appState.showActiveSessionsOnly,
+                                                onAddLocation: addLocation
+                                            )
+                                        }
+                                    } header: {
+                                        SidebarSectionHeader(
+                                            title: "Locations",
+                                            isExpanded: $isLocationsExpanded
                                         )
                                     }
-                                } header: {
-                                    SidebarSectionHeader(
-                                        title: "Locations",
-                                        isExpanded: $isLocationsExpanded
-                                    )
+                                    .id(projectID)
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                                 }
-                                .id(projectID)
-                                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 OrphanedSessionsSection()
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
@@ -525,18 +533,31 @@ private struct SpacesSection: View {
 
 private struct BrowserSessionsSection: View {
     @Environment(AppState.self) private var appState
+    @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
     @AppStorage("sidebar.browsers.expanded") private var isExpanded: Bool = true
+
+    // Mirrors NestedBookmarkSubSection.visibleBookmarks so the outer guard can test
+    // bookmark presence without prop-drilling. Same filter (projectID match OR nil/Global).
+    private var visibleBookmarks: [BrowserBookmark] {
+        let projectID = appState.selectedProjectID
+        return allBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
+    }
 
     var body: some View {
         let browsers = appState.projectBrowserSessions
-        if !browsers.isEmpty {
+        // UIX-11 / D-07: render when tabs OR bookmarks present.
+        if !browsers.isEmpty || !visibleBookmarks.isEmpty {
             Section {
                 if isExpanded {
+                    // D-10: tab rows first, then nested Bookmarks sub-section.
                     ForEach(browsers) { session in
                         LocationBrowserRow(session: session)
                     }
+                    // D-03/D-09: nested sub-section self-hides when visibleBookmarks.isEmpty.
+                    NestedBookmarkSubSection()
                 }
             } header: {
+                // D-07: label stays literal "Browsers" in all branches — no dynamic relabeling.
                 SidebarSectionHeader(title: "Browsers", isExpanded: $isExpanded)
             }
         }
