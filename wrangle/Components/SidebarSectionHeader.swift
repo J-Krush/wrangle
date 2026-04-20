@@ -5,59 +5,40 @@
 
 import SwiftUI
 
-/// Shared sidebar Section header with chevron toggle.
+/// Static sidebar section header — nav-only.
 ///
-/// Phase 10 kept this nav-only by stripping creation affordances (+/…/Import).
-/// Phase 12 re-introduces an optional `trailing` accessory slot specifically
-/// for *navigation* affordances (e.g., the Bookmarks book icon that opens a
-/// popover). Creation affordances still belong in `UnifiedAddMenu`.
+/// Phase 10 stripped creation affordances from section headers. Phase 12
+/// refinement went further: sidebar sections are no longer collapsible. The
+/// chevron + toggle are gone; sections always render their content (still
+/// gated by hide-when-empty at the caller). Optional trailing slot for
+/// navigation-only accessories (e.g., the Bookmarks book icon).
 ///
-/// Optional `count` renders only when collapsed, styled `.system(size: 10)` +
-/// `.tertiary` to match the canonical treatment.
+/// Overview cards (`CollapsibleVStackSection`) keep collapsibility; this
+/// component is sidebar-specific.
 struct SidebarSectionHeader<Trailing: View>: View {
     let title: String
-    @Binding var isExpanded: Bool
     var count: Int? = nil
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
         HStack(spacing: 4) {
-            Button {
-                withAnimation(.snappy(duration: 0.15)) {
-                    isExpanded.toggle()
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(title)
+                if let count {
+                    Text("\(count)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
                 }
-            } label: {
-                // Chevron centers against the title+count group (outer HStack
-                // defaults to .center). Count baseline-aligns with title via
-                // the inner HStack so the smaller number sits on the title
-                // baseline instead of center-aligned against its own bounds.
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .semibold))
-                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(title)
-                        if let count, !isExpanded {
-                            Text("\(count)")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
-                        }
-                    }
-                }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             Spacer()
             trailing()
         }
-        // Symmetric horizontal padding: match the visual gap from chevron-to-left-edge
-        // with trailing-accessory-to-right-edge (trailing-only; don't shift chevron).
         .padding(.trailing, 8)
     }
 }
 
 extension SidebarSectionHeader where Trailing == EmptyView {
-    init(title: String, isExpanded: Binding<Bool>, count: Int? = nil) {
-        self.init(title: title, isExpanded: isExpanded, count: count, trailing: { EmptyView() })
+    init(title: String, count: Int? = nil) {
+        self.init(title: title, count: count, trailing: { EmptyView() })
     }
 }

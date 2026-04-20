@@ -73,13 +73,15 @@ struct ProjectOverviewView: View {
         browserBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
     }
 
-    // D-12: trigger condition for the empty-hero. Todos are NOT factored in —
-    // Todos always renders at top (primary capture surface); the hero sits below it.
+    // D-12 (revised in Phase 12): trigger condition for the empty-hero. Todos
+    // are NOT factored in — Todos always renders at top. Browser bookmarks also
+    // not factored in: they live inside the Browsers card which only renders
+    // when tabs exist, so a "bookmarks-only" project still looks empty from the
+    // overview's perspective and the hero is the right signal to the user.
     private var isProjectContentEmpty: Bool {
         terminalSessions.isEmpty
             && browserTabs.isEmpty
             && documentTabs.isEmpty
-            && projectBrowserBookmarks.isEmpty
             && projectBookmarks.isEmpty
     }
 
@@ -93,8 +95,10 @@ struct ProjectOverviewView: View {
                     emptyHero
                 }
                 if !terminalSessions.isEmpty { sessionsSection }
-                // UIX-11-overview / D-20: Browsers card renders when tabs OR bookmarks present.
-                if !browserTabs.isEmpty || !projectBrowserBookmarks.isEmpty { browsersSection }
+                // Phase 12 refinement: Browsers card renders only when tabs exist.
+                // Bookmark access is behind the book-icon popover on this section's
+                // header; user must create a tab first before importing.
+                if !browserTabs.isEmpty { browsersSection }
                 if !documentTabs.isEmpty { documentsSection }
                 // UIX-12-overview / D-15 body-level: Locations card renders only when ≥1 location.
                 if !projectBookmarks.isEmpty { locationsSection }
@@ -387,14 +391,14 @@ struct ProjectOverviewView: View {
     private var browsersSection: some View {
         // Phase 12 refinement: bookmarks access lives in the trailing book-icon
         // popover accessory, not a nested Bookmarks card. Count = tabs only.
+        // Book icon is always present when the section is visible so users can
+        // always reach Import Bookmarks… (popover's empty state handles no-bookmarks).
         CollapsibleVStackSection(
             "Browsers",
             storageKey: OverviewStorageKeys.browsersExpanded(projectID),
             count: browserTabs.count,
             accessory: {
-                if !projectBrowserBookmarks.isEmpty {
-                    BookmarksPopoverButton()
-                }
+                BookmarksPopoverButton()
             },
             content: {
                 if !browserTabs.isEmpty {

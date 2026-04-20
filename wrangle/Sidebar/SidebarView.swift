@@ -15,9 +15,6 @@ struct SidebarView: View {
     @State private var dropDebounceTask: Task<Void, Never>?
     @State private var isSearchExpanded = false
     @FocusState private var isSearchFieldFocused: Bool
-    @AppStorage(SidebarStorageKeys.locationsExpanded) private var isLocationsExpanded: Bool = true
-    @AppStorage(SidebarStorageKeys.scratchPadsExpanded) private var isScratchPadsExpanded: Bool = true
-
     enum DropState {
         case idle
         case hovering
@@ -51,43 +48,37 @@ struct SidebarView: View {
                                         Theme.sidebarSelectionBackground(isSelected: appState.activeTab?.projectOverviewID == projectID)
                                     )
 
-                                BrowserSessionsSection()
-                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
-
                                 let scratchPadsForProject = appState.scratchPadManager.scratchPads(forProject: projectID)
                                 if !scratchPadsForProject.isEmpty {
                                     Section {
-                                        if isScratchPadsExpanded {
-                                            ScratchPadSection()
-                                        }
+                                        ScratchPadSection()
                                     } header: {
                                         SidebarSectionHeader(
                                             title: "Scratch Pads",
-                                            isExpanded: $isScratchPadsExpanded,
                                             count: scratchPadsForProject.count
                                         )
                                     }
                                     .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
                                 }
 
+                                BrowserSessionsSection()
+                                    .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
+
                                 // UIX-12 / D-01: hide-when-empty for Locations.
                                 if !projectLocations.isEmpty {
                                     Section {
-                                        if isLocationsExpanded {
-                                            ProjectBookmarkListView(
-                                                projectID: projectID,
-                                                scrollProxy: scrollProxy,
-                                                filterText: appState.sidebarFilterText,
-                                                activeFileTypeFilters: activeFileTypeFilters,
-                                                isFinderDragActive: dropState == .hovering,
-                                                showActiveSessionsOnly: appState.showActiveSessionsOnly,
-                                                onAddLocation: addLocation
-                                            )
-                                        }
+                                        ProjectBookmarkListView(
+                                            projectID: projectID,
+                                            scrollProxy: scrollProxy,
+                                            filterText: appState.sidebarFilterText,
+                                            activeFileTypeFilters: activeFileTypeFilters,
+                                            isFinderDragActive: dropState == .hovering,
+                                            showActiveSessionsOnly: appState.showActiveSessionsOnly,
+                                            onAddLocation: addLocation
+                                        )
                                     } header: {
                                         SidebarSectionHeader(
                                             title: "Locations",
-                                            isExpanded: $isLocationsExpanded,
                                             count: projectLocations.count
                                         )
                                     }
@@ -112,15 +103,6 @@ struct SidebarView: View {
                     .environment(\.sidebarRowSize, .small)
                     .scrollContentBackground(.hidden)
                     .frame(maxHeight: .infinity)
-                    // "Show in Locations" from the tab-strip context menu reveals
-                    // a file inside a location's file tree. If the Locations
-                    // section is collapsed, the revealed row stays hidden — so
-                    // force-expand when a reveal is requested.
-                    .onChange(of: appState.revealFileURL) { _, newValue in
-                        if newValue != nil {
-                            isLocationsExpanded = true
-                        }
-                    }
                     sidebarBottomBar
                 }
                 .frame(maxHeight: .infinity)
@@ -545,38 +527,27 @@ private struct SpacesSection: View {
 
 private struct BrowserSessionsSection: View {
     @Environment(AppState.self) private var appState
-    @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
-    @AppStorage(SidebarStorageKeys.browsersExpanded) private var isExpanded: Bool = true
-
-    // Project-scoped bookmark count — gates section visibility (D-07) and decides
-    // whether the book-icon trailing accessory renders on the header.
-    private var visibleBookmarks: [BrowserBookmark] {
-        let projectID = appState.selectedProjectID
-        return allBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
-    }
 
     var body: some View {
         let browsers = appState.projectBrowserSessions
-        // UIX-11 / D-07: render when tabs OR bookmarks present.
-        if !browsers.isEmpty || !visibleBookmarks.isEmpty {
+        // Only render when the project has at least one browser tab. The book
+        // icon is the sole way to reach bookmarks, and it's inside this header,
+        // so hiding the section when no tabs exist means the user must create a
+        // browser tab first before importing — acceptable entry-point friction.
+        if !browsers.isEmpty {
             Section {
-                if isExpanded {
-                    ForEach(browsers) { session in
-                        LocationBrowserRow(session: session)
-                    }
+                ForEach(browsers) { session in
+                    LocationBrowserRow(session: session)
                 }
             } header: {
-                // Browser-bookmarks access lives in the trailing book-icon popover
-                // (Phase 12 refinement — replaces the nested Bookmarks sub-section).
-                // Count = tabs only; bookmark count surfaces inside the popover.
+                // Bookmarks popover is always available when the section is
+                // rendered — even when no bookmarks exist yet (the popover's
+                // empty state includes an "Import Bookmarks…" action).
                 SidebarSectionHeader(
                     title: "Browsers",
-                    isExpanded: $isExpanded,
                     count: browsers.count
                 ) {
-                    if !visibleBookmarks.isEmpty {
-                        BookmarksPopoverButton()
-                    }
+                    BookmarksPopoverButton()
                 }
             }
         }
@@ -587,21 +558,17 @@ private struct BrowserSessionsSection: View {
 
 private struct OrphanedSessionsSection: View {
     @Environment(AppState.self) private var appState
-    @AppStorage(SidebarStorageKeys.otherSessionsExpanded) private var isExpanded: Bool = true
 
     var body: some View {
         let orphaned = appState.orphanedTerminalSessions
         if !orphaned.isEmpty {
             Section {
-                if isExpanded {
-                    ForEach(orphaned) { session in
-                        LocationSessionRow(session: session)
-                    }
+                ForEach(orphaned) { session in
+                    LocationSessionRow(session: session)
                 }
             } header: {
                 SidebarSectionHeader(
                     title: "Other Sessions",
-                    isExpanded: $isExpanded,
                     count: orphaned.count
                 )
             }

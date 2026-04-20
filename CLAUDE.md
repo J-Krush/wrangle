@@ -62,13 +62,18 @@ Vertical feature slices. Each slice delivers a working increment touching both U
 
 ## Sidebar / Overview Section Conventions
 
+**Collapsibility:**
+- Sidebar sections are **static** — always render their content when visible.
+  No chevron, no toggle, no expansion state. Use `SidebarSectionHeader`
+  (title + optional count + optional trailing accessory).
+- Overview cards **are** collapsible via `CollapsibleVStackSection` and default
+  to expanded. Collapse state persists per-project via `@AppStorage`.
+
 **Expansion state (`@AppStorage`):**
-- Sidebar sections use `sidebar.<section>.expanded` (global, not per-project).
 - Overview cards use `overview.<section>.expanded.<projectID>` (per-project).
-- Nested sub-sections append the sub-segment (e.g., `sidebar.browsers.bookmarks.expanded`).
-- ALL sidebar/overview expansion keys must route through
-  `wrangle/Components/SidebarStorageKeys.swift` or `OverviewStorageKeys.swift` —
-  never declare raw string literals. Adding a new section? Add the constant first.
+- All overview expansion keys must route through
+  `wrangle/Components/OverviewStorageKeys.swift` — never declare raw string
+  literals. Adding a new collapsible overview section? Add the constant first.
 
 **Hide-when-empty invariant:**
 - Sidebar and Project Overview sections must hide entirely when empty.
@@ -80,10 +85,11 @@ Vertical feature slices. Each slice delivers a working increment touching both U
   before the `Section { } header: { }` or `CollapsibleVStackSection(…)` call.
 
 **Header parity:**
-- Sidebar sections use `SidebarSectionHeader(title:isExpanded:count:)`.
+- Sidebar sections use `SidebarSectionHeader(title:count:)`.
 - Overview cards use `CollapsibleVStackSection(_:storageKey:count:)`.
-- Both render an optional count when collapsed (`.system(size: 10)` +
-  `.tertiary`). Do not build bespoke section headers.
+- Both render an optional count as `.system(size: 10)` + `.tertiary`. Sidebar
+  counts always show; overview counts show only when the card is collapsed.
+  Do not build bespoke section headers.
 
 **Header accessory scope:**
 - Phase 10 stripped *creation* affordances (`+` / `…` / `Import…`) from all
