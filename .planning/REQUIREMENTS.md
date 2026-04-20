@@ -96,8 +96,8 @@ A consistency pass across sidebar + Project Overview. Collapses five scattered c
 - [x] **UIX-11**: Sidebar Browsers section renders only when the active project has ≥1 open browser tab OR ≥1 browser bookmark. _(Plan 11-01: BrowserSessionsSection outer guard widened to `!browsers.isEmpty || !visibleBookmarks.isEmpty`.)_
 - [x] **UIX-12**: Sidebar Locations section renders only when the active project has ≥1 location. _(Plan 11-01: Locations Section wrapped in `if !projectLocations.isEmpty` guard.)_
 - [x] **UIX-13**: The sidebar top-level "Bookmarks" section is removed; browser bookmarks render as a collapsible sub-section inside Browsers, which renders only when ≥1 bookmark exists for the active project. _(Plan 11-01: BookmarkSidebarSection renamed to NestedBookmarkSubSection and rendered inside BrowserSessionsSection.)_
-- [ ] **UIX-14**: Project Overview hides empty section cards entirely; a single overview-level empty state ("Press + to add your first Scratch Pad, Browser, Bookmark, or Location.") replaces per-section empty rows.
-- [ ] **UIX-15**: Project Overview Bookmarks card is visually nested under (or directly adjacent to) the Browsers card, mirroring the sidebar hierarchy, using the existing `CollapsibleVStackSection` pattern.
+- [x] **UIX-14**: Project Overview hides empty section cards entirely; a single overview-level empty state ("Press + to add your first Scratch Pad, Browser, Bookmark, or Location.") replaces per-section empty rows. _(Plan 11-02: body gates every non-Todos section with `if !xs.isEmpty`; new `emptyHero` renders below Todos when `isProjectContentEmpty` fires; inline "No bookmarks yet" and "No locations added yet" rows deleted.)_
+- [x] **UIX-15**: Project Overview Bookmarks card is visually nested under (or directly adjacent to) the Browsers card, mirroring the sidebar hierarchy, using the existing `CollapsibleVStackSection` pattern. _(Plan 11-02: standalone `bookmarksSection` deleted; populated bookmarks grid lives inside `browsersSection` as a nested `CollapsibleVStackSection("Bookmarks", …)` — one card, two chevrons.)_
 
 **UIX-20…23 — Section parity + polish**
 
@@ -201,8 +201,8 @@ Mapping of each requirement to its roadmap phase. Updated during roadmap creatio
 | UIX-11 | Phase 11 | Complete (11-01) |
 | UIX-12 | Phase 11 | Complete (11-01) |
 | UIX-13 | Phase 11 | Complete (11-01) |
-| UIX-14 | Phase 11 | Pending |
-| UIX-15 | Phase 11 | Pending |
+| UIX-14 | Phase 11 | Complete (11-02) |
+| UIX-15 | Phase 11 | Complete (11-02) |
 | UIX-20 | Phase 12 | Pending |
 | UIX-21 | Phase 12 | Pending |
 | UIX-22 | Phase 12 | Pending |

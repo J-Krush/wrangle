@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.2 
 - [ ] **Phase 8: Downloads** — WKDownloadDelegate, progress popover, `BrowserDownloadRecord` persistence.
 - [ ] **Phase 9: Private / Incognito Mode** — `WKWebsiteDataStore.nonPersistent()`, visual distinction, history suppression.
 - [x] **Phase 10: Unified Creation Pattern** — Collapse 5 scattered add affordances into two unified `+` menus (sidebar bottom-bar + overview header); remove `New` pill.
-- [ ] **Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers** — Sections disappear when empty; top-level Bookmarks folds into Browsers as a sub-section in both sidebar and overview.
+- [x] **Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers** — Sections disappear when empty; top-level Bookmarks folds into Browsers as a sub-section in both sidebar and overview.
 - [ ] **Phase 12: Section Parity & Polish** — Canonical `SidebarSectionHeader` treatment, Scratch Pad rename/delete parity with Bookmarks, consistent `@AppStorage` expansion keys.
 
 ## Phase Details
@@ -200,7 +200,7 @@ Plans:
 
 Plans:
 - [x] 11-01-PLAN.md — Sidebar: hide-when-empty for Scratch Pads / Browsers / Locations; remove top-level BookmarkSidebarSection, render nested NestedBookmarkSubSection inside BrowserSessionsSection.
-- [ ] 11-02-PLAN.md — Project Overview: hide empty section cards, introduce centered empty-hero below Todos, regroup Bookmarks card as nested CollapsibleVStackSection inside Browsers card.
+- [x] 11-02-PLAN.md — Project Overview: hide empty section cards, introduce centered empty-hero below Todos, regroup Bookmarks card as nested CollapsibleVStackSection inside Browsers card.
 
 ### Phase 12: Section Parity & Polish
 **Goal**: Remaining visual + interaction parity across section types — canonical header styling, Scratch Pad CRUD parity, and consistent expansion-state persistence.
@@ -233,5 +233,5 @@ Phases 1 → 9 execute in numeric order (browser core; already shipped per STATE
 | 8. Downloads | 0/2 | Not started | - |
 | 9. Private / Incognito Mode | 0/1 | Not started | - |
 | 10. Unified Creation Pattern | 2/2 | Complete | 2026-04-20 |
-| 11. Hide-When-Empty + Bookmarks Nested | 1/2 | In progress | - |
+| 11. Hide-When-Empty + Bookmarks Nested | 2/2 | Complete | 2026-04-20 |
 | 12. Section Parity & Polish | 0/1 | Not started | - |
