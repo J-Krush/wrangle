@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Browser Support
 status: executing
-stopped_at: Phase 10 — 10-01 complete (UnifiedAddMenu shipped); 10-02 next.
-last_updated: "2026-04-19T23:54:30.716Z"
-last_activity: 2026-04-19 -- Phase 10 Plan 10-01 complete (UnifiedAddMenu wired)
+stopped_at: Phase 10 complete — 10-01 + 10-02 shipped. Phase 11 next.
+last_updated: "2026-04-20T00:09:26Z"
+last_activity: 2026-04-20 -- Phase 10 Plan 10-02 complete (per-section chrome stripped)
 progress:
   total_phases: 12
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 50
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 ## Current Position
 
-Phase: 10 (Unified Creation Pattern) — EXECUTING
-Plan: 2 of 2 (10-01 complete; 10-02 next)
-Status: Executing Phase 10
-Last activity: 2026-04-19 -- Phase 10 Plan 10-01 complete (UnifiedAddMenu wired)
+Phase: 10 (Unified Creation Pattern) — COMPLETE
+Plan: 2 of 2 (10-01 + 10-02 complete)
+Status: Phase 10 complete; Phase 11 ready to start
+Last activity: 2026-04-20 -- Phase 10 Plan 10-02 complete (per-section chrome stripped)
 
-Progress: [█████░░░░░] 50% (1/2 plans of phase 10 complete; build passing)
+Progress: [██████████] 100% (2/2 plans of phase 10 complete; build passing)
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [█████░░░░░] 50% (1/2 plans of phase 10 complete; 
 | 8. Downloads | 6 files (BrowserDownloadRecord @Model, DownloadManager, DownloadsPopover + 3 edits) |
 | 9. Private / Incognito Mode | 5 files (AppState, BrowserSession, BrowserWebView, BrowserToolbar, wrangleApp) |
 | 10-01. Unified Creation Pattern (1/2) | 5 files (UnifiedAddMenu created + NewBookmarkSheet, SidebarView, TitleBarTabStrip, ProjectOverviewView edits) — 3 task commits, build green |
+| 10-02. Per-Section Chrome Removal (2/2) | 4 files edited (SidebarView, ProjectOverviewView, BookmarkSidebarSection, SidebarSectionHeader) — 4 task commits, build green; ~3min |
 
 ## Accumulated Context
 
@@ -65,6 +66,7 @@ Progress: [█████░░░░░] 50% (1/2 plans of phase 10 complete; 
 - Find-in-page uses WKWebView.find(_:configuration:) (no native macOS find bar API — built in `BrowserFindBar.swift`).
 - Dev tools shortcuts (Cmd+Opt+I/J/C) toggle the in-app DevToolsPanel; right-click Inspect Element uses WebKit's default menu which routes to Safari Web Inspector (`isInspectable=true` already on).
 - **Plan 10-01 (UnifiedAddMenu):** single shared SwiftUI view renders the 11-item `+` menu across sidebar / tab strip / Project Overview; per-instance @State chosen over AppState centralization to avoid cross-presenter collisions. `addLocation()` inlined verbatim (not `appState.pendingLocationAdd` — that shortcut silently no-ops at top level). `NewBookmarkSheet` extended with optional URL/Title prefill so Bookmark… pre-fills from the focused browser tab.
+- **Plan 10-02 (per-section chrome removal):** stripped per-section add controls — Locations sidebar `...`, Bookmarks sidebar `...`, Project Overview Bookmarks `Import…` and Locations `+`. `SidebarSectionHeader` simplified (preferred path): generic `Accessory: View` parameter + `@ViewBuilder accessory` closure dropped entirely. All four call sites (Scratch Pads, Locations, Browsers, Other Sessions) compile against the simplified signature. `BookmarkSidebarSection` keeps its bespoke header (count badge is bookmark-specific); Phase 12 may unify. `addLocation()` helpers in both `SidebarView` and `ProjectOverviewView` retained — the former has a surviving empty-state caller, the latter is kept for Phase 11's empty-state hero. `New Folder…` path has no UI affordance post-Phase-10 — accepted gap; users can assign existing folder via `BookmarkEditSheet`.
 
 ### Pending Todos
 
@@ -81,6 +83,6 @@ Progress: [█████░░░░░] 50% (1/2 plans of phase 10 complete; 
 
 ## Session Continuity
 
-Last session: 2026-04-19
-Stopped at: Phase 10 — Plan 10-01 complete (UnifiedAddMenu shipped). Plan 10-02 is next.
-Resume file: .planning/phases/10-unified-creation-pattern/10-02-PLAN.md
+Last session: 2026-04-20
+Stopped at: Phase 10 COMPLETE (10-01 UnifiedAddMenu + 10-02 per-section chrome removal both shipped). Phase 11 (hide-when-empty + bookmarks nested under browsers) is next.
+Resume file: .planning/phases/11-*/11-01-PLAN.md (not yet authored — phase transition / planning step required)

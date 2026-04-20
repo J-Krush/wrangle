@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.2 
 - [ ] **Phase 7: Browsing History** — Auto-recording, grouped view, clear actions, URL-bar suggestions.
 - [ ] **Phase 8: Downloads** — WKDownloadDelegate, progress popover, `BrowserDownloadRecord` persistence.
 - [ ] **Phase 9: Private / Incognito Mode** — `WKWebsiteDataStore.nonPersistent()`, visual distinction, history suppression.
-- [ ] **Phase 10: Unified Creation Pattern** — Collapse 5 scattered add affordances into two unified `+` menus (sidebar bottom-bar + overview header); remove `New` pill.
+- [x] **Phase 10: Unified Creation Pattern** — Collapse 5 scattered add affordances into two unified `+` menus (sidebar bottom-bar + overview header); remove `New` pill.
 - [ ] **Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers** — Sections disappear when empty; top-level Bookmarks folds into Browsers as a sub-section in both sidebar and overview.
 - [ ] **Phase 12: Section Parity & Polish** — Canonical `SidebarSectionHeader` treatment, Scratch Pad rename/delete parity with Bookmarks, consistent `@AppStorage` expansion keys.
 
@@ -184,7 +184,7 @@ Plans:
 
 Plans:
 - [x] 10-01-PLAN.md — Create `UnifiedAddMenu` shared view, wire into sidebar bottom-bar `+`, tab strip `+`, and Project Overview header (replacing blue `New` pill). Extend `NewBookmarkSheet` with optional prefill.
-- [ ] 10-02-PLAN.md — Strip per-section chrome: Locations `...` (sidebar), Bookmarks `...` (sidebar), Bookmarks `Import…` + Locations `+` (overview cards). Audit `SidebarSectionHeader` accessory parameter.
+- [x] 10-02-PLAN.md — Strip per-section chrome: Locations `...` (sidebar), Bookmarks `...` (sidebar), Bookmarks `Import…` + Locations `+` (overview cards). Audit `SidebarSectionHeader` accessory parameter.
 
 ### Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers
 **Goal**: Sidebar and overview show only non-empty sections. Browser bookmarks live inside Browsers, not as a top-level peer. Discovery moves to the `+` menu.
@@ -232,6 +232,6 @@ Phases 1 → 9 execute in numeric order (browser core; already shipped per STATE
 | 7. Browsing History | 0/2 | Not started | - |
 | 8. Downloads | 0/2 | Not started | - |
 | 9. Private / Incognito Mode | 0/1 | Not started | - |
-| 10. Unified Creation Pattern | 1/2 | In progress | - |
+| 10. Unified Creation Pattern | 2/2 | Complete | 2026-04-20 |
 | 11. Hide-When-Empty + Bookmarks Nested | 0/2 | Not started | - |
 | 12. Section Parity & Polish | 0/1 | Not started | - |
