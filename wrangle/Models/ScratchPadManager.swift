@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 struct ScratchPadItem: Identifiable, Sendable {
     var id: URL { url }
@@ -76,10 +77,20 @@ class ScratchPadManager {
     }
 
     func deleteScratchPad(at url: URL) {
+        // Phase 12 / RESEARCH Pitfall 2: prior code silently hard-deleted on
+        // trashItem failure, which contradicted the UX promise of "moved to
+        // Trash". Log the error instead and leave the file in place so the
+        // user can retry or investigate.
         do {
             try FileManager.default.trashItem(at: url, resultingItemURL: nil)
         } catch {
-            try? FileManager.default.removeItem(at: url)
+            os_log(
+                "Failed to move scratch pad to Trash: %{public}@ (%{public}@)",
+                log: .default,
+                type: .error,
+                url.path,
+                String(describing: error)
+            )
         }
         loadScratchPads()
     }

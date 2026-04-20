@@ -60,6 +60,31 @@ Vertical feature slices. Each slice delivers a working increment touching both U
 - **UI tests:** File open/save flow, bookmark management
 - **Manual testing:** Editor rendering, terminal integration
 
+## Sidebar / Overview Section Conventions
+
+**Expansion state (`@AppStorage`):**
+- Sidebar sections use `sidebar.<section>.expanded` (global, not per-project).
+- Overview cards use `overview.<section>.expanded.<projectID>` (per-project).
+- Nested sub-sections append the sub-segment (e.g., `sidebar.browsers.bookmarks.expanded`).
+- ALL sidebar/overview expansion keys must route through
+  `wrangle/Components/SidebarStorageKeys.swift` or `OverviewStorageKeys.swift` —
+  never declare raw string literals. Adding a new section? Add the constant first.
+
+**Hide-when-empty invariant:**
+- Sidebar and Project Overview sections must hide entirely when empty.
+- Never render a section header with an inline empty-state row ("No X yet",
+  "Nothing here", etc.) inside its body.
+- If a global empty-state message is needed, use the overview's centered
+  `emptyHero` pattern (Phase 11) — never per-section placeholder rows.
+- Section visibility is gated at the body/scope level with `if !xs.isEmpty { … }`
+  before the `Section { } header: { }` or `CollapsibleVStackSection(…)` call.
+
+**Header parity:**
+- Sidebar sections use `SidebarSectionHeader(title:isExpanded:count:)`.
+- Overview cards use `CollapsibleVStackSection(_:storageKey:count:)`.
+- Both render an optional count when collapsed (`.system(size: 10)` +
+  `.tertiary`). Do not build bespoke section headers.
+
 ## Important Notes for Claude Code
 
 - SwiftUI App lifecycle (not AppKit AppDelegate)
