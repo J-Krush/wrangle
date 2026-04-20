@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Browser Support
 status: executing
-stopped_at: All 9 phases shipped. 13 commits on `main` since milestone kickoff.
-last_updated: "2026-04-19T23:53:57.973Z"
-last_activity: 2026-04-19 -- Phase 10 planning complete
+stopped_at: Phase 10 — 10-01 complete (UnifiedAddMenu shipped); 10-02 next.
+last_updated: "2026-04-19T23:54:30.716Z"
+last_activity: 2026-04-19 -- Phase 10 Plan 10-01 complete (UnifiedAddMenu wired)
 progress:
   total_phases: 12
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 50
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** v1.2 Browser Support — All 9 phases shipped. Ready for manual UAT.
+**Current focus:** Phase 10 — Unified Creation Pattern
 
 ## Current Position
 
-Phase: 9 of 9 (Private/Incognito Mode) — Complete
-Plan: —
-Status: Ready to execute
-Last activity: 2026-04-19 -- Phase 10 planning complete
+Phase: 10 (Unified Creation Pattern) — EXECUTING
+Plan: 2 of 2 (10-01 complete; 10-02 next)
+Status: Executing Phase 10
+Last activity: 2026-04-19 -- Phase 10 Plan 10-01 complete (UnifiedAddMenu wired)
 
-Progress: [██████████] 100% (build passing)
+Progress: [█████░░░░░] 50% (1/2 plans of phase 10 complete; build passing)
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100% (build passing)
 | 7. Browsing History | 11 files (BrowsingHistoryEntry @Model, HistoryStore, HistoryView, URLSuggestionPopover + 7 edits) |
 | 8. Downloads | 6 files (BrowserDownloadRecord @Model, DownloadManager, DownloadsPopover + 3 edits) |
 | 9. Private / Incognito Mode | 5 files (AppState, BrowserSession, BrowserWebView, BrowserToolbar, wrangleApp) |
+| 10-01. Unified Creation Pattern (1/2) | 5 files (UnifiedAddMenu created + NewBookmarkSheet, SidebarView, TitleBarTabStrip, ProjectOverviewView edits) — 3 task commits, build green |
 
 ## Accumulated Context
 
@@ -63,6 +64,7 @@ Progress: [██████████] 100% (build passing)
 - Keyboard shortcuts installed via NSEvent local monitor inside BrowserTabContentView, gated by `isActive`. Private mode plumbed via `isPrivate` on BrowserSession, used for WKWebsiteDataStore.nonPersistent() + history suppression.
 - Find-in-page uses WKWebView.find(_:configuration:) (no native macOS find bar API — built in `BrowserFindBar.swift`).
 - Dev tools shortcuts (Cmd+Opt+I/J/C) toggle the in-app DevToolsPanel; right-click Inspect Element uses WebKit's default menu which routes to Safari Web Inspector (`isInspectable=true` already on).
+- **Plan 10-01 (UnifiedAddMenu):** single shared SwiftUI view renders the 11-item `+` menu across sidebar / tab strip / Project Overview; per-instance @State chosen over AppState centralization to avoid cross-presenter collisions. `addLocation()` inlined verbatim (not `appState.pendingLocationAdd` — that shortcut silently no-ops at top level). `NewBookmarkSheet` extended with optional URL/Title prefill so Bookmark… pre-fills from the focused browser tab.
 
 ### Pending Todos
 
@@ -80,5 +82,5 @@ Progress: [██████████] 100% (build passing)
 ## Session Continuity
 
 Last session: 2026-04-19
-Stopped at: All 9 phases shipped. 13 commits on `main` since milestone kickoff.
-Resume file: None
+Stopped at: Phase 10 — Plan 10-01 complete (UnifiedAddMenu shipped). Plan 10-02 is next.
+Resume file: .planning/phases/10-unified-creation-pattern/10-02-PLAN.md

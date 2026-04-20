@@ -84,11 +84,11 @@ A consistency pass across sidebar + Project Overview. Collapses five scattered c
 
 **UIX-01…05 — Unified creation pattern**
 
-- [ ] **UIX-01**: Sidebar bottom-bar `+` is the sole creation entry point in the sidebar chrome; its menu exposes every creatable type: Scratch Pad, Browser, Bookmark (current page, only when a browser tab is focused), Terminal…, Location…, File…, Import Bookmarks….
-- [ ] **UIX-02**: Project Overview header `+` is the sole creation entry point in the overview; its menu content and ordering match UIX-01.
+- [x] **UIX-01**: Sidebar bottom-bar `+` is the sole creation entry point in the sidebar chrome; its menu exposes every creatable type: Scratch Pad, Browser, Bookmark (current page, only when a browser tab is focused), Terminal…, Location…, File…, Import Bookmarks…. _(Plan 10-01: menu in place. Per-section `…` / `+` / `Import…` accessories removal is plan 10-02; until then, duplicate affordances still visible.)_
+- [x] **UIX-02**: Project Overview header `+` is the sole creation entry point in the overview; its menu content and ordering match UIX-01. _(Plan 10-01: menu in place. Card-level accessories removal is plan 10-02.)_
 - [ ] **UIX-03**: All sidebar section headers (Browsers, Locations, Scratch Pads, Orphaned Sessions, and any Bookmarks subsection) are navigation-only — no `+`, `…`, or inline `Import…` buttons remain on section headers.
 - [ ] **UIX-04**: Project Overview section cards show no inline `+`, `…`, or `Import…` buttons on card headers; the overview header `+` is the sole add entry in the overview.
-- [ ] **UIX-05**: The blue "New" pill beside the Project title in `ProjectOverviewView.header` is removed; creation from the Overview header uses a single `+` IconButton whose visual treatment matches the sidebar `+`.
+- [x] **UIX-05**: The blue "New" pill beside the Project title in `ProjectOverviewView.header` is removed; creation from the Overview header uses a single `+` IconButton whose visual treatment matches the sidebar `+`. _(Plan 10-01.)_
 
 **UIX-10…15 — Hide-when-empty + Bookmarks nested under Browsers**
 
@@ -192,11 +192,11 @@ Mapping of each requirement to its roadmap phase. Updated during roadmap creatio
 | BP-02 | Phase 9 | Pending |
 | BP-03 | Phase 9 | Pending |
 | BP-04 | Phase 9 | Pending |
-| UIX-01 | Phase 10 | Pending |
-| UIX-02 | Phase 10 | Pending |
+| UIX-01 | Phase 10 | Complete (10-01) |
+| UIX-02 | Phase 10 | Complete (10-01) |
 | UIX-03 | Phase 10 | Pending |
 | UIX-04 | Phase 10 | Pending |
-| UIX-05 | Phase 10 | Pending |
+| UIX-05 | Phase 10 | Complete (10-01) |
 | UIX-10 | Phase 11 | Pending |
 | UIX-11 | Phase 11 | Pending |
 | UIX-12 | Phase 11 | Pending |

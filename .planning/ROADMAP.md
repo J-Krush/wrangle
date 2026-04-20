@@ -183,7 +183,7 @@ Plans:
 **Plans**: 2 plans.
 
 Plans:
-- [ ] 10-01-PLAN.md — Create `UnifiedAddMenu` shared view, wire into sidebar bottom-bar `+`, tab strip `+`, and Project Overview header (replacing blue `New` pill). Extend `NewBookmarkSheet` with optional prefill.
+- [x] 10-01-PLAN.md — Create `UnifiedAddMenu` shared view, wire into sidebar bottom-bar `+`, tab strip `+`, and Project Overview header (replacing blue `New` pill). Extend `NewBookmarkSheet` with optional prefill.
 - [ ] 10-02-PLAN.md — Strip per-section chrome: Locations `...` (sidebar), Bookmarks `...` (sidebar), Bookmarks `Import…` + Locations `+` (overview cards). Audit `SidebarSectionHeader` accessory parameter.
 
 ### Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers
@@ -232,6 +232,6 @@ Phases 1 → 9 execute in numeric order (browser core; already shipped per STATE
 | 7. Browsing History | 0/2 | Not started | - |
 | 8. Downloads | 0/2 | Not started | - |
 | 9. Private / Incognito Mode | 0/1 | Not started | - |
-| 10. Unified Creation Pattern | 0/2 | Not started | - |
+| 10. Unified Creation Pattern | 1/2 | In progress | - |
 | 11. Hide-When-Empty + Bookmarks Nested | 0/2 | Not started | - |
 | 12. Section Parity & Polish | 0/1 | Not started | - |
