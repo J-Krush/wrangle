@@ -5,23 +5,13 @@
 
 import SwiftUI
 
-/// Shared sidebar Section header with chevron toggle + optional trailing
-/// accessory. Designed to match macOS sidebar density and inherit the native
-/// section title color (never overridden to `.secondary`).
-struct SidebarSectionHeader<Accessory: View>: View {
+/// Shared sidebar Section header with chevron toggle. Navigation-only —
+/// any creation affordances live in `UnifiedAddMenu` (plan 10-01) and are
+/// presented exclusively from the sidebar bottom-bar `+` and the Project
+/// Overview header `+` (Phase 10 D-08 / D-11).
+struct SidebarSectionHeader: View {
     let title: String
     @Binding var isExpanded: Bool
-    @ViewBuilder let accessory: () -> Accessory
-
-    init(
-        title: String,
-        isExpanded: Binding<Bool>,
-        @ViewBuilder accessory: @escaping () -> Accessory = { EmptyView() }
-    ) {
-        self.title = title
-        self._isExpanded = isExpanded
-        self.accessory = accessory
-    }
 
     var body: some View {
         HStack(spacing: 4) {
@@ -40,7 +30,6 @@ struct SidebarSectionHeader<Accessory: View>: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            accessory()
         }
     }
 }
