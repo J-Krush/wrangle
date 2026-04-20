@@ -25,10 +25,6 @@ enum OverviewStorageKeys {
         "overview.browsers.expanded.\(projectID)"
     }
 
-    static func browserBookmarksExpanded(_ projectID: String) -> String {
-        "overview.browsers.bookmarks.expanded.\(projectID)"
-    }
-
     static func documentsExpanded(_ projectID: String) -> String {
         "overview.documents.expanded.\(projectID)"
     }

@@ -539,8 +539,8 @@ private struct BrowserSessionsSection: View {
     @Query(sort: \BrowserBookmark.dateAdded, order: .reverse) private var allBookmarks: [BrowserBookmark]
     @AppStorage(SidebarStorageKeys.browsersExpanded) private var isExpanded: Bool = true
 
-    // Mirrors NestedBookmarkSubSection.visibleBookmarks so the outer guard can test
-    // bookmark presence without prop-drilling. Same filter (projectID match OR nil/Global).
+    // Project-scoped bookmark count — gates section visibility (D-07) and decides
+    // whether the book-icon trailing accessory renders on the header.
     private var visibleBookmarks: [BrowserBookmark] {
         let projectID = appState.selectedProjectID
         return allBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
@@ -552,21 +552,23 @@ private struct BrowserSessionsSection: View {
         if !browsers.isEmpty || !visibleBookmarks.isEmpty {
             Section {
                 if isExpanded {
-                    // D-10: tab rows first, then nested Bookmarks sub-section.
                     ForEach(browsers) { session in
                         LocationBrowserRow(session: session)
                     }
-                    // D-03/D-09: nested sub-section self-hides when visibleBookmarks.isEmpty.
-                    NestedBookmarkSubSection()
                 }
             } header: {
-                // D-07: label stays literal "Browsers" in all branches — no dynamic relabeling.
-                // Phase 12 D-A6: count = tabs only; nested Bookmarks shows its own count.
+                // Browser-bookmarks access lives in the trailing book-icon popover
+                // (Phase 12 refinement — replaces the nested Bookmarks sub-section).
+                // Count = tabs only; bookmark count surfaces inside the popover.
                 SidebarSectionHeader(
                     title: "Browsers",
                     isExpanded: $isExpanded,
                     count: browsers.count
-                )
+                ) {
+                    if !visibleBookmarks.isEmpty {
+                        BookmarksPopoverButton()
+                    }
+                }
             }
         }
     }

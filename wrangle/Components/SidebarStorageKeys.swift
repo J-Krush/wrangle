@@ -17,5 +17,4 @@ enum SidebarStorageKeys {
     static let scratchPadsExpanded = "sidebar.scratchPads.expanded"
     static let browsersExpanded = "sidebar.browsers.expanded"
     static let otherSessionsExpanded = "sidebar.otherSessions.expanded"
-    static let browserBookmarksExpanded = "sidebar.browsers.bookmarks.expanded"
 }

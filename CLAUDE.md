@@ -85,6 +85,16 @@ Vertical feature slices. Each slice delivers a working increment touching both U
 - Both render an optional count when collapsed (`.system(size: 10)` +
   `.tertiary`). Do not build bespoke section headers.
 
+**Header accessory scope:**
+- Phase 10 stripped *creation* affordances (`+` / `…` / `Import…`) from all
+  section headers — those live in `UnifiedAddMenu` only.
+- *Navigation* accessories are still allowed via the trailing slot on
+  `SidebarSectionHeader` and the `accessory:` closure on
+  `CollapsibleVStackSection`. Example: Browsers header carries a
+  `BookmarksPopoverButton` (book icon → popover listing bookmarks with
+  "Import…"). Rule: if the accessory *creates* something, route through
+  `UnifiedAddMenu`; if it *navigates* to related content, inline it.
+
 ## Important Notes for Claude Code
 
 - SwiftUI App lifecycle (not AppKit AppDelegate)

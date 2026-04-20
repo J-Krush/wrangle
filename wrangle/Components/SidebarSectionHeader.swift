@@ -5,17 +5,20 @@
 
 import SwiftUI
 
-/// Shared sidebar Section header with chevron toggle. Navigation-only —
-/// any creation affordances live in `UnifiedAddMenu` (plan 10-01) and are
-/// presented exclusively from the sidebar bottom-bar `+` and the Project
-/// Overview header `+` (Phase 10 D-08 / D-11).
+/// Shared sidebar Section header with chevron toggle.
 ///
-/// Optional `count` renders only when collapsed (Phase 12 D-01), styled
-/// `.system(size: 10)` + `.tertiary` to match the canonical treatment.
-struct SidebarSectionHeader: View {
+/// Phase 10 kept this nav-only by stripping creation affordances (+/…/Import).
+/// Phase 12 re-introduces an optional `trailing` accessory slot specifically
+/// for *navigation* affordances (e.g., the Bookmarks book icon that opens a
+/// popover). Creation affordances still belong in `UnifiedAddMenu`.
+///
+/// Optional `count` renders only when collapsed, styled `.system(size: 10)` +
+/// `.tertiary` to match the canonical treatment.
+struct SidebarSectionHeader<Trailing: View>: View {
     let title: String
     @Binding var isExpanded: Bool
     var count: Int? = nil
+    @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
         HStack(spacing: 4) {
@@ -39,6 +42,13 @@ struct SidebarSectionHeader: View {
             }
             .buttonStyle(.plain)
             Spacer()
+            trailing()
         }
+    }
+}
+
+extension SidebarSectionHeader where Trailing == EmptyView {
+    init(title: String, isExpanded: Binding<Bool>, count: Int? = nil) {
+        self.init(title: title, isExpanded: isExpanded, count: count, trailing: { EmptyView() })
     }
 }

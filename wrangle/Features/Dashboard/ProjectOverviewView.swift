@@ -385,107 +385,45 @@ struct ProjectOverviewView: View {
     // MARK: - Browsers
 
     private var browsersSection: some View {
-        // Phase 12 D-A6: count = tabs only; nested Bookmarks shows its own count.
+        // Phase 12 refinement: bookmarks access lives in the trailing book-icon
+        // popover accessory, not a nested Bookmarks card. Count = tabs only.
         CollapsibleVStackSection(
             "Browsers",
             storageKey: OverviewStorageKeys.browsersExpanded(projectID),
-            count: browserTabs.count
-        ) {
-            // D-18/D-19: tab grid renders only when tabs exist.
-            if !browserTabs.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
-                    ForEach(browserTabs) { tab in
-                        Button { navigateToTab(tab) } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: "globe")
-                                    .font(.title3)
-                                    .foregroundStyle(.blue)
-                                    .frame(width: 32)
-                                Text(tab.displayName)
-                                    .font(.body)
-                                    .lineLimit(1)
-                                Spacer()
-                            }
-                            .modifier(CardStyle())
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button("Go To") { navigateToTab(tab) }
-                            Divider()
-                            Button("Close") { closeTab(tab) }
-                        }
-                    }
+            count: browserTabs.count,
+            accessory: {
+                if !projectBrowserBookmarks.isEmpty {
+                    BookmarksPopoverButton()
                 }
-            }
-
-            // UIX-15 / D-16/D-17/D-18: nested Bookmarks sub-section — renders only when bookmarks exist.
-            // Key: per-project, independent from the outer overview.browsers.expanded.{projectID} key (D-21).
-            if !projectBrowserBookmarks.isEmpty {
-                CollapsibleVStackSection(
-                    "Bookmarks",
-                    storageKey: OverviewStorageKeys.browserBookmarksExpanded(projectID),
-                    count: projectBrowserBookmarks.count
-                ) {
+            },
+            content: {
+                if !browserTabs.isEmpty {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
-                        ForEach(projectBrowserBookmarks.prefix(12), id: \.id) { bookmark in
-                            Button {
-                                guard let url = bookmark.url else { return }
-                                appState.openBrowser(url: url)
-                            } label: {
+                        ForEach(browserTabs) { tab in
+                            Button { navigateToTab(tab) } label: {
                                 HStack(spacing: 12) {
-                                    if let data = bookmark.faviconData, let image = NSImage(data: data) {
-                                        Image(nsImage: image)
-                                            .resizable()
-                                            .frame(width: 20, height: 20)
-                                            .frame(width: 32)
-                                    } else {
-                                        Image(systemName: "globe")
-                                            .font(.title3)
-                                            .foregroundStyle(.blue)
-                                            .frame(width: 32)
-                                    }
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(bookmark.title.isEmpty
-                                            ? (URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
-                                            : bookmark.title)
-                                            .font(.body)
-                                            .lineLimit(1)
-                                        Text(URL(string: bookmark.urlString)?.host() ?? bookmark.urlString)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                            .lineLimit(1)
-                                    }
+                                    Image(systemName: "globe")
+                                        .font(.title3)
+                                        .foregroundStyle(.blue)
+                                        .frame(width: 32)
+                                    Text(tab.displayName)
+                                        .font(.body)
+                                        .lineLimit(1)
                                     Spacer()
                                 }
                                 .modifier(CardStyle())
                             }
                             .buttonStyle(.plain)
-                            .help(bookmark.urlString)
                             .contextMenu {
-                                Button("Open") {
-                                    if let url = bookmark.url { appState.openBrowser(url: url) }
-                                }
-                                Button("Copy URL") {
-                                    NSPasteboard.general.clearContents()
-                                    NSPasteboard.general.setString(bookmark.urlString, forType: .string)
-                                }
+                                Button("Go To") { navigateToTab(tab) }
                                 Divider()
-                                Button("Delete", role: .destructive) {
-                                    let store = BookmarkStore(context: modelContext)
-                                    store.remove(bookmark)
-                                }
+                                Button("Close") { closeTab(tab) }
                             }
                         }
                     }
-
-                    if projectBrowserBookmarks.count > 12 {
-                        Text("Showing 12 of \(projectBrowserBookmarks.count). Use the sidebar for the full list.")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
                 }
             }
-        }
+        )
     }
 
     // MARK: - Documents

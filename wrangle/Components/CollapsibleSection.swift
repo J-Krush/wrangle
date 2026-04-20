@@ -59,8 +59,8 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                accessory()
                 Spacer()
+                accessory()
             }
             if isExpanded {
                 content()
