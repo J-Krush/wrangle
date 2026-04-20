@@ -27,7 +27,7 @@ struct SidebarSectionHeader<Trailing: View>: View {
                     isExpanded.toggle()
                 }
             } label: {
-                HStack(spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
@@ -44,6 +44,9 @@ struct SidebarSectionHeader<Trailing: View>: View {
             Spacer()
             trailing()
         }
+        // Symmetric horizontal padding: match the visual gap from chevron-to-left-edge
+        // with trailing-accessory-to-right-edge (trailing-only; don't shift chevron).
+        .padding(.trailing, 4)
     }
 }
 
