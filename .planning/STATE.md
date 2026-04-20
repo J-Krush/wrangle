@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Browser Support
 status: completed
-stopped_at: Phase 11 context gathered
-last_updated: "2026-04-20T00:41:31.116Z"
+stopped_at: Phase 11 UI-SPEC approved
+last_updated: "2026-04-20T00:48:44.493Z"
 last_activity: 2026-04-20 -- Phase 10 Plan 10-02 complete (per-section chrome stripped)
 progress:
   total_phases: 12
@@ -83,6 +83,6 @@ Progress: [██████████] 100% (2/2 plans of phase 10 complete;
 
 ## Session Continuity
 
-Last session: 2026-04-20T00:41:31.112Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-hide-when-empty-bookmarks-nested-under-browsers/11-CONTEXT.md
+Last session: 2026-04-20T00:48:44.491Z
+Stopped at: Phase 11 UI-SPEC approved
+Resume file: .planning/phases/11-hide-when-empty-bookmarks-nested-under-browsers/11-UI-SPEC.md
