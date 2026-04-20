@@ -79,20 +79,7 @@ struct SidebarView: View {
                                     SidebarSectionHeader(
                                         title: "Locations",
                                         isExpanded: $isLocationsExpanded
-                                    ) {
-                                        Menu {
-                                            Button("Add Location...") { addLocation() }
-                                        } label: {
-                                            Image(systemName: "ellipsis")
-                                                .font(.system(size: 10))
-                                                .foregroundStyle(.secondary)
-                                                .contentShape(Rectangle())
-                                        }
-                                        .menuStyle(.borderlessButton)
-                                        .menuIndicator(.hidden)
-                                        .fixedSize()
-                                        .help("Location actions")
-                                    }
+                                    )
                                 }
                                 .id(projectID)
                                 .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
