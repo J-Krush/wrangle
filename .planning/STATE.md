@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Browser Support
-status: executing
-stopped_at: Phase 11 complete (both plans shipped); ready for Phase 12
-last_updated: "2026-04-20T03:33:32Z"
+status: Ready for Phase 12 (Section Parity & Polish)
+stopped_at: Phase 12 context gathered
+last_updated: "2026-04-20T13:53:49.989Z"
 last_activity: 2026-04-20 -- Phase 11 Plan 11-02 complete (overview hide-when-empty + empty-hero + nested Bookmarks card)
 progress:
   total_phases: 12
@@ -87,6 +87,6 @@ Progress: [██████████] 100% of Phase 11 plans shipped; build
 
 ## Session Continuity
 
-Last session: 2026-04-20T03:33:32Z
-Stopped at: Phase 11 complete (both plans shipped); ready for Phase 12 (Section Parity & Polish)
-Resume file: None — Phase 12 planning to be initiated next session
+Last session: 2026-04-20T13:53:49.985Z
+Stopped at: Phase 12 context gathered
+Resume file: .planning/phases/12-section-parity-polish/12-CONTEXT.md
