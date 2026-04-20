@@ -112,6 +112,15 @@ struct SidebarView: View {
                     .environment(\.sidebarRowSize, .small)
                     .scrollContentBackground(.hidden)
                     .frame(maxHeight: .infinity)
+                    // "Show in Locations" from the tab-strip context menu reveals
+                    // a file inside a location's file tree. If the Locations
+                    // section is collapsed, the revealed row stays hidden — so
+                    // force-expand when a reveal is requested.
+                    .onChange(of: appState.revealFileURL) { _, newValue in
+                        if newValue != nil {
+                            isLocationsExpanded = true
+                        }
+                    }
                     sidebarBottomBar
                 }
                 .frame(maxHeight: .infinity)

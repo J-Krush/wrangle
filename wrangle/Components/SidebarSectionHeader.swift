@@ -46,7 +46,7 @@ struct SidebarSectionHeader<Trailing: View>: View {
         }
         // Symmetric horizontal padding: match the visual gap from chevron-to-left-edge
         // with trailing-accessory-to-right-edge (trailing-only; don't shift chevron).
-        .padding(.trailing, 4)
+        .padding(.trailing, 8)
     }
 }
 
