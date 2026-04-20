@@ -346,16 +346,7 @@ struct ProjectOverviewView: View {
     private var bookmarksSection: some View {
         CollapsibleVStackSection(
             "Bookmarks",
-            storageKey: "overview.bookmarks.expanded.\(projectID)",
-            accessory: {
-                Button {
-                    appState.showBookmarkImport = true
-                } label: {
-                    Label("Import...", systemImage: "square.and.arrow.down")
-                        .font(.caption)
-                }
-                .buttonStyle(.borderless)
-            }
+            storageKey: "overview.bookmarks.expanded.\(projectID)"
         ) {
             bookmarksContent
         }
@@ -513,17 +504,7 @@ struct ProjectOverviewView: View {
     private var locationsSection: some View {
         CollapsibleVStackSection(
             "Locations",
-            storageKey: "overview.locations.expanded.\(projectID)",
-            accessory: {
-                Button {
-                    addLocation()
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-            }
+            storageKey: "overview.locations.expanded.\(projectID)"
         ) {
             if projectBookmarks.isEmpty {
                 HStack(spacing: 8) {
