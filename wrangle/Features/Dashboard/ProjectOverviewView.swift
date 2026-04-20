@@ -73,16 +73,31 @@ struct ProjectOverviewView: View {
         browserBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
     }
 
+    // D-12: trigger condition for the empty-hero. Todos are NOT factored in —
+    // Todos always renders at top (primary capture surface); the hero sits below it.
+    private var isProjectContentEmpty: Bool {
+        terminalSessions.isEmpty
+            && browserTabs.isEmpty
+            && documentTabs.isEmpty
+            && projectBrowserBookmarks.isEmpty
+            && projectBookmarks.isEmpty
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 header
                 todosSection
+                // UIX-14 / D-12/D-13/D-14: single overview-level empty hero when every non-Todos source is empty.
+                if isProjectContentEmpty {
+                    emptyHero
+                }
                 if !terminalSessions.isEmpty { sessionsSection }
-                if !browserTabs.isEmpty { browsersSection }
+                // UIX-11-overview / D-20: Browsers card renders when tabs OR bookmarks present.
+                if !browserTabs.isEmpty || !projectBrowserBookmarks.isEmpty { browsersSection }
                 if !documentTabs.isEmpty { documentsSection }
-                bookmarksSection
-                locationsSection
+                // UIX-12-overview / D-15 body-level: Locations card renders only when ≥1 location.
+                if !projectBookmarks.isEmpty { locationsSection }
             }
             .padding(32)
         }
@@ -341,6 +356,26 @@ struct ProjectOverviewView: View {
         }
     }
 
+    // MARK: - Empty Hero
+
+    private var emptyHero: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(systemName: "square.grid.2x2")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text("Nothing here yet")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+            Text("Press + to add your first Scratch Pad, Browser, Bookmark, or Location.")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+    }
+
     // MARK: - Browsers
 
     private var browsersSection: some View {
@@ -483,25 +518,15 @@ struct ProjectOverviewView: View {
     // MARK: - Locations
 
     private var locationsSection: some View {
+        // D-15: inline empty-state row deleted. Section is gated at the body level
+        // by `if !projectBookmarks.isEmpty` — reaching here means non-empty.
         CollapsibleVStackSection(
             "Locations",
             storageKey: "overview.locations.expanded.\(projectID)"
         ) {
-            if projectBookmarks.isEmpty {
-                HStack(spacing: 8) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.title3)
-                        .foregroundStyle(.tertiary)
-                    Text("No locations added yet. Add a folder to get started.")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(16)
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
-                    ForEach(projectBookmarks) { bookmark in
-                        locationCard(bookmark)
-                    }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                ForEach(projectBookmarks) { bookmark in
+                    locationCard(bookmark)
                 }
             }
         }
