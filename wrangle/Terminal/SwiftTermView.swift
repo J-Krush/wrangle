@@ -161,14 +161,17 @@ class TerminalContainerView: NSView {
 struct SwiftTermView: NSViewRepresentable, Equatable {
     let session: TerminalSession
     var isActive: Bool = false
+    /// Passed through so OSC 8 hyperlink clicks (e.g. from Claude Code) route
+    /// through LinkRouter instead of bouncing out to Safari via NSWorkspace.open.
+    let appState: AppState
     @Environment(\.colorScheme) private var colorScheme
 
     static func == (lhs: SwiftTermView, rhs: SwiftTermView) -> Bool {
-        lhs.session === rhs.session && lhs.isActive == rhs.isActive
+        lhs.session === rhs.session && lhs.isActive == rhs.isActive && lhs.appState === rhs.appState
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(session: session)
+        Coordinator(session: session, appState: appState)
     }
 
     func makeNSView(context: Context) -> TerminalContainerView {
@@ -184,6 +187,7 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
 
         let container = TerminalContainerView(terminalView: terminalView)
         container.isActive = isActive
+        container.isHidden = !isActive
         context.coordinator.isActive = isActive
 
         // Defer process start until the container has a valid frame so SwiftTerm
@@ -208,7 +212,9 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
 
         // Sync isActive state to coordinator and container
         context.coordinator.isActive = isActive
+        context.coordinator.appState = appState
         container.isActive = isActive
+        container.isHidden = !isActive
 
         // Force SwiftTerm to recalculate cols/rows when tab becomes active.
         // Inactive terminals in the ZStack may miss frame changes during resize.
@@ -241,14 +247,16 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
 
     class Coordinator: NSObject, LocalProcessTerminalViewDelegate, TerminalProcessController {
         let session: TerminalSession
+        weak var appState: AppState?
         weak var terminalView: LocalProcessTerminalView?
         var lastColorScheme: ColorScheme?
         var isActive: Bool = false
         var processStarted: Bool = false
         fileprivate var keyboardMonitor: Any?
 
-        init(session: TerminalSession) {
+        init(session: TerminalSession, appState: AppState) {
             self.session = session
+            self.appState = appState
             super.init()
             session.emulator.processController = self
         }
@@ -388,6 +396,22 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
             Task { @MainActor in
                 session.emulator.isRunning = false
                 session.handleProcessExit()
+            }
+        }
+
+        /// Intercepts OSC 8 hyperlink clicks (and any other links SwiftTerm reports).
+        /// Relative paths resolve against the shell's current working directory so
+        /// `./src/foo.swift` printed by a tool resolves correctly.
+        func requestOpenLink(source: TerminalView, link: String, params: [String: String]) {
+            Task { @MainActor [weak self] in
+                guard let self, let appState = self.appState else {
+                    if let fixedUp = link.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                       let url = URL(string: fixedUp) {
+                        NSWorkspace.shared.open(url)
+                    }
+                    return
+                }
+                _ = LinkRouter.open(link, relativeTo: self.session.emulator.workingDirectory, appState: appState)
             }
         }
 

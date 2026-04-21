@@ -73,6 +73,10 @@ struct ProjectOverviewView: View {
         browserBookmarks.filter { $0.projectID == projectID || $0.projectID == nil }
     }
 
+    private var scratchPads: [ScratchPadItem] {
+        appState.scratchPadManager.scratchPads(forProject: projectID)
+    }
+
     // D-12 (revised in Phase 12): trigger condition for the empty-hero. Todos
     // are NOT factored in — Todos always renders at top. Browser bookmarks also
     // not factored in: they live inside the Browsers card which only renders
@@ -83,6 +87,7 @@ struct ProjectOverviewView: View {
             && browserTabs.isEmpty
             && documentTabs.isEmpty
             && projectBookmarks.isEmpty
+            && scratchPads.isEmpty
     }
 
     var body: some View {
@@ -94,6 +99,7 @@ struct ProjectOverviewView: View {
                 if isProjectContentEmpty {
                     emptyHero
                 }
+                if !scratchPads.isEmpty { scratchPadsSection }
                 if !terminalSessions.isEmpty { sessionsSection }
                 // Phase 12 refinement: Browsers card renders only when tabs exist.
                 // Bookmark access is behind the book-icon popover on this section's
@@ -142,12 +148,13 @@ struct ProjectOverviewView: View {
                 newButton
             }
 
-            // Stats
+            // Stats — badges mirror the sections that can render below, and hide at count 0.
             HStack(spacing: 16) {
+                statBadge(count: scratchPads.count, label: scratchPads.count == 1 ? "scratch pad" : "scratch pads", icon: "note.text", color: .yellow)
                 statBadge(count: terminalSessions.count, label: "terminals", icon: "terminal", color: .mint)
                 statBadge(count: browserTabs.count, label: browserTabs.count == 1 ? "browser" : "browsers", icon: "globe", color: .blue)
-                statBadge(count: projectBrowserBookmarks.count, label: "bookmarks", icon: "star.fill", color: .yellow)
-                statBadge(count: projectBookmarks.count, label: "locations", icon: "folder.fill", color: .gray)
+                statBadge(count: documentTabs.count, label: documentTabs.count == 1 ? "open file" : "open files", icon: "doc.text", color: .cyan)
+                statBadge(count: projectBookmarks.count, label: projectBookmarks.count == 1 ? "file location" : "file locations", icon: "folder.fill", color: .gray)
                 if !(incompleteTodos.isEmpty && completedTodos.isEmpty) {
                     todoStatBadge
                 }
@@ -178,17 +185,20 @@ struct ProjectOverviewView: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
     private func statBadge(count: Int, label: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundStyle(color)
-            Text("\(count)")
-                .font(.subheadline)
-                .fontWeight(.medium)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        if count > 0 {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption2)
+                    .foregroundStyle(color)
+                Text("\(count)")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -277,6 +287,41 @@ struct ProjectOverviewView: View {
         let todo = TodoItem(title: title, projectID: projectID, displayOrder: maxOrder + 1)
         modelContext.insert(todo)
         newTodoTitle = ""
+    }
+
+    // MARK: - Scratch Pads
+
+    private var scratchPadsSection: some View {
+        CollapsibleVStackSection(
+            "Scratch Pads",
+            storageKey: OverviewStorageKeys.scratchPadsExpanded(projectID),
+            count: scratchPads.count
+        ) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 260, maximum: 400), spacing: 12)], spacing: 12) {
+                ForEach(scratchPads) { pad in
+                    Button { appState.openFile(url: pad.url) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "note.text")
+                                .font(.title3)
+                                .foregroundStyle(.yellow)
+                                .frame(width: 32)
+                            Text(pad.name)
+                                .font(.body)
+                                .lineLimit(1)
+                            Spacer()
+                        }
+                        .modifier(CardStyle())
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button("Open") { appState.openFile(url: pad.url) }
+                        Button("Reveal in Finder") {
+                            NSWorkspace.shared.activateFileViewerSelecting([pad.url])
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Sessions
@@ -377,7 +422,7 @@ struct ProjectOverviewView: View {
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
-            Text("Press + to add your first Scratch Pad, Browser, Bookmark, or Location.")
+            Text("Press + to add your first Scratch Pad, Browser, Bookmark, or File Location.")
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -482,7 +527,7 @@ struct ProjectOverviewView: View {
         // D-15: inline empty-state row deleted. Section is gated at the body level
         // by `if !projectBookmarks.isEmpty` — reaching here means non-empty.
         CollapsibleVStackSection(
-            "Locations",
+            "File Locations",
             storageKey: OverviewStorageKeys.locationsExpanded(projectID),
             count: projectBookmarks.count
         ) {
@@ -658,7 +703,7 @@ struct ProjectOverviewView: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        panel.message = "Select a directory to add as a location"
+        panel.message = "Select a directory to add as a File Location"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 

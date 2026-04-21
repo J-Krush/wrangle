@@ -21,17 +21,22 @@ struct SidebarSectionHeader<Trailing: View>: View {
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(title)
-                if let count {
-                    Text("\(count)")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
-                }
+                // NOTE: count badge intentionally commented out for this
+                // release — re-enable to surface per-section counts again.
+                // The `count` parameter on both inits is preserved so every
+                // call site continues to compile unchanged.
+                //
+                // if let count {
+                //     Text("\(count)")
+                //         .font(.system(size: 10))
+                //         .foregroundStyle(.tertiary)
+                // }
             }
-            Spacer()
             trailing()
+            Spacer()
         }
         .padding(.trailing, 8)
     }

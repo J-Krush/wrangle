@@ -251,29 +251,24 @@ struct TitleBarTabItem: View {
                 .offset(x: showTrailing ? 4 : -4)
             }
         }
-        .onDrag {
-            draggingTabID = tab.id
-            return NSItemProvider(object: tab.id.uuidString as NSString)
-        }
-        .onDrop(of: [UTType.text], isTargeted: $isDropTargeted) { providers in
-            guard let provider = providers.first else { return false }
-            _ = provider.loadObject(ofClass: NSString.self) { string, _ in
-                guard let idString = string as? String,
-                      let sourceID = UUID(uuidString: idString) else { return }
-                Task { @MainActor in
-                    appState.moveTab(fromID: sourceID, toID: tab.id)
-                    draggingTabID = nil
-                }
-            }
-            return true
-        }
+        // Drag-to-reorder is disabled for the pinned Overview tab. It must
+        // always remain at index 0 — neither moveable nor a drop target.
+        // AppState.moveTab/moveTabToEnd also reject Overview as a belt-and-suspenders
+        // guard, but skipping the modifiers here prevents the drag preview and drop
+        // indicator from ever appearing on this tab.
+        .modifier(TabReorderModifier(
+            tab: tab,
+            draggingTabID: $draggingTabID,
+            isDropTargeted: $isDropTargeted,
+            appState: appState
+        ))
         .contextMenu {
             if isPreview {
                 Button("Keep Open") { onPromote() }
                 Divider()
             }
             if tab.document?.fileURL != nil {
-                Button("Show in Locations") {
+                Button("Show in File Locations") {
                     onSelect()
                     appState.revealFileURL = tab.document?.fileURL
                 }
@@ -328,6 +323,43 @@ struct TitleBarTabItem: View {
                 }
             }
             .padding()
+        }
+    }
+}
+
+// MARK: - Tab Reorder Modifier
+
+/// Conditionally attaches drag-source and drop-target modifiers to a tab.
+/// The Project Overview tab is pinned to index 0 and must never participate
+/// in drag-to-reorder, so this modifier is a no-op for it.
+private struct TabReorderModifier: ViewModifier {
+    let tab: WorkspaceTab
+    @Binding var draggingTabID: UUID?
+    @Binding var isDropTargeted: Bool
+    let appState: AppState
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if tab.isProjectOverview {
+            content
+        } else {
+            content
+                .onDrag {
+                    draggingTabID = tab.id
+                    return NSItemProvider(object: tab.id.uuidString as NSString)
+                }
+                .onDrop(of: [UTType.text], isTargeted: $isDropTargeted) { providers in
+                    guard let provider = providers.first else { return false }
+                    _ = provider.loadObject(ofClass: NSString.self) { string, _ in
+                        guard let idString = string as? String,
+                              let sourceID = UUID(uuidString: idString) else { return }
+                        Task { @MainActor in
+                            appState.moveTab(fromID: sourceID, toID: tab.id)
+                            draggingTabID = nil
+                        }
+                    }
+                    return true
+                }
         }
     }
 }

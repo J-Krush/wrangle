@@ -165,7 +165,7 @@ struct ProjectBookmarkListView: View {
                     }
                 }
             }
-            .alert("Rename Location", isPresented: Binding(
+            .alert("Rename File Location", isPresented: Binding(
                 get: { renamingBookmark != nil },
                 set: { if !$0 { renamingBookmark = nil } }
             )) {
@@ -179,7 +179,7 @@ struct ProjectBookmarkListView: View {
                 }
                 Button("Cancel", role: .cancel) { renamingBookmark = nil }
             } message: {
-                Text("Enter a custom display name for this location.")
+                Text("Enter a custom display name for this File Location.")
             }
             .onChange(of: appState.revealFileURL) { oldValue, newValue in
                 if let revealURL = newValue {
@@ -587,7 +587,7 @@ private struct RightClickMenuArea: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let view = ClickableView(coordinator: context.coordinator)
         let menu = NSMenu()
-        let item = NSMenuItem(title: "Add Location...", action: #selector(Coordinator.addLocation), keyEquivalent: "")
+        let item = NSMenuItem(title: "Add File Location...", action: #selector(Coordinator.addLocation), keyEquivalent: "")
         item.target = context.coordinator
         menu.addItem(item)
         view.menu = menu

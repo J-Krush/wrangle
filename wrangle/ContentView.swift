@@ -347,7 +347,8 @@ struct ContentView: View {
                 ),
                 document: doc,
                 editorContext: editorContext,
-                editingMode: appState.editingMode
+                editingMode: appState.editingMode,
+                appState: appState
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

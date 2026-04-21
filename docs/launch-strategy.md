@@ -26,6 +26,21 @@ Every other markdown editor treats your AI config files like dumb text. Wrangle 
 
 ## Launch Channels (Low Effort, High Signal)
 
+### 0. Product Hunt Launch (Day 0)
+
+Assets live in `docs/product-hunt/` — tagline, description, gallery images, demo GIF, first-comment maker post.
+
+**Launch day tactics:**
+- Post at 12:01am PT for a full 24-hour window on the daily leaderboard
+- First comment (the "maker post") goes up within the first 5 minutes — it's the most-read thing on your page
+- Reply to every comment in the first 12 hours, then taper
+- Don't ask for upvotes in DMs or public posts — PH penalizes obvious solicitation. If someone DMs you asking how they can help, say "a comment means more than an upvote"
+- Same anti-marketing voice as elsewhere: first-person, opinionated, filter-in-your-audience. The PH description is not a place to soften your tone
+
+**What PH buys you:** one concentrated day of traffic from a developer-adjacent audience, a permanent listing page for SEO, and (if you crack top-3 in category) a badge you can put on the landing page. Treat it as a spike, not a sustaining channel.
+
+**Effort: 2 hours day-of + engagement throughout the day.**
+
 ### 1. Build-in-Public Twitter/X Thread (Day 0)
 Write a single thread. Not a launch announcement — a story.
 
@@ -112,11 +127,10 @@ That's it. No gradients, no app screenshots, no "AI-powered" buzzwords. Anti-des
 
 ## What NOT to Do
 
-- **No Product Hunt launch** (unless you genuinely want to). It's a time sink for a niche macOS app. The audience isn't there.
 - **No influencer outreach.** Your users are too technical to be influenced by a YouTuber holding your app.
 - **No feature comparison tables.** Don't compete on features. Compete on understanding.
 - **No "we" language.** You're one person who built a thing. Own that.
-- **No launch day pressure.** This isn't a Kickstarter. The Mac App Store is always open. Launch quietly, let it build.
+- **No launch day pressure beyond PH day.** PH is a finite window. After it closes, go back to letting the Mac App Store build organically — no stress about sustained hype.
 
 ---
 
@@ -132,6 +146,7 @@ That's it. No gradients, no app screenshots, no "AI-powered" buzzwords. Anti-des
 
 | Action | Effort | When |
 |---|---|---|
+| Product Hunt launch | 2 hours + engagement | Day 0 |
 | Twitter/X launch thread | 1 hour | Day 0 |
 | 3-4 Reddit posts | 2 hours total | Week 1 |
 | Blog post | 2-3 hours | Week 1-2 |
@@ -139,7 +154,7 @@ That's it. No gradients, no app screenshots, no "AI-powered" buzzwords. Anti-des
 | Community presence | Ongoing, passive | Always |
 | Optional: boost top tweet | $50-100 | Week 2+ |
 
-**Total active effort: ~6-8 hours spread over 2 weeks.** Then just keep shipping and talking about what you ship.
+**Total active effort: ~8-10 hours spread over 2 weeks.** Then just keep shipping and talking about what you ship.
 
 ---
 

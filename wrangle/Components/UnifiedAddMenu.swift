@@ -89,7 +89,7 @@ struct UnifiedAddMenu: View {
             Button {
                 addLocation()
             } label: {
-                Label("Location…", systemImage: "folder.badge.plus")
+                Label("File Location…", systemImage: "folder.badge.plus")
             }
             // "Import Bookmarks…" removed from UnifiedAddMenu — now reached
             // exclusively via the Bookmarks popover (book icon) "…" menu.
@@ -165,7 +165,7 @@ struct UnifiedAddMenu: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        panel.message = "Select a file or directory to add as a location"
+        panel.message = "Select a file or directory to add as a File Location"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 

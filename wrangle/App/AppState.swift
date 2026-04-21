@@ -476,6 +476,10 @@ class AppState {
               let toIndex = tabs.firstIndex(where: { $0.id == destinationID })
         else { return }
 
+        // Project Overview tab is pinned to index 0 — neither moveable
+        // nor displaceable. Reject if either endpoint is the Overview tab.
+        if tabs[fromIndex].isProjectOverview || tabs[toIndex].isProjectOverview { return }
+
         let activeID = activeTab?.id
         let tab = tabs.remove(at: fromIndex)
         tabs.insert(tab, at: toIndex)
@@ -489,6 +493,9 @@ class AppState {
         guard let fromIndex = tabs.firstIndex(where: { $0.id == sourceID }),
               fromIndex != tabs.count - 1
         else { return }
+
+        // Overview tab is pinned to index 0; never move it to the end.
+        if tabs[fromIndex].isProjectOverview { return }
 
         let activeID = activeTab?.id
         let tab = tabs.remove(at: fromIndex)
@@ -706,6 +713,17 @@ class AppState {
 
     func openBrowserForActiveProject(url: URL? = nil) {
         openBrowser(url: url, bookmarkID: selectedBookmarkID)
+    }
+
+    /// Routes a URL to the in-app browser: appends as a tab inside the active
+    /// browser session if one is focused (avoids spawning a new workspace tab
+    /// per Cmd+click), otherwise opens a new browser workspace tab.
+    func openURLInBrowser(_ url: URL) {
+        if let session = activeTab?.browserSession {
+            session.addTab(url: url)
+        } else {
+            openBrowser(url: url)
+        }
     }
 
     /// All open browser sessions across tabs

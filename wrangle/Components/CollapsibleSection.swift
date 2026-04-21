@@ -37,39 +37,53 @@ struct CollapsibleVStackSection<Content: View, Accessory: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Button {
-                    withAnimation(.snappy(duration: 0.18)) {
-                        isExpanded.toggle()
-                    }
-                } label: {
-                    // Chevron centers against the title+count group (outer HStack
-                    // defaults to .center). Count baseline-aligns with the larger
-                    // title inside an inner HStack.
-                    HStack(spacing: 6) {
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(title)
-                                .font(.headline)
-                                .foregroundStyle(.secondary)
-                            if let count, !isExpanded {
-                                Text("\(count)")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                Spacer()
+                // NOTE: collapse UI (chevron + toggle) and count badge
+                // intentionally commented out for this release. The user
+                // may re-expose collapsing later to let people clean up
+                // their overview; restoring the behavior is as simple as
+                // uncommenting the Button block below and the `if isExpanded`
+                // gate at the bottom of this VStack. `isExpanded`, `storage`,
+                // `count`, and `storageKey` on both inits are preserved so
+                // every call site continues to compile unchanged.
+                //
+                // Button {
+                //     withAnimation(.snappy(duration: 0.18)) {
+                //         isExpanded.toggle()
+                //     }
+                // } label: {
+                //     // Chevron centers against the title+count group (outer HStack
+                //     // defaults to .center). Count baseline-aligns with the larger
+                //     // title inside an inner HStack.
+                //     HStack(spacing: 6) {
+                //         Image(systemName: "chevron.right")
+                //             .font(.caption.weight(.semibold))
+                //             .foregroundStyle(.secondary)
+                //             .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                //         HStack(alignment: .firstTextBaseline, spacing: 6) {
+                //             Text(title)
+                //                 .font(.headline)
+                //                 .foregroundStyle(.secondary)
+                //             if let count, !isExpanded {
+                //                 Text("\(count)")
+                //                     .font(.system(size: 10))
+                //                     .foregroundStyle(.tertiary)
+                //             }
+                //         }
+                //     }
+                //     .contentShape(Rectangle())
+                // }
+                // .buttonStyle(.plain)
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
                 accessory()
+                Spacer()
             }
-            if isExpanded {
-                content()
-            }
+            // NOTE: `if isExpanded { content() }` — gate removed so that
+            // users who had previously collapsed a section still see their
+            // data. Re-add the `if isExpanded` check when restoring the
+            // chevron above.
+            content()
         }
     }
 }

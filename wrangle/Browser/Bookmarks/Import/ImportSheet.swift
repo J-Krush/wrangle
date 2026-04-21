@@ -16,7 +16,6 @@ struct BookmarkImportSheet: View {
     @State private var importedTree: ImportedFolder?
     @State private var errorMessage: String?
     @State private var showFDAHelp: Bool = false
-    @State private var scopeToProject: Bool = true
     @State private var isImporting: Bool = false
     @State private var importResult: ImportResult?
 
@@ -113,15 +112,6 @@ struct BookmarkImportSheet: View {
                     .font(.system(size: 11))
                     .foregroundStyle(selected > 0 ? Color.accentColor : .secondary)
             }
-
-            Toggle(isOn: $scopeToProject) {
-                Text("Scope to current project only")
-                    .font(.system(size: 11))
-            }
-            .toggleStyle(.checkbox)
-            .help(appState.selectedProjectID == nil
-                ? "No project selected — bookmarks will be Global."
-                : "Uncheck to create Global bookmarks visible in every project.")
 
             ScrollView {
                 FolderTreeView(folder: tree, depth: 0)
@@ -239,7 +229,7 @@ struct BookmarkImportSheet: View {
         guard let tree = importedTree else { return }
         isImporting = true
         let store = BookmarkStore(context: modelContext)
-        let scopedProjectID = scopeToProject ? appState.selectedProjectID : nil
+        let scopedProjectID = appState.selectedProjectID
         let flat = tree.flattenSelected()
 
         var added = 0

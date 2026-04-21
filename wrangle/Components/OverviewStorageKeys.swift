@@ -21,6 +21,10 @@ enum OverviewStorageKeys {
         "overview.sessions.expanded.\(projectID)"
     }
 
+    static func scratchPadsExpanded(_ projectID: String) -> String {
+        "overview.scratchpads.expanded.\(projectID)"
+    }
+
     static func browsersExpanded(_ projectID: String) -> String {
         "overview.browsers.expanded.\(projectID)"
     }

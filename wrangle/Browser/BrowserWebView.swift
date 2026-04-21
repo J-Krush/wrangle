@@ -39,6 +39,7 @@ struct BrowserWebView: NSViewRepresentable {
     func makeNSView(context: Context) -> BrowserContainerView {
         let container = BrowserContainerView(frame: .zero)
         container.isActive = isActive
+        container.isHidden = !isActive
         context.coordinator.container = container
 
         // Create webview for the initial tab
@@ -58,6 +59,7 @@ struct BrowserWebView: NSViewRepresentable {
 
     func updateNSView(_ container: BrowserContainerView, context: Context) {
         container.isActive = isActive
+        container.isHidden = !isActive
         let coordinator = context.coordinator
 
         // Switch visible webview when active tab changes

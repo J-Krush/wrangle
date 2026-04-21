@@ -741,7 +741,6 @@ final class MarkdownParser: @unchecked Sendable {
                 .foregroundColor: theme.linkColor,
                 .underlineStyle: NSUnderlineStyle.single.rawValue,
                 .link: urlString,
-                .cursor: NSCursor.pointingHand,
             ], range: textRange)
 
             // Also color the full range for consistent look

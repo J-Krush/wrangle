@@ -15,13 +15,16 @@ struct MarkdownTextView: NSViewRepresentable {
     /// Optional shared context so external views (like toolbars) can drive formatting.
     var editorContext: EditorContext?
     var editingMode: EditingMode = .writing
+    /// Routes Cmd+click on markdown links through LinkRouter instead of NSTextView's
+    /// default NSWorkspace.open behavior (which fails on relative paths).
+    var appState: AppState?
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showLineNumbers") private var showLineNumbers: Bool = true
 
     // MARK: - NSViewRepresentable
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, document: document, editingMode: editingMode)
+        Coordinator(text: $text, document: document, editingMode: editingMode, appState: appState)
     }
 
     func makeNSView(context: Context) -> NSScrollView {
@@ -115,6 +118,9 @@ struct MarkdownTextView: NSViewRepresentable {
         editorContext?.coordinator = context.coordinator
         context.coordinator.editorContext = editorContext
 
+        // Keep appState in sync (used for Cmd+click link routing).
+        context.coordinator.appState = appState
+
         // Detect document switch (since we no longer use .id(doc.id))
         let documentChanged = context.coordinator.documentID != document?.id
         if documentChanged {
@@ -174,6 +180,7 @@ struct MarkdownTextView: NSViewRepresentable {
         weak var editorContext: EditorContext?
         var editingMode: EditingMode = .writing
         var lastColorScheme: ColorScheme?
+        weak var appState: AppState?
 
         /// Guard against feedback loops: true while we are pushing changes from the
         /// text view back to the binding (so `updateNSView` won't re-enter).
@@ -203,11 +210,12 @@ struct MarkdownTextView: NSViewRepresentable {
             document?.fileType.isMarkdownRendered ?? true
         }
 
-        init(text: Binding<String>, document: EditorDocument?, editingMode: EditingMode = .writing) {
+        init(text: Binding<String>, document: EditorDocument?, editingMode: EditingMode = .writing, appState: AppState? = nil) {
             self.text = text
             self.document = document
             self.documentID = document?.id
             self.editingMode = editingMode
+            self.appState = appState
         }
 
         // MARK: - Content Management
@@ -266,7 +274,6 @@ struct MarkdownTextView: NSViewRepresentable {
             // Sync fold state to the text view for triangle drawing
             if let editorTV = textView as? EditorTextView {
                 editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
-                editorTV.updateCopyButtons()
             }
         }
 
@@ -316,7 +323,6 @@ struct MarkdownTextView: NSViewRepresentable {
             // Sync fold state to the text view for triangle drawing
             if let editorTV = textView as? EditorTextView {
                 editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
-                editorTV.updateCopyButtons()
             }
         }
 
@@ -444,7 +450,6 @@ struct MarkdownTextView: NSViewRepresentable {
             // Sync fold state to the text view for triangle drawing
             if let editorTV = textView as? EditorTextView {
                 editorTV.xmlCollapsedOffsets = collapsedXMLTagOffsets
-                editorTV.updateCopyButtons()
             }
         }
 
@@ -968,7 +973,6 @@ struct MarkdownTextView: NSViewRepresentable {
                 attrs[.foregroundColor] = checked ? NSColor.systemGreen : NSColor.tertiaryLabelColor
                 attrs[.font] = NSFont.systemFont(ofSize: 18)
                 attrs[.checkboxMarker] = checked  // Preserve marker for click detection
-                attrs[.cursor] = NSCursor.pointingHand
                 let symbol = checked ? "☑︎ " : "☐ "
                 storage.replaceCharacters(in: range, with: NSAttributedString(string: symbol, attributes: attrs))
             }
@@ -1052,6 +1056,22 @@ struct MarkdownTextView: NSViewRepresentable {
             if let editorTV = textView as? EditorTextView, editorTV.showLineNumbers {
                 editorTV.needsDisplay = true
             }
+        }
+
+        /// Intercepts Cmd+click on markdown `[text](url)` links. Relative paths resolve
+        /// against the current document's directory; external URLs open in the in-app
+        /// browser. Returning `true` suppresses NSTextView's default NSWorkspace.open.
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            guard let appState else { return false }
+            let raw: String
+            if let s = link as? String {
+                raw = s
+            } else if let u = link as? URL {
+                raw = u.absoluteString
+            } else {
+                return false
+            }
+            return LinkRouter.open(raw, relativeTo: document?.fileURL, appState: appState)
         }
 
         // MARK: - Active Format Detection

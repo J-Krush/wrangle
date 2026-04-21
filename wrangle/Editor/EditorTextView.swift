@@ -33,7 +33,9 @@ protocol EditorTextViewFormattingDelegate: AnyObject {
 class EditorTextView: NSTextView {
 
     weak var formattingDelegate: EditorTextViewFormattingDelegate?
-    private var copyButtons: [NSButton] = []
+
+    /// Block index currently showing copied-feedback (green tint). Nil when idle.
+    private var copiedFeedbackBlockIndex: Int?
 
     /// Whether line numbers should be drawn in the left gutter (dev mode).
     var showLineNumbers: Bool = false
@@ -257,6 +259,7 @@ class EditorTextView: NSTextView {
     override func mouseDown(with event: NSEvent) {
         if handleXMLFoldClick(event) { return }
         if handleCheckboxClick(event) { return }
+        if handleCopyButtonClick(event) { return }
         super.mouseDown(with: event)
     }
 
@@ -322,6 +325,7 @@ class EditorTextView: NSTextView {
         drawTableCards()
         drawTableHeaderLine()
         drawXMLFoldTriangles()
+        drawCopyButtons()
         if showLineNumbers { drawLineNumbers(in: rect) }
     }
 
@@ -602,21 +606,29 @@ class EditorTextView: NSTextView {
         return count
     }
 
-    // MARK: - Copy Buttons
+    // MARK: - Copy Buttons (drawn + hit-tested, no NSButton subviews)
 
-    func updateCopyButtons() {
-        // Defer to next run loop iteration so text appears first, then buttons are positioned
-        DispatchQueue.main.async { [weak self] in
-            self?.rebuildCopyButtons()
-        }
+    /// Geometry for a code block's copy button glyph in the text view's coordinate space.
+    private func copyButtonRect(forBlockAt blockRect: NSRect) -> NSRect {
+        let buttonSize: CGFloat = 22
+        let cardPadTop: CGFloat = editingMode == .writing ? 12 : 4
+        return NSRect(
+            x: bounds.width - textContainerInset.width - buttonSize - 12,
+            y: blockRect.origin.y + textContainerInset.height - cardPadTop + 4,
+            width: buttonSize,
+            height: buttonSize
+        )
     }
 
-    private func rebuildCopyButtons() {
-        copyButtons.forEach { $0.removeFromSuperview() }
-        copyButtons.removeAll()
-
+    private func drawCopyButtons() {
         guard let layoutManager, let textContainer, let textStorage else { return }
         guard textStorage.length > 0 else { return }
+
+        let baseSymbol = NSImage(
+            systemSymbolName: "doc.on.doc",
+            accessibilityDescription: "Copy code"
+        )
+        guard let baseSymbol else { return }
 
         var blockIndex = 0
         textStorage.enumerateAttribute(
@@ -635,105 +647,92 @@ class EditorTextView: NSTextView {
                 forGlyphRange: glyphRange,
                 in: textContainer
             )
+            let buttonRect = copyButtonRect(forBlockAt: blockRect)
 
-            let button = NSButton()
-            button.image = NSImage(
-                systemSymbolName: "doc.on.doc",
-                accessibilityDescription: "Copy code"
-            )
-            button.bezelStyle = .inline
-            button.isBordered = false
-            button.contentTintColor = .tertiaryLabelColor
-            button.imageScaling = .scaleProportionallyDown
-            button.tag = blockIndex
-            button.target = self
-            button.action = #selector(copyCodeBlock(_:))
+            let tint: NSColor = (copiedFeedbackBlockIndex == blockIndex)
+                ? .systemGreen
+                : .tertiaryLabelColor
+            let config = NSImage.SymbolConfiguration(pointSize: 12, weight: .regular)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [tint]))
 
-            let buttonSize: CGFloat = 22
-            let cardPadTop: CGFloat = self.editingMode == .writing ? 12 : 4
-            button.frame = NSRect(
-                x: self.bounds.width - self.textContainerInset.width - buttonSize - 12,
-                y: blockRect.origin.y + self.textContainerInset.height - cardPadTop + 4,
-                width: buttonSize,
-                height: buttonSize
-            )
+            if let tinted = baseSymbol.withSymbolConfiguration(config) {
+                let imgSize = tinted.size
+                let drawRect = NSRect(
+                    x: buttonRect.midX - imgSize.width / 2,
+                    y: buttonRect.midY - imgSize.height / 2,
+                    width: imgSize.width,
+                    height: imgSize.height
+                )
+                tinted.draw(in: drawRect)
+            }
 
-            self.addSubview(button)
-            self.copyButtons.append(button)
             blockIndex += 1
         }
     }
 
-    override func setFrameSize(_ newSize: NSSize) {
-        super.setFrameSize(newSize)
-        repositionCopyButtons()
-    }
+    private func handleCopyButtonClick(_ event: NSEvent) -> Bool {
+        guard let layoutManager, let textContainer, let textStorage else { return false }
+        guard textStorage.length > 0 else { return false }
 
-    private func repositionCopyButtons() {
-        guard let layoutManager, let textContainer, let textStorage else { return }
-        guard textStorage.length > 0 else { return }
+        let point = convert(event.locationInWindow, from: nil)
 
-        var index = 0
-        textStorage.enumerateAttribute(
-            .codeBlockBackground,
-            in: NSRange(location: 0, length: textStorage.length)
-        ) { value, range, _ in
-            guard value != nil, index < self.copyButtons.count else { return }
-
-            let glyphRange = layoutManager.glyphRange(
-                forCharacterRange: range,
-                actualCharacterRange: nil
-            )
-            guard glyphRange.length > 0 else { return }
-
-            let blockRect = layoutManager.boundingRect(
-                forGlyphRange: glyphRange,
-                in: textContainer
-            )
-
-            let buttonSize: CGFloat = 22
-            let cardPadTop: CGFloat = self.editingMode == .writing ? 12 : 4
-            self.copyButtons[index].frame = NSRect(
-                x: self.bounds.width - self.textContainerInset.width - buttonSize - 12,
-                y: blockRect.origin.y + self.textContainerInset.height - cardPadTop + 4,
-                width: buttonSize,
-                height: buttonSize
-            )
-            index += 1
-        }
-    }
-
-    @objc private func copyCodeBlock(_ sender: NSButton) {
-        guard let textStorage else { return }
-
+        var hit = false
+        var hitRange = NSRange(location: 0, length: 0)
+        var hitIndex = 0
         var blockIndex = 0
+
         textStorage.enumerateAttribute(
             .codeBlockBackground,
             in: NSRange(location: 0, length: textStorage.length)
         ) { value, range, stop in
             guard value != nil else { return }
 
-            if blockIndex == sender.tag {
-                let fullText = (textStorage.string as NSString).substring(with: range)
-                // Strip fence lines — first and last lines if they start with ```
-                var lines = fullText.components(separatedBy: "\n")
-                if let first = lines.first, first.hasPrefix("```") { lines.removeFirst() }
-                if let last = lines.last, last.hasPrefix("```") { lines.removeLast() }
-                if lines.last?.isEmpty == true { lines.removeLast() }
-                let code = lines.joined(separator: "\n")
+            let glyphRange = layoutManager.glyphRange(
+                forCharacterRange: range,
+                actualCharacterRange: nil
+            )
+            guard glyphRange.length > 0 else { return }
 
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(code, forType: .string)
+            let blockRect = layoutManager.boundingRect(
+                forGlyphRange: glyphRange,
+                in: textContainer
+            )
+            let buttonRect = copyButtonRect(forBlockAt: blockRect)
 
-                // Brief visual feedback — tint the button
-                sender.contentTintColor = .systemGreen
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                    sender.contentTintColor = .tertiaryLabelColor
-                }
-
+            if buttonRect.contains(point) {
+                hit = true
+                hitRange = range
+                hitIndex = blockIndex
                 stop.pointee = true
             }
             blockIndex += 1
+        }
+
+        if hit {
+            copyCode(range: hitRange, blockIndex: hitIndex)
+            return true
+        }
+        return false
+    }
+
+    private func copyCode(range: NSRange, blockIndex: Int) {
+        guard let textStorage else { return }
+
+        let fullText = (textStorage.string as NSString).substring(with: range)
+        var lines = fullText.components(separatedBy: "\n")
+        if let first = lines.first, first.hasPrefix("```") { lines.removeFirst() }
+        if let last = lines.last, last.hasPrefix("```") { lines.removeLast() }
+        if lines.last?.isEmpty == true { lines.removeLast() }
+        let code = lines.joined(separator: "\n")
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code, forType: .string)
+
+        copiedFeedbackBlockIndex = blockIndex
+        needsDisplay = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+            self?.copiedFeedbackBlockIndex = nil
+            self?.needsDisplay = true
         }
     }
 }

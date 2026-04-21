@@ -37,7 +37,7 @@ struct TerminalDirectoryPicker: View {
             Divider()
 
             if bookmarks.isEmpty {
-                Text("No saved locations")
+                Text("No saved File Locations")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding(12)
@@ -87,7 +87,7 @@ struct TerminalDirectoryPicker: View {
                 HStack(spacing: 6) {
                     Image(systemName: "folder.badge.plus")
                         .font(.caption)
-                    Text("Add Location...")
+                    Text("Add File Location...")
                         .font(.system(size: 12))
                 }
                 .padding(.horizontal, 10)

@@ -42,11 +42,12 @@ struct SidebarView: View {
                     ScrollViewReader { scrollProxy in
                         List {
                             if let projectID = appState.selectedProjectID {
-                                overviewRow(projectID: projectID)
-                                    .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 2, trailing: 4))
-                                    .listRowBackground(
-                                        Theme.sidebarSelectionBackground(isSelected: appState.activeTab?.projectOverviewID == projectID)
-                                    )
+                                Section {
+                                    overviewRow(projectID: projectID)
+                                } header: {
+                                    SidebarSectionHeader(title: "Project")
+                                }
+                                .listRowInsets(EdgeInsets(top: 0, leading: 4, bottom: 0, trailing: 4))
 
                                 let scratchPadsForProject = appState.scratchPadManager.scratchPads(forProject: projectID)
                                 if !scratchPadsForProject.isEmpty {
@@ -78,7 +79,7 @@ struct SidebarView: View {
                                         )
                                     } header: {
                                         SidebarSectionHeader(
-                                            title: "Locations",
+                                            title: "File Locations",
                                             count: projectLocations.count
                                         )
                                     }
@@ -112,23 +113,15 @@ struct SidebarView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(4)
                 .overlay(alignment: .trailing) {
-                    // Resize handle
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(width: 5)
-                        .contentShape(Rectangle())
-                        .onHover { hovering in
-                            if hovering { NSCursor.resizeLeftRight.push() }
-                            else { NSCursor.pop() }
-                        }
-                        .gesture(
-                            DragGesture(minimumDistance: 1)
-                                .onChanged { value in
-                                    if startWidth == nil { startWidth = appState.sidebarWidth }
-                                    appState.sidebarWidth = max(140, min(400, (startWidth ?? 200) + value.translation.width))
-                                }
-                                .onEnded { _ in startWidth = nil }
-                        )
+                    ResizeHandle(
+                        axis: .horizontal,
+                        onDragged: { translation in
+                            if startWidth == nil { startWidth = appState.sidebarWidth }
+                            appState.sidebarWidth = max(140, min(400, (startWidth ?? 200) + translation))
+                        },
+                        onEnded: { startWidth = nil }
+                    )
+                    .frame(width: 5)
                 }
                 .overlay {
                     if dropState == .hovering {
@@ -277,9 +270,9 @@ struct SidebarView: View {
             Image(systemName: "folder.badge.plus")
                 .font(.system(size: 32))
                 .foregroundStyle(.tint)
-            Text("Drop to Add Location")
+            Text("Drop to Add File Location")
                 .font(.headline)
-            Text("Drag a folder here to add it as a location")
+            Text("Drag a folder here to add it as a File Location")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -307,6 +300,7 @@ struct SidebarView: View {
             Label {
                 Text("Overview")
                     .lineLimit(1)
+                    .foregroundStyle(isActive ? .primary : .secondary)
             } icon: {
                 Image(systemName: "square.grid.2x2")
                     .foregroundStyle(.gray)
@@ -315,6 +309,7 @@ struct SidebarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .listRowBackground(Theme.sidebarSelectionBackground(isSelected: isActive))
     }
 
     // MARK: - Actions
@@ -338,7 +333,7 @@ struct SidebarView: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        panel.message = "Select a file or directory to add as a location"
+        panel.message = "Select a file or directory to add as a File Location"
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 

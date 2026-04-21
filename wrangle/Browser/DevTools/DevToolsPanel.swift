@@ -75,28 +75,15 @@ private struct DevToolsResizeHandle: View {
     @State private var startHeight: CGFloat?
 
     var body: some View {
-        Rectangle()
-            .fill(Color.clear)
-            .frame(height: 5)
-            .contentShape(Rectangle())
-            .onHover { hovering in
-                if hovering {
-                    NSCursor.resizeUpDown.push()
-                } else {
-                    NSCursor.pop()
-                }
-            }
-            .gesture(
-                DragGesture(minimumDistance: 1)
-                    .onChanged { value in
-                        if startHeight == nil { startHeight = height }
-                        // Dragging up increases height (negative translation)
-                        let newHeight = (startHeight ?? height) - value.translation.height
-                        height = max(100, min(600, newHeight))
-                    }
-                    .onEnded { _ in
-                        startHeight = nil
-                    }
-            )
+        ResizeHandle(
+            axis: .vertical,
+            onDragged: { translation in
+                if startHeight == nil { startHeight = height }
+                // AppKit y-up: drag up → positive translation → increase height
+                height = max(100, min(600, (startHeight ?? height) + translation))
+            },
+            onEnded: { startHeight = nil }
+        )
+        .frame(height: 5)
     }
 }

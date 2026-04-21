@@ -54,7 +54,7 @@ struct ProjectDetailSection: View {
             IntentListView(projectID: projectID)
         }
 
-        Section("Locations") {
+        Section("File Locations") {
             ProjectBookmarkListView(
                 projectID: projectID,
                 scrollProxy: scrollProxy,

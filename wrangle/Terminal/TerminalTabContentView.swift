@@ -8,6 +8,7 @@ import SwiftUI
 struct TerminalTabContentView: View {
     let session: TerminalSession
     let isActive: Bool
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         VStack(spacing: 0) {
@@ -18,7 +19,7 @@ struct TerminalTabContentView: View {
             // so SwiftTerm's frame matches the reported terminal dimensions exactly.
             // NOTE: Do NOT wrap SwiftTermView in a ZStack — it interferes with the
             // NSViewRepresentable layout proposal and causes text overlap corruption.
-            EquatableView(content: SwiftTermView(session: session, isActive: isActive))
+            EquatableView(content: SwiftTermView(session: session, isActive: isActive, appState: appState))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(Theme.current.terminalBackground))
                 .overlay {
