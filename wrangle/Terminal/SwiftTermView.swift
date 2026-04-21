@@ -24,6 +24,9 @@ protocol TerminalProcessController: AnyObject {
 /// paths as shell-escaped text into the terminal process.
 class TerminalContainerView: NSView {
     let terminalView: LocalProcessTerminalView
+    /// Overlay sibling that draws URL underlines + hover cursors. Only present
+    /// when the terminal view is the URL-aware subclass.
+    private let urlOverlay: URLOverlayView?
     /// Called once when the container first receives a non-zero frame, so the
     /// shell process can start with the correct terminal column/row count.
     var onFirstLayout: (() -> Void)?
@@ -45,6 +48,13 @@ class TerminalContainerView: NSView {
 
     init(terminalView: LocalProcessTerminalView) {
         self.terminalView = terminalView
+        if let urlAware = terminalView as? URLAwareTerminalView {
+            let overlay = URLOverlayView(frame: .zero)
+            overlay.terminalView = urlAware
+            self.urlOverlay = overlay
+        } else {
+            self.urlOverlay = nil
+        }
         super.init(frame: .zero)
 
         // Use manual frame management (not AutoLayout) so that setFrameSize:
@@ -52,6 +62,17 @@ class TerminalContainerView: NSView {
         // frame-setting bypasses setFrameSize:, which means SwiftTerm never
         // calls processSizeChange and keeps its initial 0×0 col/row count.
         addSubview(terminalView)
+        if let overlay = urlOverlay {
+            addSubview(overlay, positioned: .above, relativeTo: terminalView)
+
+            // Repaint overlay + refresh cursor rects whenever the detector
+            // finds a new set of URL spans.
+            (terminalView as? URLAwareTerminalView)?.onSpansChanged = { [weak self] in
+                guard let self, let overlay = self.urlOverlay else { return }
+                overlay.needsDisplay = true
+                self.window?.invalidateCursorRects(for: overlay)
+            }
+        }
         // Drag type registration is managed dynamically via isActive didSet
     }
 
@@ -71,6 +92,10 @@ class TerminalContainerView: NSView {
         // drag interrupts SwiftTerm's selection tracking.
         if terminalView.frame != termFrame {
             terminalView.frame = termFrame
+        }
+        // Overlay shadows the terminal frame exactly.
+        if let overlay = urlOverlay, overlay.frame != termFrame {
+            overlay.frame = termFrame
         }
 
         if bounds.width > 0, let callback = onFirstLayout {
@@ -175,9 +200,25 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
     }
 
     func makeNSView(context: Context) -> TerminalContainerView {
-        let terminalView = LocalProcessTerminalView(frame: .zero)
+        let terminalView = URLAwareTerminalView(frame: .zero)
         terminalView.processDelegate = context.coordinator
         context.coordinator.terminalView = terminalView
+
+        // Intercept Cmd+click on hyperlink-payload cells so URLs open in-app.
+        // SwiftTerm's default TerminalViewDelegate extension opens via NSWorkspace,
+        // and a subclass override isn't dispatched (see LinkInterceptingTerminalDelegate
+        // docstring). Replacing the terminalDelegate with our proxy is the fix.
+        let interceptor = LinkInterceptingTerminalDelegate(wrapping: terminalView)
+        interceptor.onOpenLink = { [weak coordinator = context.coordinator] link, _ in
+            guard let coordinator, let appState = coordinator.appState else { return }
+            _ = LinkRouter.open(
+                link,
+                relativeTo: coordinator.session.emulator.workingDirectory,
+                appState: appState
+            )
+        }
+        terminalView.terminalDelegate = interceptor
+        context.coordinator.linkInterceptor = interceptor
 
         // Apply theme
         context.coordinator.configureAppearance(terminalView)
@@ -253,6 +294,9 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
         var isActive: Bool = false
         var processStarted: Bool = false
         fileprivate var keyboardMonitor: Any?
+        /// Strong-held proxy that intercepts URL Cmd+clicks. SwiftTerm holds the
+        /// `terminalDelegate` weakly, so the coordinator must retain it.
+        var linkInterceptor: LinkInterceptingTerminalDelegate?
 
         init(session: TerminalSession, appState: AppState) {
             self.session = session
@@ -396,22 +440,6 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
             Task { @MainActor in
                 session.emulator.isRunning = false
                 session.handleProcessExit()
-            }
-        }
-
-        /// Intercepts OSC 8 hyperlink clicks (and any other links SwiftTerm reports).
-        /// Relative paths resolve against the shell's current working directory so
-        /// `./src/foo.swift` printed by a tool resolves correctly.
-        func requestOpenLink(source: TerminalView, link: String, params: [String: String]) {
-            Task { @MainActor [weak self] in
-                guard let self, let appState = self.appState else {
-                    if let fixedUp = link.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                       let url = URL(string: fixedUp) {
-                        NSWorkspace.shared.open(url)
-                    }
-                    return
-                }
-                _ = LinkRouter.open(link, relativeTo: self.session.emulator.workingDirectory, appState: appState)
             }
         }
 

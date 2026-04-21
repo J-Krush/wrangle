@@ -506,8 +506,6 @@ private struct SessionAddButton: View {
             Button("New Claude Code Session") { launchClaude() }
             Button("New Gemini Code Session") { launchGemini() }
             Divider()
-            Button("New Browser") { appState.openBrowser() }
-            Divider()
             Button {
                 launchClaudeDangerous()
             } label: {

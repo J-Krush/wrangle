@@ -160,7 +160,7 @@ struct TitleBarTabItem: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 4) {
-                if tab.terminalSession?.isClaude != true && tab.terminalSession?.isGemini != true {
+                if tab.terminalSession?.isGemini != true {
                     if tab.isCustomIcon {
                         Image(tab.iconName)
                             .resizable()
@@ -172,6 +172,11 @@ struct TitleBarTabItem: View {
                         Image(systemName: tab.iconName)
                             .font(.system(size: 10))
                             .foregroundColor(isActive ? tab.iconColor : .secondary)
+                            .symbolEffect(
+                                .pulse,
+                                options: .repeating,
+                                isActive: tab.terminalSession?.isWorking == true
+                            )
                     }
                 }
 
@@ -277,6 +282,19 @@ struct TitleBarTabItem: View {
                         NSWorkspace.shared.activateFileViewerSelecting([url])
                     }
                 }
+                Divider()
+            }
+            if let browserSession = tab.browserSession {
+                let activeURL = browserSession.activeTab?.url
+                Button("Duplicate Tab") {
+                    appState.openBrowser(url: activeURL)
+                }
+                Button("Open in Default Browser") {
+                    if let url = activeURL {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .disabled(activeURL == nil)
                 Divider()
             }
             Button("Rename") {

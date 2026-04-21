@@ -69,12 +69,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var panel: ToolbarPanel!
     var windowPicker: NSPopUpButton!
     var scaleControl: NSSegmentedControl!
+    var timerControl: NSSegmentedControl!
     var captureButton: NSButton!
     var statusLabel: NSTextField!
     var dimensionsLabel: NSTextField!
 
     var scWindows: [SCWindow] = []
     var lastSaved: URL?
+
+    // Timer delay options in seconds, parallel to timerControl segments.
+    let timerDelays: [Int] = [0, 3, 5, 10]
 
     func applicationDidFinishLaunching(_ note: Notification) {
         buildUI()
@@ -84,7 +88,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: UI
 
     func buildUI() {
-        let panelW: CGFloat = 640
+        let panelW: CGFloat = 800
         let panelH: CGFloat = 68
         let screen = NSScreen.main!.frame
         let frame = NSRect(
@@ -132,6 +136,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         scaleControl.segmentDistribution = .fillEqually
         scaleControl.widthAnchor.constraint(equalToConstant: 80).isActive = true
 
+        let timerLabels = timerDelays.map { $0 == 0 ? "Now" : "\($0)s" }
+        timerControl = NSSegmentedControl(labels: timerLabels, trackingMode: .selectOne, target: self, action: nil)
+        timerControl.selectedSegment = 0
+        timerControl.controlSize = .regular
+        timerControl.segmentDistribution = .fillEqually
+        timerControl.toolTip = "Delay before capture — lets you position the mouse"
+        timerControl.widthAnchor.constraint(equalToConstant: 160).isActive = true
+
         captureButton = NSButton(title: "Capture", target: self, action: #selector(captureClicked))
         captureButton.bezelStyle = .rounded
         captureButton.controlSize = .regular
@@ -147,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let revealBtn = makeButton(symbol: "folder", action: #selector(revealClicked))
         revealBtn.toolTip = "Reveal in Finder"
 
-        let controlStack = NSStackView(views: [refreshBtn, windowPicker, scaleControl, captureButton, copyBtn, revealBtn])
+        let controlStack = NSStackView(views: [refreshBtn, windowPicker, scaleControl, timerControl, captureButton, copyBtn, revealBtn])
         controlStack.orientation = .horizontal
         controlStack.spacing = 8
         controlStack.alignment = .centerY
@@ -306,12 +318,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = scWindows[idx]
         let scale = scaleControl.selectedSegment == 0 ? 2 : 3
+        let delay = timerDelays[timerControl.selectedSegment]
 
         captureButton.isEnabled = false
-        statusLabel.stringValue = "Capturing..."
-        statusLabel.textColor = .secondaryLabelColor
 
         Task {
+            // Countdown: tick once per second so the user can place the cursor.
+            if delay > 0 {
+                for remaining in stride(from: delay, through: 1, by: -1) {
+                    await MainActor.run {
+                        self.statusLabel.stringValue = "Capturing in \(remaining)s…"
+                        self.statusLabel.textColor = .systemOrange
+                    }
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+            }
+
+            await MainActor.run {
+                self.statusLabel.stringValue = "Capturing..."
+                self.statusLabel.textColor = .secondaryLabelColor
+            }
+
             do {
                 // Always capture at native 2x Retina — this is what the display
                 // actually renders. 3x on a 2x display can't produce new detail,
@@ -322,7 +349,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 config.width = Int(window.frame.width) * nativeScale
                 config.height = Int(window.frame.height) * nativeScale
                 config.captureResolution = .best
-                config.showsCursor = false
+                // If the user set a timer, they likely want the cursor they
+                // just positioned to appear in the shot.
+                config.showsCursor = delay > 0
                 config.pixelFormat = kCVPixelFormatType_32BGRA
                 config.minimumFrameInterval = CMTime(value: 1, timescale: 30)
 

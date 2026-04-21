@@ -42,6 +42,7 @@ struct LocationSessionRow: View {
                     } else {
                         Image(systemName: session.iconName)
                             .foregroundStyle(isActive ? session.iconColor : Color.secondary)
+                            .symbolEffect(.pulse, options: .repeating, isActive: session.isWorking)
                     }
                 }
 

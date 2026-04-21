@@ -21,22 +21,24 @@ enum WhatsNewChangelog {
     static let entries: [ChangelogEntry] = [
         ChangelogEntry(
             version: "1.2.0",
-            date: "April 19, 2026",
+            date: "April 21, 2026",
             sections: [
                 ChangelogSection(category: .new, items: [
-                    "Embedded browser — WebKit tabs right next to your editor and terminal, with Console, Network, Elements, and Cookies panels built in",
-                    "Projects — organize File Locations, terminals, and browsers under named projects",
-                    "Project dashboard — overview stats and quick actions for each project",
-                    "Project-level todos — a lightweight task list that lives with the project",
-                    "Canvas view — lay out your workspace visually",
-                    "Back/forward navigation between views",
+                    "Embedded browsers - full browser tabs alongside your editor and terminal, with find-in-page, HTTPS padlock, and dev tools (console, network, elements, and cookies panels)",
+                    "Bookmarks - star button, nested folders with drag-and-drop, and one-click import from Safari, Brave, Chrome, and Firefox",
+                    "Browsing history - auto-recorded with grouped view, URL suggestions, and clear all button",
+                    "Downloads and Private mode — progress popover with cancel/persistence, plus an incognito data store",
                 ]),
                 ChangelogSection(category: .improved, items: [
-                    "System metrics in the title bar (turn on in settings)",
+                    "Unified Add menu - one shared creation flow across the sidebar, tab strip, and project overview",
+                    "Sidebar organization and cleanup",
+                    "Project overview section organization"
                 ]),
                 ChangelogSection(category: .fixed, items: [
-                    "Keyboard shortcuts are consistent across all views",
-                    "Embedded terminal: text overlap and highlighting issues",
+                    "Keyboard shortcut consistency",
+                    "Make hyperlinks clickable in Claude sessions",
+                    "Trash failures no longer silently hard-delete items",
+                    "Resize handlers no longer flicker"
                 ]),
             ]
         ),

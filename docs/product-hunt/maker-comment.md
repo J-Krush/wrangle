@@ -27,6 +27,8 @@ It's a native macOS app that combines:
 
 Swift and SwiftUI. Apple Silicon. Not Electron. One window. Everything in view.
 
+**How it was built:** Heavy AI assistance — I used Claude Code (and Wrangle itself, once it was usable) as a primary coding partner. Before shipping, every line of Swift got reviewed by a professional Swift developer. A tool for AI-native dev, built the same way. Seemed right.
+
 **Pricing:** $19 one-time, 3-day free trial, 30-day refund if it's not for you.
 
 **Who this isn't for:** If you don't run AI agents daily, or if you write markdown once a month in whatever text editor came with your OS, Wrangle isn't going to change your life. That's cool. It was built for a specific person who lives in this workflow every day.
