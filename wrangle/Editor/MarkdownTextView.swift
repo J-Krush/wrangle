@@ -872,6 +872,42 @@ struct MarkdownTextView: NSViewRepresentable {
             }
         }
 
+        // MARK: - Find-in-Page
+
+        func toggleFindBar() {
+            editorContext?.toggleFindBar()
+        }
+
+        /// Find all occurrences of `query` in the editor's plain text.
+        /// Returns ranges into the *displayed* text storage (the styled string), which is
+        /// what selectMatch operates on. For markdown writing-mode this means matches against
+        /// the rendered text — acceptable since hidden syntax characters are invisible.
+        func findAll(_ query: String, caseSensitive: Bool) -> [NSRange] {
+            guard let textView, !query.isEmpty else { return [] }
+            let haystack = textView.string as NSString
+            var results: [NSRange] = []
+            var searchRange = NSRange(location: 0, length: haystack.length)
+            let options: NSString.CompareOptions = caseSensitive ? [] : [.caseInsensitive]
+            while searchRange.length > 0 {
+                let found = haystack.range(of: query, options: options, range: searchRange)
+                guard found.location != NSNotFound else { break }
+                results.append(found)
+                let next = found.location + max(found.length, 1)
+                if next >= haystack.length { break }
+                searchRange = NSRange(location: next, length: haystack.length - next)
+            }
+            return results
+        }
+
+        func selectMatch(_ range: NSRange) {
+            guard let textView else { return }
+            let length = (textView.string as NSString).length
+            guard range.location + range.length <= length else { return }
+            textView.scrollRangeToVisible(range)
+            textView.setSelectedRange(range)
+            textView.showFindIndicator(for: range)
+        }
+
         // MARK: - Smart Enter
 
         func handleSmartEnter() -> Bool {

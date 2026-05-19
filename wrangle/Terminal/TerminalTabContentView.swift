@@ -14,6 +14,10 @@ struct TerminalTabContentView: View {
         VStack(spacing: 0) {
             SessionContextBar(session: session)
 
+            if session.isFindBarVisible {
+                TerminalFindBar(session: session)
+            }
+
             // SwiftTerm handles both rendering and keyboard input.
             // Padding is applied inside TerminalContainerView via layout margins
             // so SwiftTerm's frame matches the reported terminal dimensions exactly.

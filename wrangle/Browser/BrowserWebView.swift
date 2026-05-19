@@ -322,8 +322,16 @@ struct BrowserWebView: NSViewRepresentable {
                 webView.goForward()
             case .reload:
                 webView.reload()
+            case .reloadFromOrigin:
+                webView.reloadFromOrigin()
             case .stop:
                 webView.stopLoading()
+            case .zoomIn:
+                webView.pageZoom = min(webView.pageZoom + 0.1, 3.0)
+            case .zoomOut:
+                webView.pageZoom = max(webView.pageZoom - 0.1, 0.25)
+            case .zoomReset:
+                webView.pageZoom = 1.0
             }
         }
 

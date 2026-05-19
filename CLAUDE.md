@@ -104,7 +104,7 @@ Vertical feature slices. Each slice delivers a working increment touching both U
 ## Important Notes for Claude Code
 
 - SwiftUI App lifecycle (not AppKit AppDelegate)
-- Target macOS 14.0+ (Sonoma)
+- Target macOS 15.0+ (Sequoia) — see `MACOSX_DEPLOYMENT_TARGET` in `Wrangle.xcodeproj/project.pbxproj`
 - Do NOT use document-based app template — we manage files ourselves
 - Multiple windows supported (each window = one workspace)
 - `NavigationSplitView` for sidebar/editor layout

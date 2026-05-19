@@ -144,6 +144,12 @@ private final class KeyHandler {
             }
         }
 
+        // CMD+Shift+R = reload from origin (cache-bypass).
+        if mods == [.command, .shift] && key == "r" {
+            session.activeTab?.pendingNavigation = .reloadFromOrigin
+            return nil
+        }
+
         guard mods == cmd else { return event }
 
         switch key {
@@ -156,6 +162,25 @@ private final class KeyHandler {
         case "w":
             // Close the workspace tab. Falls through to global Cmd+W.
             return event
+        case "r":
+            session.activeTab?.pendingNavigation = .reload
+            return nil
+        case "l":
+            NotificationCenter.default.post(
+                name: .browserFocusAddressBar,
+                object: nil,
+                userInfo: ["sessionID": session.id.uuidString]
+            )
+            return nil
+        case "=", "+":
+            session.activeTab?.pendingNavigation = .zoomIn
+            return nil
+        case "-":
+            session.activeTab?.pendingNavigation = .zoomOut
+            return nil
+        case "0":
+            session.activeTab?.pendingNavigation = .zoomReset
+            return nil
         case "[":
             if session.activeTab?.canGoBack == true {
                 session.activeTab?.pendingNavigation = .goBack
@@ -178,4 +203,5 @@ private final class KeyHandler {
 
 extension Notification.Name {
     static let browserRequestElementPick = Notification.Name("browserRequestElementPick")
+    static let browserFocusAddressBar = Notification.Name("browserFocusAddressBar")
 }

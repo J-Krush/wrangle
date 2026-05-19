@@ -26,6 +26,7 @@ protocol EditorTextViewFormattingDelegate: AnyObject {
     func clearLinePrefix()
     func handleSmartEnter() -> Bool
     func shouldIndentCurrentLine() -> Bool
+    func toggleFindBar()
 }
 
 /// Custom NSTextView subclass that draws rounded-rect card backgrounds behind
@@ -163,7 +164,9 @@ class EditorTextView: NSTextView {
         let option = event.modifierFlags.contains(.option)
         let chars = event.charactersIgnoringModifiers ?? ""
 
-        // Cmd+Option shortcuts (block formatting)
+        // Cmd+Option shortcuts (block formatting + headings).
+        // Headings use Cmd+Opt+1..6 (Notion convention) so plain Cmd+1..4 stays
+        // free for app-level project switching.
         if option && !shift {
             switch chars {
             case "c":
@@ -181,12 +184,38 @@ class EditorTextView: NSTextView {
             case "t":
                 formattingDelegate?.insertBlock("| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| Cell | Cell | Cell |\n")
                 return true
+            case "1":
+                formattingDelegate?.insertLinePrefix("# ")
+                return true
+            case "2":
+                formattingDelegate?.insertLinePrefix("## ")
+                return true
+            case "3":
+                formattingDelegate?.insertLinePrefix("### ")
+                return true
+            case "4":
+                formattingDelegate?.insertLinePrefix("#### ")
+                return true
+            case "5":
+                formattingDelegate?.insertLinePrefix("##### ")
+                return true
+            case "6":
+                formattingDelegate?.insertLinePrefix("###### ")
+                return true
+            case "0":
+                formattingDelegate?.clearLinePrefix()
+                return true
             default:
                 break
             }
         }
 
         switch (chars, shift) {
+        // Cmd+F → toggle find bar (handled here so it works while editor has focus,
+        // overriding NSTextView's default usesFindPanel behavior).
+        case ("f", false):
+            formattingDelegate?.toggleFindBar()
+            return true
         // Cmd+Shift+K → delete line
         case ("k", true):
             formattingDelegate?.deleteCurrentLine()
@@ -222,29 +251,6 @@ class EditorTextView: NSTextView {
             return true
         case ("x", true):
             formattingDelegate?.insertFormatting(prefix: "~~", suffix: "~~")
-            return true
-        // Headings Cmd+1 through Cmd+6
-        case ("1", false):
-            formattingDelegate?.insertLinePrefix("# ")
-            return true
-        case ("2", false):
-            formattingDelegate?.insertLinePrefix("## ")
-            return true
-        case ("3", false):
-            formattingDelegate?.insertLinePrefix("### ")
-            return true
-        case ("4", false):
-            formattingDelegate?.insertLinePrefix("#### ")
-            return true
-        case ("5", false):
-            formattingDelegate?.insertLinePrefix("##### ")
-            return true
-        case ("6", false):
-            formattingDelegate?.insertLinePrefix("###### ")
-            return true
-        // Cmd+0 → clear heading prefix
-        case ("0", false):
-            formattingDelegate?.clearLinePrefix()
             return true
         default:
             return super.performKeyEquivalent(with: event)

@@ -102,6 +102,12 @@ struct BrowserToolbar: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
+        .onReceive(NotificationCenter.default.publisher(for: .browserFocusAddressBar)) { note in
+            guard let sessionID = note.userInfo?["sessionID"] as? String,
+                  sessionID == session.id.uuidString else { return }
+            urlText = session.activeTab?.url?.absoluteString ?? ""
+            isURLFieldFocused = true
+        }
     }
 
     private var privateBadge: some View {

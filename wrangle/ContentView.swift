@@ -340,6 +340,9 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            if editorContext.isFindBarVisible {
+                EditorFindBar(context: editorContext)
+            }
             MarkdownTextView(
                 text: Binding(
                     get: { doc.content },

@@ -54,6 +54,8 @@ class AppState {
     var projectTabIndexes: [String: Int] = [:]
     /// Per-project expanded location state so sidebar hierarchy survives project switches
     var projectExpandedBookmarks: [String: Set<String>] = [:]
+    /// Project IDs in displayOrder, published by sidebar views — used by CMD+1..4 commands
+    var orderedProjectIDs: [String] = []
     var showFuzzyFinder: Bool = false
     var showGlobalSearch: Bool = false
     var showBookmarkImport: Bool = false
@@ -190,6 +192,14 @@ class AppState {
         }
 
         pushNavigation()
+    }
+
+    /// Switch to the project at the given index in `orderedProjectIDs` — backs CMD+1..4.
+    func switchToProject(atIndex index: Int) {
+        guard orderedProjectIDs.indices.contains(index) else { return }
+        let target = orderedProjectIDs[index]
+        guard target != selectedProjectID else { return }
+        switchToProject(target)
     }
 
     // MARK: - Navigation History

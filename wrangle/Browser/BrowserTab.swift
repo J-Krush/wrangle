@@ -14,7 +14,11 @@ enum NavigationAction {
     case goBack
     case goForward
     case reload
+    case reloadFromOrigin
     case stop
+    case zoomIn
+    case zoomOut
+    case zoomReset
 }
 
 // MARK: - Console Message

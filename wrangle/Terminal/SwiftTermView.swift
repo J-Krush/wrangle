@@ -27,6 +27,9 @@ class TerminalContainerView: NSView {
     /// Overlay sibling that draws URL underlines + hover cursors. Only present
     /// when the terminal view is the URL-aware subclass.
     private let urlOverlay: URLOverlayView?
+    /// Overlay sibling that highlights find-in-page matches. Always present so
+    /// the controller can invalidate it on demand.
+    let findOverlay = TerminalFindOverlayView(frame: .zero)
     /// Called once when the container first receives a non-zero frame, so the
     /// shell process can start with the correct terminal column/row count.
     var onFirstLayout: (() -> Void)?
@@ -73,6 +76,8 @@ class TerminalContainerView: NSView {
                 self.window?.invalidateCursorRects(for: overlay)
             }
         }
+        findOverlay.terminalView = terminalView
+        addSubview(findOverlay, positioned: .above, relativeTo: urlOverlay ?? terminalView)
         // Drag type registration is managed dynamically via isActive didSet
     }
 
@@ -96,6 +101,9 @@ class TerminalContainerView: NSView {
         // Overlay shadows the terminal frame exactly.
         if let overlay = urlOverlay, overlay.frame != termFrame {
             overlay.frame = termFrame
+        }
+        if findOverlay.frame != termFrame {
+            findOverlay.frame = termFrame
         }
 
         if bounds.width > 0, let callback = onFirstLayout {
@@ -229,6 +237,8 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
         let container = TerminalContainerView(terminalView: terminalView)
         container.isActive = isActive
         container.isHidden = !isActive
+        container.findOverlay.session = session
+        context.coordinator.container = container
         context.coordinator.isActive = isActive
 
         // Defer process start until the container has a valid frame so SwiftTerm
@@ -286,10 +296,11 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
 
     // MARK: - Coordinator
 
-    class Coordinator: NSObject, LocalProcessTerminalViewDelegate, TerminalProcessController {
+    class Coordinator: NSObject, LocalProcessTerminalViewDelegate, TerminalProcessController, TerminalFindControlling {
         let session: TerminalSession
         weak var appState: AppState?
         weak var terminalView: LocalProcessTerminalView?
+        weak var container: TerminalContainerView?
         var lastColorScheme: ColorScheme?
         var isActive: Bool = false
         var processStarted: Bool = false
@@ -303,6 +314,7 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
             self.appState = appState
             super.init()
             session.emulator.processController = self
+            session.findController = self
         }
 
         deinit {
@@ -319,6 +331,16 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
                       let window = terminalView.window,
                       window.firstResponder === terminalView else {
                     return event
+                }
+
+                // CMD+F: toggle find bar (consume so shell doesn't see it).
+                let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                if mods == .command,
+                   event.charactersIgnoringModifiers?.lowercased() == "f" {
+                    MainActor.assumeIsolated {
+                        self.session.toggleFindBar()
+                    }
+                    return nil
                 }
 
                 // Shift+Return: send kitty keyboard protocol ESC[13;2u
@@ -462,6 +484,116 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
         func sendString(_ string: String) {
             guard let data = string.data(using: .utf8) else { return }
             terminalView?.process.send(data: ArraySlice(data))
+        }
+
+        // MARK: - TerminalFindControlling
+
+        /// Walk every line of the visible scrollback (rows 0..<rows of the visible
+        /// window plus what's above it, up through the bottom of the buffer) and
+        /// collect every match. Uses public SwiftTerm APIs only — `getCharData`
+        /// and `getText` — so we don't depend on internal buffer types.
+        func recomputeFindMatches() {
+            guard let terminalView, let terminal = terminalView.terminal else { return }
+            let query = session.findQuery
+            guard !query.isEmpty else {
+                session.findMatches = []
+                session.findCurrentIndex = 0
+                container?.findOverlay.needsDisplay = true
+                return
+            }
+
+            // Pull the entire scrollback as a string, one row per line. We pass a huge
+            // end-row that getText clamps to lines.count-1 internally.
+            let cols = max(terminal.cols, 1)
+            let endRow = 1_000_000
+            let fullText = terminal.getText(
+                start: Position(col: 0, row: 0),
+                end: Position(col: cols - 1, row: endRow)
+            )
+
+            // Convert to per-row strings. SwiftTerm's getText emits each line as the
+            // visible characters concatenated — there is no implicit newline between
+            // rows, so we need a different approach. Walk row-by-row using getText
+            // for each row (1 row = one Position-pair). This is O(rows * chars) but
+            // scrollback is bounded.
+            session.findMatches = []
+            session.findCurrentIndex = 0
+
+            // We don't know the exact total scrollback length via public API, so use
+            // the same trick: ask getText for one row at a time starting at row 0 and
+            // stop when we get an empty result for several rows in a row (rare in real
+            // shells, but a safety net).
+            //
+            // Better: use getCharData(col:row:) for the visible window, plus walk
+            // upward from yDisp to row 0 using the same. This bounds work to the
+            // current buffer extent without needing internal APIs.
+            _ = fullText  // silence unused-warning; we use the row-by-row path below
+
+            let yDisp = terminal.buffer.yDisp
+            let rows = terminal.rows
+            // Search range: from row 0 up to yDisp + rows. Anything past that is the
+            // alternate screen and not part of normal scrollback we care about.
+            let searchEnd = yDisp + rows
+            let options: NSString.CompareOptions = session.findCaseSensitive ? [] : [.caseInsensitive]
+
+            for row in 0..<searchEnd {
+                let line = terminal.getText(
+                    start: Position(col: 0, row: row),
+                    end: Position(col: cols - 1, row: row)
+                )
+                guard !line.isEmpty else { continue }
+                let ns = line as NSString
+                var searchRange = NSRange(location: 0, length: ns.length)
+                while searchRange.length > 0 {
+                    let found = ns.range(of: query, options: options, range: searchRange)
+                    guard found.location != NSNotFound else { break }
+                    session.findMatches.append(TerminalSession.FindMatch(
+                        row: row,
+                        col: found.location,
+                        length: found.length
+                    ))
+                    let next = found.location + max(found.length, 1)
+                    if next >= ns.length { break }
+                    searchRange = NSRange(location: next, length: ns.length - next)
+                }
+            }
+
+            // Default to the first match in (or nearest below) the visible viewport.
+            if let firstVisible = session.findMatches.firstIndex(where: { $0.row >= yDisp }) {
+                session.findCurrentIndex = firstVisible
+                scrollToCurrentMatch()
+            } else if !session.findMatches.isEmpty {
+                session.findCurrentIndex = 0
+                scrollToCurrentMatch()
+            }
+            container?.findOverlay.needsDisplay = true
+        }
+
+        func advanceFindMatch(backwards: Bool) {
+            guard !session.findMatches.isEmpty else { return }
+            let count = session.findMatches.count
+            session.findCurrentIndex = backwards
+                ? (session.findCurrentIndex - 1 + count) % count
+                : (session.findCurrentIndex + 1) % count
+            scrollToCurrentMatch()
+            container?.findOverlay.needsDisplay = true
+        }
+
+        func invalidateFindOverlay() {
+            container?.findOverlay.needsDisplay = true
+        }
+
+        private func scrollToCurrentMatch() {
+            guard let terminalView, let terminal = terminalView.terminal,
+                  session.findMatches.indices.contains(session.findCurrentIndex) else { return }
+            let match = session.findMatches[session.findCurrentIndex]
+            let rows = terminal.rows
+            let halfWindow = max(rows / 2, 1)
+            let target = max(0, match.row - halfWindow)
+            if terminal.buffer.yDisp != target {
+                terminal.buffer.yDisp = target
+                terminalView.needsDisplay = true
+            }
         }
     }
 }

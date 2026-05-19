@@ -34,6 +34,43 @@ class TerminalSession: Identifiable {
     /// Consumed by SwiftTermView.Coordinator after process start.
     var pendingCommand: String?
 
+    // MARK: - Find-in-Page
+
+    /// One match in the SwiftTerm buffer. `row` is the absolute index into
+    /// `terminal.buffer.lines`; `col` is the start column on that row.
+    struct FindMatch: Equatable {
+        let row: Int
+        let col: Int
+        let length: Int
+    }
+
+    var isFindBarVisible: Bool = false
+    var findQuery: String = ""
+    var findCaseSensitive: Bool = false
+    var findMatches: [FindMatch] = []
+    var findCurrentIndex: Int = 0
+
+    /// Set by SwiftTermView.Coordinator on makeNSView / cleared on dismantle.
+    /// SwiftUI find bar calls into this to perform the actual buffer scan
+    /// and overlay invalidation.
+    weak var findController: TerminalFindControlling?
+
+    func toggleFindBar() {
+        if isFindBarVisible {
+            closeFindBar()
+        } else {
+            isFindBarVisible = true
+        }
+    }
+
+    func closeFindBar() {
+        isFindBarVisible = false
+        findQuery = ""
+        findMatches = []
+        findCurrentIndex = 0
+        findController?.invalidateFindOverlay()
+    }
+
     init(
         emulator: TerminalEmulator,
         projectName: String,

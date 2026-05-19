@@ -419,6 +419,16 @@ struct WrangleApp: App {
                 }
                 .keyboardShortcut("[", modifiers: [.command, .shift])
                 .disabled(focusedAppState == nil)
+
+                Divider()
+
+                ForEach(1...4, id: \.self) { n in
+                    Button("Switch to Project \(n)") {
+                        focusedAppState?.switchToProject(atIndex: n - 1)
+                    }
+                    .keyboardShortcut(KeyEquivalent(Character("\(n)")), modifiers: .command)
+                    .disabled((focusedAppState?.orderedProjectIDs.count ?? 0) < n)
+                }
             }
         }
 

@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 struct ProjectListSection: View {
     @Environment(AppState.self) private var appState
@@ -18,7 +17,9 @@ struct ProjectListSection: View {
         ForEach(projects) { project in
             let count = intents.filter { $0.projectID == project.id }.count
             Button {
-                appState.selectedProjectID = project.id
+                if appState.selectedProjectID != project.id {
+                    appState.switchToProject(project.id)
+                }
             } label: {
                 ProjectRow(
                     project: project,
@@ -29,12 +30,28 @@ struct ProjectListSection: View {
             .buttonStyle(.plain)
             .listRowBackground(projectRowBackground(projectID: project.id))
             .contextMenu { projectContextMenu(project) }
-            .onDrag {
-                draggingProjectID = project.id
-                return NSItemProvider(object: project.id as NSString)
+            .draggable(ProjectDragPayload(id: project.id)) {
+                ProjectRow(
+                    project: project,
+                    intentCount: count,
+                    isSelected: false
+                )
+                .padding(6)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6))
             }
-            .onDrop(of: [UTType.text], isTargeted: dropBinding(for: project.id)) { providers in
-                handleReorderDrop(providers: providers, targetID: project.id)
+            .dropDestination(for: ProjectDragPayload.self) { items, _ in
+                guard let source = items.first else { return false }
+                reorderProject(sourceID: source.id, beforeTargetID: project.id)
+                draggingProjectID = nil
+                dropTargetProjectID = nil
+                return true
+            } isTargeted: { targeted in
+                if targeted {
+                    draggingProjectID = draggingProjectID ?? "?"
+                    dropTargetProjectID = project.id
+                } else if dropTargetProjectID == project.id {
+                    dropTargetProjectID = nil
+                }
             }
         }
 
@@ -92,29 +109,6 @@ struct ProjectListSection: View {
                 Color.accentColor.frame(height: 2)
             }
         }
-    }
-
-    private func dropBinding(for projectID: String) -> Binding<Bool> {
-        Binding(
-            get: { dropTargetProjectID == projectID },
-            set: { targeted in
-                if targeted { dropTargetProjectID = projectID }
-                else if dropTargetProjectID == projectID { dropTargetProjectID = nil }
-            }
-        )
-    }
-
-    private func handleReorderDrop(providers: [NSItemProvider], targetID: String) -> Bool {
-        guard let provider = providers.first else { return false }
-        provider.loadObject(ofClass: NSString.self) { item, _ in
-            guard let sourceID = item as? String else { return }
-            Task { @MainActor in
-                reorderProject(sourceID: sourceID, beforeTargetID: targetID)
-                draggingProjectID = nil
-                dropTargetProjectID = nil
-            }
-        }
-        return true
     }
 
     private func reorderProject(sourceID: String, beforeTargetID: String) {

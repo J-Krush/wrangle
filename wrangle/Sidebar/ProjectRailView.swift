@@ -1,6 +1,5 @@
 import SwiftUI
 import SwiftData
-import UniformTypeIdentifiers
 
 struct ProjectRailView: View {
     @Environment(AppState.self) private var appState
@@ -40,6 +39,10 @@ struct ProjectRailView: View {
         }
         .frame(width: 52)
         .background(Color(nsColor: Theme.chromeBackground))
+        .onAppear { appState.orderedProjectIDs = projects.map(\.id) }
+        .onChange(of: projects.map(\.id)) { _, ids in
+            appState.orderedProjectIDs = ids
+        }
         .sheet(isPresented: $showNewProjectSheet) {
             ProjectEditSheet(name: $sheetName, colorHex: $sheetColorHex, isNew: true) {
                 commitNewProject()
@@ -133,12 +136,26 @@ struct ProjectRailView: View {
                     .offset(y: -5)
             }
         }
-        .onDrag {
-            draggingProjectID = project.id
-            return NSItemProvider(object: project.id as NSString)
+        .draggable(ProjectDragPayload(id: project.id)) {
+            Text(initials)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(color, in: RoundedRectangle(cornerRadius: 12))
         }
-        .onDrop(of: [UTType.text], isTargeted: dropBinding(for: project.id)) { providers in
-            handleReorderDrop(providers: providers, targetID: project.id)
+        .dropDestination(for: ProjectDragPayload.self) { items, _ in
+            guard let source = items.first, source.id != project.id else { return false }
+            reorderProject(sourceID: source.id, beforeTargetID: project.id)
+            draggingProjectID = nil
+            dropTargetProjectID = nil
+            return true
+        } isTargeted: { targeted in
+            if targeted {
+                dropTargetProjectID = project.id
+                if draggingProjectID == nil { draggingProjectID = "?" }
+            } else if dropTargetProjectID == project.id {
+                dropTargetProjectID = nil
+            }
         }
     }
 
@@ -231,29 +248,6 @@ struct ProjectRailView: View {
     }
 
     // MARK: - Reordering
-
-    private func dropBinding(for projectID: String) -> Binding<Bool> {
-        Binding(
-            get: { dropTargetProjectID == projectID },
-            set: { targeted in
-                if targeted { dropTargetProjectID = projectID }
-                else if dropTargetProjectID == projectID { dropTargetProjectID = nil }
-            }
-        )
-    }
-
-    private func handleReorderDrop(providers: [NSItemProvider], targetID: String) -> Bool {
-        guard let provider = providers.first else { return false }
-        provider.loadObject(ofClass: NSString.self) { item, _ in
-            guard let sourceID = item as? String else { return }
-            Task { @MainActor in
-                reorderProject(sourceID: sourceID, beforeTargetID: targetID)
-                draggingProjectID = nil
-                dropTargetProjectID = nil
-            }
-        }
-        return true
-    }
 
     private func reorderProject(sourceID: String, beforeTargetID: String) {
         var ordered = Array(projects)

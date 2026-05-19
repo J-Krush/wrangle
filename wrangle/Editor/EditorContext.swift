@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// Tracks which markdown formatting is active at the current cursor position.
@@ -24,6 +25,48 @@ class EditorContext {
 
     /// Currently active formats at the cursor position.
     var activeFormats = ActiveFormats()
+
+    // MARK: - Find-in-Page
+
+    var isFindBarVisible: Bool = false
+    var findQuery: String = ""
+    var findCaseSensitive: Bool = false
+    var findMatches: [NSRange] = []
+    var findCurrentIndex: Int = 0   // -1 when no matches
+
+    func toggleFindBar() {
+        if isFindBarVisible {
+            closeFindBar()
+        } else {
+            isFindBarVisible = true
+        }
+    }
+
+    func closeFindBar() {
+        isFindBarVisible = false
+        findQuery = ""
+        findMatches = []
+        findCurrentIndex = 0
+    }
+
+    /// Recompute matches for the current query and select the first one (if any).
+    func recomputeMatches() {
+        findMatches = coordinator?.findAll(findQuery, caseSensitive: findCaseSensitive) ?? []
+        findCurrentIndex = findMatches.isEmpty ? 0 : 0
+        if let first = findMatches.first {
+            coordinator?.selectMatch(first)
+        }
+    }
+
+    func advanceMatch(backwards: Bool = false) {
+        guard !findMatches.isEmpty else { return }
+        let count = findMatches.count
+        let next = backwards
+            ? (findCurrentIndex - 1 + count) % count
+            : (findCurrentIndex + 1) % count
+        findCurrentIndex = next
+        coordinator?.selectMatch(findMatches[next])
+    }
 
     /// Wrap the current selection (or insert at cursor) with prefix and suffix.
     func insertFormatting(prefix: String, suffix: String) {

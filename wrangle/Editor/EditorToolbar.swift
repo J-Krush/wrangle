@@ -80,13 +80,13 @@ struct EditorToolbar: View {
 
     private var headingGroup: some View {
         HStack(spacing: 2) {
-            toolbarButton(label: "H1", icon: nil, tooltip: "Heading 1 (Cmd+1)", isActive: formats.heading == 1) {
+            toolbarButton(label: "H1", icon: nil, tooltip: "Heading 1 (Cmd+Opt+1)", isActive: formats.heading == 1) {
                 context?.insertLinePrefix("# ")
             }
-            toolbarButton(label: "H2", icon: nil, tooltip: "Heading 2 (Cmd+2)", isActive: formats.heading == 2) {
+            toolbarButton(label: "H2", icon: nil, tooltip: "Heading 2 (Cmd+Opt+2)", isActive: formats.heading == 2) {
                 context?.insertLinePrefix("## ")
             }
-            toolbarButton(label: "H3", icon: nil, tooltip: "Heading 3 (Cmd+3)", isActive: formats.heading == 3) {
+            toolbarButton(label: "H3", icon: nil, tooltip: "Heading 3 (Cmd+Opt+3)", isActive: formats.heading == 3) {
                 context?.insertLinePrefix("### ")
             }
         }
