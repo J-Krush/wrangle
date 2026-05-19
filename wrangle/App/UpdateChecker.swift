@@ -9,7 +9,7 @@ class UpdateChecker {
     var releaseNotes = ""
     private var downloadURL = ""
 
-    private static let versionEndpoint = "https://wrangleapp.dev/api/version.json"
+    private static let versionEndpoint = "https://api.github.com/repos/J-Krush/wrangle/releases/latest"
     private static let dismissedVersionKey = "UpdateChecker.dismissedVersion"
 
     func checkForUpdate(manual: Bool = false) {
@@ -24,10 +24,11 @@ class UpdateChecker {
     }
 
     func openDownloadPage() {
-        let urlString = downloadURL.isEmpty ? "https://wrangleapp.dev/download" : downloadURL
-        if let url = URL(string: urlString) {
-            NSWorkspace.shared.open(url)
-        }
+        // Open the GitHub Release page directly (D-11). No legacy
+        // landing-page fallback — `downloadURL` is the Release
+        // `html_url` populated from the GitHub Releases response.
+        guard !downloadURL.isEmpty, let url = URL(string: downloadURL) else { return }
+        NSWorkspace.shared.open(url)
         updateAvailable = false
     }
 
@@ -38,25 +39,39 @@ class UpdateChecker {
 
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
-            let versionInfo = try JSONDecoder().decode(VersionInfo.self, from: data)
+            let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+
+            // GitHub release tag_name is often prefixed with "v" (e.g. "v1.3.0");
+            // strip it so the semver comparison below works unchanged.
+            let releaseVersion: String = {
+                let tag = release.tag_name
+                return tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+            }()
 
             let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
 
-            guard isVersion(versionInfo.version, newerThan: currentVersion) else {
+            guard isVersion(releaseVersion, newerThan: currentVersion) else {
                 if manual { showUpToDate = true }
                 return
             }
 
             if !manual {
                 let dismissed = UserDefaults.standard.string(forKey: Self.dismissedVersionKey)
-                guard dismissed != versionInfo.version else { return }
+                guard dismissed != releaseVersion else { return }
             }
 
-            latestVersion = versionInfo.version
-            downloadURL = versionInfo.downloadURL
-            releaseNotes = versionInfo.releaseNotes ?? ""
+            latestVersion = releaseVersion
+            downloadURL = release.html_url
+            releaseNotes = release.body ?? ""
             updateAvailable = true
         } catch {
+            // Pre-public-flip (Phases 13–17), the GitHub Releases endpoint
+            // returns 404 because the repo is still private. The decode
+            // throws, we land here, and the existing manual / non-manual
+            // paths handle the fall-through: manual flips
+            // `showUpToDate = true` (per D-10), background checks swallow
+            // silently. Phase 18 makes the endpoint live and this becomes
+            // the success path.
             if manual { showUpToDate = true }
         }
     }
@@ -76,16 +91,17 @@ class UpdateChecker {
     }
 }
 
-// MARK: - Version Endpoint Model
+// MARK: - GitHub Releases Response Model
 
-private struct VersionInfo: Codable {
-    let version: String
-    let downloadURL: String
-    let releaseNotes: String?
-
-    enum CodingKeys: String, CodingKey {
-        case version
-        case downloadURL = "download_url"
-        case releaseNotes = "release_notes"
-    }
+/// Subset of GitHub's Releases API response used by `UpdateChecker`.
+/// Other fields (`assets[]`, `prerelease`, `draft`, `author`, etc.) are
+/// ignored — opening the Release `html_url` is the v1.3 download path
+/// (D-09). Parsing `assets[]` for a `.dmg` `browser_download_url` is
+/// deferred to Phase 18 per CONTEXT.md `<deferred>`.
+// swiftlint:disable identifier_name
+private struct GitHubRelease: Decodable {
+    let tag_name: String
+    let html_url: String
+    let body: String?
 }
+// swiftlint:enable identifier_name

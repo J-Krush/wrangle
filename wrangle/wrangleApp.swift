@@ -177,6 +177,18 @@ struct WrangleApp: App {
                             .foregroundColor: NSColor.linkColor
                         ]
                     ))
+                    credits.append(NSAttributedString(
+                        string: "  \u{2022}  ",
+                        attributes: [.font: NSFont.systemFont(ofSize: 11)]
+                    ))
+                    credits.append(NSAttributedString(
+                        string: "github.com/J-Krush/wrangle",
+                        attributes: [
+                            .font: NSFont.systemFont(ofSize: 11),
+                            .link: URL(string: "https://github.com/J-Krush/wrangle")! as Any,
+                            .foregroundColor: NSColor.linkColor
+                        ]
+                    ))
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
                         .credits: credits,
                     ])
