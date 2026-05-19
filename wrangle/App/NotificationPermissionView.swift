@@ -6,7 +6,7 @@ struct NotificationPermissionView: View {
     var body: some View {
         let manager = coordinator.notificationManager
 
-        if !coordinator.licenseManager.needsLicense && manager.shouldShowModal {
+        if manager.shouldShowModal && !coordinator.whatsNewManager.shouldShowModal {
             ZStack {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()

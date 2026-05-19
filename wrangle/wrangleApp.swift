@@ -115,7 +115,6 @@ struct WrangleApp: App {
                     setupForegroundTracking()
                     updateSystemScheme()
                     coordinator.updateChecker.checkForUpdate()
-                    coordinator.licenseManager.loadOnLaunch()
                     coordinator.whatsNewManager.checkOnLaunch()
                     removeSystemCloseMenuItems()
 

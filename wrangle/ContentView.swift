@@ -39,10 +39,7 @@ struct ContentView: View {
     var body: some View {
         @Bindable var appState = appState
 
-        VStack(spacing: 0) {
-            TrialBannerView()
-
-            HStack(spacing: 0) {
+        HStack(spacing: 0) {
                 SidebarView()
 
                 // Right side: tabs + detail
@@ -184,7 +181,6 @@ struct ContentView: View {
                 Text("Wrangle v\(current) is the latest version.")
             }
         } // HStack
-        } // outer VStack (trial banner + content)
         .background(
             Color(nsColor: Theme.chromeBackground),
             ignoresSafeAreaEdges: .all
@@ -200,7 +196,6 @@ struct ContentView: View {
             if appState.showGlobalSearch {
                 GlobalSearchView()
             }
-            LicenseGateView()
             NotificationPermissionView()
             WhatsNewView()
         }

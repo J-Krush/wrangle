@@ -2,7 +2,6 @@ import SwiftUI
 
 enum SettingsTab: Hashable {
     case general
-    case license
 }
 
 struct SettingsView: View {
@@ -16,12 +15,6 @@ struct SettingsView: View {
                     Label("General", systemImage: "gear")
                 }
                 .tag(SettingsTab.general)
-
-            LicenseSettingsView()
-                .tabItem {
-                    Label("License", systemImage: "key")
-                }
-                .tag(SettingsTab.license)
         }
         .frame(minWidth: 450, minHeight: 300)
     }

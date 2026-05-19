@@ -9,7 +9,6 @@ class AppCoordinator {
     var claudeHookService: ClaudeHookService?
     var isSetupComplete: Bool = false
     var updateChecker = UpdateChecker()
-    var licenseManager = LicenseManager()
     var notificationManager = NotificationPermissionManager()
     var whatsNewManager = WhatsNewManager()
     var selectedSettingsTab: SettingsTab = .general

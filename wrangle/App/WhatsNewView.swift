@@ -6,7 +6,7 @@ struct WhatsNewView: View {
     var body: some View {
         let manager = coordinator.whatsNewManager
 
-        if !coordinator.licenseManager.needsLicense && manager.shouldShowModal {
+        if manager.shouldShowModal {
             ZStack {
                 Color.black.opacity(0.4)
                     .ignoresSafeArea()
