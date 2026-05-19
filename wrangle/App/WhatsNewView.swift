@@ -76,6 +76,13 @@ private struct WhatsNewEntryView: View {
                     }
                 }
             }
+
+            if let cta = entry.cta {
+                Link(cta.label, destination: cta.url)
+                    .buttonStyle(.bordered)
+                    .tint(.purple)
+                    .padding(.top, 4)
+            }
         }
     }
 

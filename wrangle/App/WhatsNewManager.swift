@@ -35,7 +35,21 @@ class WhatsNewManager {
     var visibleEntries: [ChangelogEntry] {
         if showAll { return WhatsNewChangelog.entries }
         let lastSeen = UserDefaults.standard.string(forKey: Self.lastSeenVersionKey) ?? "0.0.0"
-        return WhatsNewChangelog.entries.filter { isVersion($0.version, newerThan: lastSeen) }
+        let isFreshInstall = lastSeen == "0.0.0"
+        return WhatsNewChangelog.entries.filter { entry in
+            // Always require: entry version > lastSeen (existing semver gate).
+            guard isVersion(entry.version, newerThan: lastSeen) else { return false }
+            // D-05 fresh-install filter: brand-new installs (no prior lastSeen)
+            // only see entries >= "1.3.0" so v1.1.x / v1.2.0 history isn't
+            // auto-shown to users who never ran an older Wrangle build.
+            // Upgrading users (lastSeen != "0.0.0") fall through with just the
+            // semver-newer gate above. Help → What's New (showAll) bypasses
+            // this filter via the short-circuit at the top of this getter.
+            if isFreshInstall {
+                return !isVersion("1.3.0", newerThan: entry.version)
+            }
+            return true
+        }
     }
 
     private func isVersion(_ a: String, newerThan b: String) -> Bool {

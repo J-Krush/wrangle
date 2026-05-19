@@ -1,9 +1,15 @@
 import Foundation
 
+struct ChangelogCTA {
+    let label: String
+    let url: URL
+}
+
 struct ChangelogEntry {
     let version: String
     let date: String
     let sections: [ChangelogSection]
+    let cta: ChangelogCTA?
 }
 
 struct ChangelogSection {
@@ -19,6 +25,19 @@ enum ChangeCategory: String {
 
 enum WhatsNewChangelog {
     static let entries: [ChangelogEntry] = [
+        ChangelogEntry(
+            version: "1.3.0",
+            date: "May 19, 2026",
+            sections: [
+                ChangelogSection(category: .new, items: [
+                    "Wrangle is now free and open source.",
+                ]),
+            ],
+            cta: ChangelogCTA(
+                label: "Star on GitHub",
+                url: URL(string: "https://github.com/J-Krush/wrangle")!
+            )
+        ),
         ChangelogEntry(
             version: "1.2.0",
             date: "April 21, 2026",
@@ -40,7 +59,8 @@ enum WhatsNewChangelog {
                     "Trash failures no longer silently hard-delete items",
                     "Resize handlers no longer flicker"
                 ]),
-            ]
+            ],
+            cta: nil
         ),
         ChangelogEntry(
             version: "1.1.1",
@@ -62,7 +82,8 @@ enum WhatsNewChangelog {
                     "Keyboard shortcuts are now consistent across all views",
                     "Embedded terminal: text overlapping and highlighting issues fixed",
                 ]),
-            ]
+            ],
+            cta: nil
         ),
     ]
 }
