@@ -113,9 +113,77 @@ The final milestone step — both repos go public and the DMG release ships.
 
 ## Traceability
 
-Filled by the roadmapper after ROADMAP.md is created.
+53/53 v1.3 requirements mapped to phases. Coverage: 100%. No orphans.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| APP-01 | Phase 13 — App De-Commercialization | Pending |
+| APP-02 | Phase 13 — App De-Commercialization | Pending |
+| APP-03 | Phase 13 — App De-Commercialization | Pending |
+| APP-04 | Phase 13 — App De-Commercialization | Pending |
+| APP-05 | Phase 13 — App De-Commercialization | Pending |
+| APP-06 | Phase 13 — App De-Commercialization | Pending |
+| APP-07 | Phase 13 — App De-Commercialization | Pending |
+| APP-08 | Phase 13 — App De-Commercialization | Pending |
+| APP-09 | Phase 13 — App De-Commercialization | Pending |
+| APP-10 | Phase 13 — App De-Commercialization | Pending |
+| APP-11 | Phase 13 — App De-Commercialization | Pending |
+| APP-12 | Phase 13 — App De-Commercialization | Pending |
+| APP-13 | Phase 13 — App De-Commercialization | Pending |
+| APP-14 | Phase 13 — App De-Commercialization | Pending |
+| APP-15 | Phase 13 — App De-Commercialization | Pending |
+| REPO-01 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-02 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-03 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-04 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-05 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-06 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-07 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-08 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-09 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-10 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-11 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-12 | Phase 14 — App Repo OSS Surface | Pending |
+| LAND-01 | Phase 15 — Landing Repo OSS Surface | Pending |
+| LAND-02 | Phase 15 — Landing Repo OSS Surface | Pending |
+| LAND-03 | Phase 15 — Landing Repo OSS Surface | Pending |
+| LAND-04 | Phase 15 — Landing Repo OSS Surface | Pending |
+| LAND-05 | Phase 15 — Landing Repo OSS Surface | Pending |
+| REL-01 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| REL-02 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| REL-03 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| REL-04 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| REL-05 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| REL-06 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| SITE-01 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-02 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-03 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-04 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-05 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-06 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-07 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-08 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-09 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-10 | Phase 17 — Landing Page Repositioning | Pending |
+| FLIP-01 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
+| FLIP-02 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
+| FLIP-03 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
+| FLIP-04 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
+| FLIP-05 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
+
+**By phase totals:**
+
+| Phase | REQ-IDs | Count |
+|-------|---------|-------|
+| 13. App De-Commercialization | APP-01…15 | 15 |
+| 14. App Repo OSS Surface | REPO-01…12 | 12 |
+| 15. Landing Repo OSS Surface | LAND-01…05 | 5 |
+| 16. Signed-DMG Release Pipeline | REL-01…06 | 6 |
+| 17. Landing Page Repositioning | SITE-01…10 | 10 |
+| 18. Public Flip + v1.3.0 Release | FLIP-01…05 | 5 |
+| **Total** | — | **53** |
 
 ---
 
 *Requirements defined: 2026-05-19*
-*Last updated: 2026-05-19 — v1.3 Open Source Release initial draft*
+*Last updated: 2026-05-19 — v1.3 roadmap mapped (Phases 13–18; 53/53 REQ-IDs); Traceability section populated.*

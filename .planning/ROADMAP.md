@@ -2,236 +2,115 @@
 
 ## Milestones
 
-- 🚧 **v1.2 Browser Support** — Phases 1–9 (in progress)
+- ✓ **v1.0.x** — Pre-planning baseline (editor, AI-file awareness, terminal, multi-tab workspace)
+- ✓ **v1.1.0** — "Bigger IDE" (Project structure, density pass, Todos, license/trial plumbing)
+- ✓ **v1.2** — "Browser Support" (Phases 1–12; browser stack + UX polish)
+- 🚧 **v1.3 Open Source Release** — Phases 13–18 (in progress)
 
 ## Overview
 
-v1.2 re-exposes and hardens Wrangle's embedded browser. Phase 1 unblocks everything by restoring "New Browser" entry points in `+`/File menus. Phases 2–4 harden the existing WKWebView wrapper (find-in-page, tab shortcuts, favicon cache, New Tab page, dev-tools shortcuts, security indicators, user-agent). Phases 5–6 deliver bookmarks (local SwiftData + star button, then import from Safari/Brave/Chrome/Firefox). Phases 7–9 complete the "real browser" feel with browsing history, downloads, and private / incognito mode. Phases 10–12 are a pre-release UX polish pass: collapse the five scattered creation affordances into two unified `+` menus, hide empty sections, nest browser bookmarks inside the Browsers section, and normalize section-header chrome.
+v1.3 converts Wrangle from a paid trial-gated app into a free, MIT-licensed open-source portfolio project. Phase 13 rips the commercial surface out of the app (LicenseManager, LicenseGateView, TrialBannerView, LicenseSettingsView, `wrangleapp.dev/api/trial/*`, LemonSqueezy, all plumbing) and replaces it with a one-time "now free + open source" note. Phases 14 and 15 stand up the public-facing surfaces of the two repos (`J-Krush/wrangle` and `J-Krush/wrangle-landing`) — LICENSE, story-driven README, CONTRIBUTING, issue/PR templates, screenshots, secrets sweep. Phase 16 documents and executes the local signed-DMG → notarize → tagged GitHub Release pipeline. Phase 17 repositions the Astro landing page from "Buy $24" to "Free + open source" with a real download link to the v1.3.0 Release. Phase 18 is the small final flip: one last secrets sweep, both repos go public, the Release is published.
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work.
+- Integer phases (1, 2, 3, …): Planned milestone work.
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED).
 
-Decimal phases appear between their surrounding integers in numeric order. v1.2 starts at Phase 1 — no prior milestone numbering to continue from.
+Decimal phases appear between their surrounding integers in numeric order. v1.3 continues from v1.2's last phase (12), so v1.3 starts at Phase 13.
 
-- [ ] **Phase 1: Restore Entry Points** — Uncomment "New Browser" buttons and add File-menu shortcut.
-- [ ] **Phase 2: Core Hardening** — Find-in-page, tab shortcuts, favicon cache, New Tab page.
-- [ ] **Phase 3: Dev Tools Shortcuts** — Cmd+Option+I/J/C bound to the in-app panel; right-click "Inspect Element".
-- [ ] **Phase 4: Browser Chrome & Security** — HTTPS padlock, cert popover, user-agent setting, tab-bar polish.
-- [ ] **Phase 5: Bookmark Foundations** — `BrowserBookmark` SwiftData, sidebar section, star button, CRUD.
-- [ ] **Phase 6: Bookmark Import** — Safari / Brave / Chrome / Firefox importers with preview, dedupe, re-runnability.
-- [ ] **Phase 7: Browsing History** — Auto-recording, grouped view, clear actions, URL-bar suggestions.
-- [ ] **Phase 8: Downloads** — WKDownloadDelegate, progress popover, `BrowserDownloadRecord` persistence.
-- [ ] **Phase 9: Private / Incognito Mode** — `WKWebsiteDataStore.nonPersistent()`, visual distinction, history suppression.
-- [x] **Phase 10: Unified Creation Pattern** — Collapse 5 scattered add affordances into two unified `+` menus (sidebar bottom-bar + overview header); remove `New` pill.
-- [x] **Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers** — Sections disappear when empty; top-level Bookmarks folds into Browsers as a sub-section in both sidebar and overview.
-- [ ] **Phase 12: Section Parity & Polish** — Canonical `SidebarSectionHeader` treatment, Scratch Pad rename/delete parity with Bookmarks, consistent `@AppStorage` expansion keys.
+- [ ] **Phase 13: App De-Commercialization** — Strip `LicenseManager` / `LicenseGateView` / `TrialBannerView` / `LicenseSettingsView` / trial endpoints; replace with one-time "free + open source" note.
+- [ ] **Phase 14: App Repo OSS Surface** — `J-Krush/wrangle`: MIT `LICENSE`, story-driven `README.md`, `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF, `SECURITY.md`, full repo secrets audit.
+- [ ] **Phase 15: Landing Repo OSS Surface** — `J-Krush/wrangle-landing`: secrets sweep, MIT `LICENSE`, public-facing `README.md`, `.gitignore` audit.
+- [ ] **Phase 16: Signed-DMG Release Pipeline** — Local build → sign (Developer ID) → notarize (`notarytool`) → staple → signed DMG; attach to `v1.3.0` GitHub Release tag.
+- [ ] **Phase 17: Landing Page Repositioning** — Astro site reframes from "Buy $24" to "Free + open source": new CTA, story section, GitHub link, real DMG download link, SEO/OG updates, deploy.
+- [ ] **Phase 18: Public Flip + v1.3.0 Release** — Final secrets sweep across both repos; flip both private → public; publish the `v1.3.0` Release.
 
 ## Phase Details
 
-### Phase 1: Restore Entry Points
-**Goal**: Every "new" menu surface in the app exposes "New Browser" and the File menu gets a keyboard shortcut.
-**Depends on**: Nothing (first phase).
-**Requirements**: BR-01, BR-02, BR-03, BR-04
+### Phase 13: App De-Commercialization
+**Goal**: A fresh launch of the v1.3 build opens directly to the editor with no gate, no banner, no nag, and no license / trial / pricing code left in the binary.
+**Depends on**: Nothing (first phase of v1.3; clean tree from v1.2).
+**Requirements**: APP-01, APP-02, APP-03, APP-04, APP-05, APP-06, APP-07, APP-08, APP-09, APP-10, APP-11, APP-12, APP-13, APP-14, APP-15
 **Success Criteria** (what must be TRUE):
-  1. User opens the sidebar `+` menu and sees "New Browser"; clicking it opens a browser tab.
-  2. User opens the tab-strip `+` menu and sees "New Browser"; clicking it opens a browser tab.
-  3. User opens the Location header action menu and sees "New Browser"; clicking it opens a browser tab.
-  4. User presses `Cmd+Option+B` from anywhere in the app and a browser tab opens.
-**Plans**: TBD (expected: 1 plan).
+  1. Launching the app lands the user directly in the editor — no `LicenseGateView` sheet, no `TrialBannerView` strip in `ContentView` chrome, no Preferences → License tab.
+  2. A grep of the source tree for `"$24"`, `"Buy"`, `"Trial"` / `"trial"`, `"License"` / `"license"`, `wrangleapp.dev`, and `LemonSqueezy` returns zero matches in product copy or runtime code (excluding the new repo-root `LICENSE` file and Apple-framework type names).
+  3. On first launch of v1.3 against an upgraded SwiftData store, a one-time "Wrangle is now free and open source — star us on GitHub" surface appears, links to `https://github.com/J-Krush/wrangle`, is dismissable, and does not re-appear on subsequent launches.
+  4. The app builds clean with no warnings or compilation errors after the strip; basic smoke test passes (open app → editor loads → create a Scratch Pad → open a Browser tab).
+  5. `scripts/reset-license.sh`, `LicenseManager.swift`, `LicenseGateView.swift`, `TrialBannerView.swift`, `LicenseSettingsView.swift` are all deleted from the repo working tree (`git status` confirms removal).
+**Plans**: TBD (expected: 2 plans — file deletion + plumbing strip; then "free + open source" note via WhatsNewView).
 
-Plans:
-- [ ] 01-01: Uncomment existing "New Browser" blocks + add Location header entry + File menu shortcut.
-
-### Phase 2: Core Hardening
-**Goal**: Close user-visible gaps in the existing WKWebView wrapper so the browser behaves like a real browser for common keyboard workflows.
-**Depends on**: Phase 1
-**Requirements**: BH-01, BH-02, BH-03, BH-04, BH-05, BH-06
+### Phase 14: App Repo OSS Surface
+**Goal**: A first-time visitor to `J-Krush/wrangle` lands on a README that tells the product's story (PH launch, Reddit ads, native-for-AI-devs thesis), can find the LICENSE, the contributing guide, the issue/PR templates, screenshots, and is confident no committed secrets exist in the repo's history.
+**Depends on**: Phase 13 (so the README's "this is the source for the app" claim matches a de-commercialized codebase; so the secrets audit and content review reflect the v1.3 reality).
+**Requirements**: REPO-01, REPO-02, REPO-03, REPO-04, REPO-05, REPO-06, REPO-07, REPO-08, REPO-09, REPO-10, REPO-11, REPO-12
 **Success Criteria** (what must be TRUE):
-  1. User presses `Cmd+F` in a browser tab and a native find-in-page bar appears with working match navigation.
-  2. User presses `Cmd+T` / `Cmd+W` and new-tab / close-tab behavior matches a real browser within a browser session.
-  3. User presses `Cmd+[` / `Cmd+]` in a browser tab and navigates page history, without breaking global workspace-tab navigation outside the browser.
-  4. Visiting the same domain across multiple tabs fetches the favicon only once; relaunching the app shows cached favicons without refetching.
-  5. Opening a browser with no URL lands on a usable New Tab page with a URL field and recent-bookmarks grid.
-**Plans**: TBD (expected: 2 plans — keyboard + focus scoping is substantial enough to split).
+  1. Repo root contains `LICENSE` (MIT, attributed to "Copyright (c) 2026 J Krush"), `README.md`, `CONTRIBUTING.md`, and `SECURITY.md`; the `.github/` directory contains `ISSUE_TEMPLATE/bug_report.md`, `ISSUE_TEMPLATE/feature_request.md`, and `PULL_REQUEST_TEMPLATE.md`.
+  2. `README.md` includes — in order — a hero pitch with screenshot/GIF, a "What this is" section, a "Why it's free and open source now" story section covering the 2026-04-22 Product Hunt launch and the Reddit ads channel experiment, a "Built with" list, install (DMG download) instructions, "Build from source," and a "Contributing" / "License" link block.
+  3. At least 3 screenshots (editor with rendered markdown, browser tab, project overview) plus an animated demo GIF are committed and visibly embedded in `README.md` when rendered on GitHub.
+  4. A repo-wide history audit (`git rev-list --all | xargs git grep -i 'secret\|api[-_]key\|token\|password\|wrangleapp.dev\|lemonsqueezy'`) returns clean — or any hit found is rotated and documented as such.
+  5. `.gitignore` is updated and no `.DS_Store`, `DerivedData/`, `.build/`, or `*.xcuserstate` files remain tracked; `docs/architecture.md` / `docs/coding-patterns.md` / `docs/audit-report.md` are reviewed and `CLAUDE.md` has a header note that the project is now open source plus a "Contributors" pointer to `CONTRIBUTING.md`.
+**Plans**: TBD (expected: 3 plans — LICENSE + templates scaffold; story-driven README + screenshots/GIF; full repo secrets/history audit + `.gitignore` + docs review).
+**UI hint**: yes
 
-Plans:
-- [ ] 02-01: Find-in-page, new-tab / close-tab, back/forward focus-scoped shortcuts.
-- [ ] 02-02: Favicon cache + New Tab page.
-
-### Phase 3: Dev Tools Shortcuts
-**Goal**: Standard web-developer keyboard shortcuts open the in-app DevTools panel on the correct sub-tab; right-click menu route matches.
-**Depends on**: Phase 1
-**Requirements**: DT-01, DT-02, DT-03, DT-04
+### Phase 15: Landing Repo OSS Surface
+**Goal**: A first-time visitor to `J-Krush/wrangle-landing` lands on a clear, public-facing README explaining the repo is the Astro source for `wrangleapp.dev` with working build/dev instructions, finds an MIT `LICENSE`, and the repo's history contains no committed analytics tokens or private notes.
+**Depends on**: Nothing in v1.3 (can run in parallel with Phase 13 and Phase 14; touches a separate repo on disk at `/Users/krush/Projects/Krush-Dev/Wrangle/Landing Page/`).
+**Requirements**: LAND-01, LAND-02, LAND-03, LAND-04, LAND-05
 **Success Criteria** (what must be TRUE):
-  1. `Cmd+Option+I` in a focused browser tab toggles the in-app dev tools panel.
-  2. `Cmd+Option+J` toggles the panel with the Console tab selected.
-  3. `Cmd+Option+C` toggles the panel and arms the element picker (`ElementInspectorView.toggleSelectMode`).
-  4. Right-click in the WKWebView surfaces "Inspect Element" which routes to the element picker.
-**Plans**: TBD (expected: 1 plan).
+  1. Repo root contains `LICENSE` (MIT, attributed to "Copyright (c) 2026 J Krush") and a rewritten `README.md` covering: what the repo is, dev commands (`pnpm install`, `pnpm dev`, `pnpm build`), deploy target, and a link back to `J-Krush/wrangle`.
+  2. A full working-tree and history audit (`git log -p`, `git rev-list --all | xargs git grep -i 'secret\|api[-_]key\|token\|plausible\|fathom\|posthog'`) finds zero committed analytics keys, Slack URLs, private feedback emails, dev-only notes, or hardcoded credentials.
+  3. `.gitignore` excludes `node_modules/`, `dist/`, `.env*`, `.DS_Store`; any previously-committed offenders are removed from the working tree.
+  4. Running `pnpm install && pnpm dev` from a clean checkout (no `.env`) successfully boots the dev server, confirming the README's instructions are accurate and no required secret is missing from the public surface.
+**Plans**: TBD (expected: 2 plans — LICENSE + public README; secrets sweep + `.gitignore` audit).
 
-Plans:
-- [ ] 03-01: Focus-scoped keyboard shortcuts + WKUIDelegate context menu routing.
-
-### Phase 4: Browser Chrome & Security
-**Goal**: Browser chrome communicates page security clearly and gives the user control over user-agent identification.
-**Depends on**: Phase 1
-**Requirements**: BX-01, BX-02, BX-03, BX-04
+### Phase 16: Signed-DMG Release Pipeline
+**Goal**: A documented, repeatable local-build procedure produces a signed and notarized DMG that opens cleanly on a fresh-eyes Mac without Gatekeeper warnings, attached to a tagged `v1.3.0` GitHub Release on `J-Krush/wrangle` (still private at this point).
+**Depends on**: Phase 13 (the build being signed must be the de-commercialized binary, not a license-gated one).
+**Requirements**: REL-01, REL-02, REL-03, REL-04, REL-05, REL-06
 **Success Criteria** (what must be TRUE):
-  1. User visits an HTTPS site and sees a green padlock; mixed content or cert errors surface warning / red states.
-  2. User clicks the padlock and sees a popover with certificate subject, issuer, expiry, and TLS version.
-  3. User can set a user-agent preset in Preferences → Browser; reloading a page confirms the new UA in `navigator.userAgent`.
-  4. The internal tab bar shows favicon + truncated title; tooltip on hover shows the full URL.
-**Plans**: TBD (expected: 2 plans).
+  1. A documented procedure (`scripts/build-release.sh` or `docs/release.md`) produces a Release-configuration `.app` for Apple Silicon (arm64) macOS 15+, signed with a valid `Developer ID Application` certificate across the `.app` and every bundled binary including SwiftTerm.
+  2. The notarization flow (`xcrun notarytool submit … --wait` then `xcrun stapler staple`) completes successfully against the signed `.app`, and the documented Apple ID / app-specific password / Team ID requirements are listed in the release doc.
+  3. A DMG is produced from the stapled `.app`, is itself signed with the same Developer ID, and `spctl -a -t open --context context:primary-signature <dmg>` reports the DMG as accepted.
+  4. The DMG opens on a second Mac (or after `xattr -d com.apple.quarantine`) without prompting the user to right-click → Open — Gatekeeper passes silently.
+  5. The DMG is attached to a `v1.3.0` tagged GitHub Release on `J-Krush/wrangle` (drafted; not yet published to anonymous viewers since the repo is still private — published in Phase 18), and the tag convention is documented in the release doc.
+**Plans**: TBD (expected: 2 plans — build/sign/notarize/staple script + doc; DMG packaging + GitHub Release draft).
 
-Plans:
-- [ ] 04-01: Padlock view + cert popover from `WKWebView.serverTrust`.
-- [ ] 04-02: User-agent preference setting + tab-bar chrome polish.
-
-### Phase 5: Bookmark Foundations
-**Goal**: Persistent, project-scoped bookmarks with a sidebar section, star-button toolbar toggle, edit dialog, and full CRUD.
-**Depends on**: Phase 1 (needs a working browser surface to bookmark from).
-**Requirements**: BM-01, BM-02, BM-03, BM-04, BM-05, BM-06
+### Phase 17: Landing Page Repositioning
+**Goal**: The live `wrangleapp.dev` site presents Wrangle as a free, open-source macOS markdown editor for AI devs — with a working "Download for macOS" CTA pointing at the real v1.3.0 GitHub Release DMG, a "Star on GitHub" CTA, a story section, and zero remaining "Buy $24" / pricing surface.
+**Depends on**: Phase 15 (landing repo is public-ready) and Phase 16 (real GitHub Release URL exists for the DMG download CTA).
+**Requirements**: SITE-01, SITE-02, SITE-03, SITE-04, SITE-05, SITE-06, SITE-07, SITE-08, SITE-09, SITE-10
 **Success Criteria** (what must be TRUE):
-  1. User taps the star in the browser toolbar; page appears in the sidebar "Unfiled" folder and star stays filled.
-  2. User single-clicks a sidebar bookmark and it opens in the active browser tab; Cmd-click opens in a new tab.
-  3. User can rename, edit URL, or reassign folder via the edit dialog; changes persist across app relaunch.
-  4. User can delete a bookmark via context menu or the Delete key.
-  5. Project-scoped bookmarks follow the selected project; the "Global" folder remains visible regardless of project.
-**Plans**: TBD (expected: 3 plans — model, sidebar + star button, CRUD dialog).
+  1. Hero section presents the OSS positioning with a dual CTA: "Download for macOS" (links to the v1.3.0 GitHub Release DMG or `https://github.com/J-Krush/wrangle/releases/latest`) and "Star on GitHub" (links to `https://github.com/J-Krush/wrangle`); no "$24" / "Buy Wrangle" copy survives in the hero or anywhere on the site.
+  2. The pricing page is either deleted (with a `404.astro` / fallback handling old inbound links) or rewritten to say "Free and open source — no pricing"; no internal nav link still says "Pricing" or "Buy."
+  3. A new "Story" / "About" section (homepage section or its own page) covers the 2026-04-22 Product Hunt launch, the Reddit ads channel experiment, the native-for-AI-devs thesis, and the decision to convert to OSS as a portfolio piece.
+  4. SEO + social metadata (page title, meta description, Open Graph, Twitter/X cards) all reflect the OSS positioning; OG image is OSS-appropriate; feature pages have no remaining "Pro" / "Trial limit" / "Premium" copy.
+  5. The repositioned site is deployed to the same production host that serves `wrangleapp.dev` (deploy is reversible), and clicking "Download for macOS" successfully resolves to the actual DMG file from the GitHub Release.
+**Plans**: TBD (expected: 3 plans — hero + nav + pricing teardown; story section + OG/SEO; download wiring + deploy).
+**UI hint**: yes
 
-Plans:
-- [ ] 05-01: Define `BrowserBookmark` / `BrowserBookmarkFolder` @Model + schema bump 2→3.
-- [ ] 05-02: Sidebar bookmark section + folder tree rendering.
-- [ ] 05-03: Star-button toggle + edit dialog + delete flows.
-
-### Phase 6: Bookmark Import
-**Goal**: One-way, re-runnable bookmark import from Safari, Brave, Chrome, Firefox with folder-preview, dedupe, and TCC-aware Safari handling.
-**Depends on**: Phase 5 (writes into `BrowserBookmark` model).
-**Requirements**: BI-01, BI-02, BI-03, BI-04, BI-05, BI-06, BI-07
+### Phase 18: Public Flip + v1.3.0 Release
+**Goal**: Both GitHub repos go from private to public, the `v1.3.0` Release is published, and an anonymous viewer landing on `J-Krush/wrangle` sees a fully-rendered README with screenshots, an MIT LICENSE, and a downloadable signed DMG.
+**Depends on**: Phases 13–17 (everything must be in place before the flip; this is the smallest, last, irreversible-feeling phase).
+**Requirements**: FLIP-01, FLIP-02, FLIP-03, FLIP-04, FLIP-05
 **Success Criteria** (what must be TRUE):
-  1. User can open `File → Import Bookmarks…` and pick any of the four supported browsers; a sheet appears.
-  2. Sheet shows a folder-tree preview + bookmark count; user can deselect folders before committing.
-  3. Chrome / Brave import succeeds when installed, with a profile picker when multiple Chromium profiles exist.
-  4. Firefox import succeeds even while Firefox is running (temp-copy `places.sqlite` avoids WAL lock).
-  5. Safari import succeeds when Full Disk Access is granted; without FDA, a clear dialog explains how to grant it.
-  6. Re-running an import on the same source does not create duplicate bookmarks (normalized-URL dedupe).
-**Plans**: TBD (expected: 4 plans — one per importer, sheet shared).
-
-Plans:
-- [ ] 06-01: Import sheet + dedupe infrastructure.
-- [ ] 06-02: Chromium (Chrome / Brave) importer.
-- [ ] 06-03: Firefox SQLite importer.
-- [ ] 06-04: Safari plist importer + FDA failure UX.
-
-### Phase 7: Browsing History
-**Goal**: Automatically record URL visits, offer a grouped history view, support clear actions, and surface history + bookmarks as URL-bar suggestions.
-**Depends on**: Phase 5 (URL-bar suggestions merge history with bookmarks).
-**Requirements**: BW-01, BW-02, BW-03, BW-04
-**Success Criteria** (what must be TRUE):
-  1. User visits pages and they appear in the history view grouped by Today / Yesterday / Past Week / Older.
-  2. User types in the URL bar and sees combined history + bookmark suggestions (prefix match).
-  3. User can clear history for last hour / last day / last week / all time.
-  4. Private tabs (Phase 9) do not write history entries.
-**Plans**: TBD (expected: 2 plans).
-
-Plans:
-- [ ] 07-01: `BrowsingHistoryEntry` @Model + navigation-delegate recording.
-- [ ] 07-02: History view + URL-bar suggestion popover.
-
-### Phase 8: Downloads
-**Goal**: File downloads are intercepted, show progress, persist across restarts, and are manageable from a toolbar popover.
-**Depends on**: Phase 1 (needs a browser surface); independent of 5–7.
-**Requirements**: BD-01, BD-02, BD-03, BD-04, BD-05
-**Success Criteria** (what must be TRUE):
-  1. User clicks a file link and a download starts; progress appears in the downloads popover.
-  2. User can cancel an in-progress download and the partial file is removed.
-  3. User can "Show in Finder" / "Open" a completed download from the popover.
-  4. Completed downloads persist across app restarts; in-flight downloads at crash time show as "Incomplete" after restart.
-**Plans**: TBD (expected: 2 plans).
-
-Plans:
-- [ ] 08-01: `WKDownloadDelegate` + `BrowserDownloadRecord` @Model.
-- [ ] 08-02: Downloads toolbar button + popover UI + Preferences default location.
-
-### Phase 9: Private / Incognito Mode
-**Goal**: First-class private-browsing tab surface with non-persistent data store, visual distinction, and history suppression.
-**Depends on**: Phase 7 (history suppression logic shared with recording path).
-**Requirements**: BP-01, BP-02, BP-03, BP-04
-**Success Criteria** (what must be TRUE):
-  1. `File → New Private Browser` (or `Cmd+Shift+Option+B`) opens a private browser tab with clear visual distinction (purple accent, "Private" label, glyph).
-  2. Cookies / cache / auth do not persist between private sessions (login in private → close → new private → still logged out).
-  3. Visits made inside a private tab do not appear in the history view.
-  4. Explicit bookmarks created from a private tab are saved (and tagged "from private" where useful).
-**Plans**: TBD (expected: 1 plan).
-
-Plans:
-- [ ] 09-01: Thread `isPrivate` through `BrowserSession` → `BrowserWebView.Coordinator`, set `nonPersistent()` data store, add visual distinctions and entry point.
-
-### Phase 10: Unified Creation Pattern
-**Goal**: Two — and only two — `+` menus exist in the app: the sidebar bottom-bar `+` and the Project Overview header `+`. Every per-section `…` / `+` / `Import…` affordance is removed. The blue `New` pill is replaced by a single `+` IconButton.
-**Depends on**: Phases 1–9 (entire browser surface shipped; polish pass runs over real content).
-**Requirements**: UIX-01, UIX-02, UIX-03, UIX-04, UIX-05
-**Success Criteria** (what must be TRUE):
-  1. User looking at a project sees exactly two `+` buttons on the main workspace: one at the sidebar bottom, one in the Project Overview header. No other `+`, `…`, or `Import…` buttons appear on section headers.
-  2. User clicks the sidebar `+` and sees Scratch Pad, Browser, Bookmark (enabled only when a browser tab is focused), Terminal…, Location…, File…, Import Bookmarks….
-  3. User clicks the overview `+` and sees the identical menu (same items, same order).
-  4. User looking at the Project Overview no longer sees a blue `New` pill beside the project title; the `+` button sits in its place with consistent visual weight to the sidebar `+`.
-  5. Existing keyboard shortcuts (File → New …, Cmd+Option+B, etc.) continue to work unchanged.
-**Plans**: 2 plans.
-
-Plans:
-- [x] 10-01-PLAN.md — Create `UnifiedAddMenu` shared view, wire into sidebar bottom-bar `+`, tab strip `+`, and Project Overview header (replacing blue `New` pill). Extend `NewBookmarkSheet` with optional prefill.
-- [x] 10-02-PLAN.md — Strip per-section chrome: Locations `...` (sidebar), Bookmarks `...` (sidebar), Bookmarks `Import…` + Locations `+` (overview cards). Audit `SidebarSectionHeader` accessory parameter.
-
-### Phase 11: Hide-When-Empty + Bookmarks Nested Under Browsers
-**Goal**: Sidebar and overview show only non-empty sections. Browser bookmarks live inside Browsers, not as a top-level peer. Discovery moves to the `+` menu.
-**Depends on**: Phase 10 (unified `+` must exist before empty-state fallback rows are removed).
-**Requirements**: UIX-10, UIX-11, UIX-12, UIX-13, UIX-14, UIX-15
-**Success Criteria** (what must be TRUE):
-  1. A fresh project with no content shows no Scratch Pads, Browsers, Bookmarks, or Locations sections in the sidebar — just the Overview row and the `+` bottom bar.
-  2. A fresh project's Overview page shows a single centered empty state with a "Press + to add your first…" message; no empty section cards are rendered.
-  3. Creating a first Browser tab makes the Browsers section appear in the sidebar; creating a first bookmark from that browser makes a `Bookmarks (n)` sub-section appear nested under Browsers — not as a top-level section.
-  4. Deleting the last item in any section removes the section from the sidebar and overview on the next render tick.
-  5. Project Overview's Bookmarks card is visually grouped with Browsers (either nested inside or stacked immediately below with shared chrome) and collapses/expands independently.
-**Plans**: 2 plans.
-
-Plans:
-- [x] 11-01-PLAN.md — Sidebar: hide-when-empty for Scratch Pads / Browsers / Locations; remove top-level BookmarkSidebarSection, render nested NestedBookmarkSubSection inside BrowserSessionsSection.
-- [x] 11-02-PLAN.md — Project Overview: hide empty section cards, introduce centered empty-hero below Todos, regroup Bookmarks card as nested CollapsibleVStackSection inside Browsers card.
-
-### Phase 12: Section Parity & Polish
-**Goal**: Remaining visual + interaction parity across section types — canonical header styling, Scratch Pad CRUD parity, and consistent expansion-state persistence.
-**Depends on**: Phase 11 (section structure settled before visual normalization).
-**Requirements**: UIX-20, UIX-21, UIX-22, UIX-23
-**Success Criteria** (what must be TRUE):
-  1. Every sidebar section header (Browsers, Bookmarks-within-Browsers, Locations, Scratch Pads, Orphaned Sessions) uses the same `SidebarSectionHeader` and looks pixel-identical (font, color, chevron, row height) across the four sections.
-  2. User can rename a Scratch Pad row by pressing Return, and delete via Delete key or context menu — matching the Bookmarks row affordances already present in the codebase.
-  3. Toggling collapse/expand on any section persists across app relaunch; all expansion-state keys follow the `sidebar.<section>.expanded` convention.
-  4. No section ever renders both a header row AND an inline empty-state row simultaneously (contradicts UIX-10…13).
-**Plans**: TBD (expected: 1 plan).
-
-Plans:
-- [ ] 12-01: Canonicalize `SidebarSectionHeader` usage; Scratch Pad row rename/delete; `@AppStorage` key audit; assert no residual empty-state rows survive.
+  1. A final secrets sweep across both repos (`git rev-list --all | xargs git grep -i 'secret\|api[-_]key\|token\|password\|wrangleapp.dev\|lemonsqueezy'`) returns clean; anything found is rotated and history-rewritten before the flip.
+  2. `J-Krush/wrangle` is flipped from private to public on GitHub; the repo page renders correctly to an anonymous (signed-out) viewer with README screenshots loading, LICENSE displayed as "MIT," and `CONTRIBUTING.md` accessible.
+  3. `J-Krush/wrangle-landing` is flipped from private to public on GitHub and renders cleanly for an anonymous viewer.
+  4. The `v1.3.0` GitHub Release is published (drafted → published), with the signed/notarized DMG attached and release notes summarizing the OSS flip plus the headline browser-support features shipped in v1.2.
+  5. An anonymous viewer can download the DMG from the public Release page and the landing page's "Download for macOS" CTA (now hitting the public Release URL) works end-to-end.
+**Plans**: TBD (expected: 1 plan — secrets sweep + flip sequence + Release publish).
 
 ## Progress
 
 **Execution Order:**
-Phases 1 → 9 execute in numeric order (browser core; already shipped per STATE.md). Phases 10 → 11 → 12 are the polish pass and execute strictly sequentially after 9. Phases 2, 3, 4, 8 are independent of each other and can be parallelized after Phase 1. Phase 6 requires Phase 5. Phase 9 requires Phase 7. Phase 11 requires Phase 10. Phase 12 requires Phase 11.
+Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both depend on the de-commercialized codebase). Phase 15 is independent of Phases 13–14–16 and can run in parallel with any of them — it touches a separate repo on disk. Phase 17 requires both Phase 15 (landing repo is publish-ready) and Phase 16 (real GitHub Release URL for the download CTA). Phase 18 requires all prior phases — it's the single irreversible flip. Critical path: 13 → 16 → 17 → 18, with 14 and 15 parallel-eligible against that spine.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Restore Entry Points | 0/1 | Not started | - |
-| 2. Core Hardening | 0/2 | Not started | - |
-| 3. Dev Tools Shortcuts | 0/1 | Not started | - |
-| 4. Browser Chrome & Security | 0/2 | Not started | - |
-| 5. Bookmark Foundations | 0/3 | Not started | - |
-| 6. Bookmark Import | 0/4 | Not started | - |
-| 7. Browsing History | 0/2 | Not started | - |
-| 8. Downloads | 0/2 | Not started | - |
-| 9. Private / Incognito Mode | 0/1 | Not started | - |
-| 10. Unified Creation Pattern | 2/2 | Complete | 2026-04-20 |
-| 11. Hide-When-Empty + Bookmarks Nested | 2/2 | Complete | 2026-04-20 |
-| 12. Section Parity & Polish | 0/1 | Not started | - |
+| 13. App De-Commercialization | 0/2 | Not started | - |
+| 14. App Repo OSS Surface | 0/3 | Not started | - |
+| 15. Landing Repo OSS Surface | 0/2 | Not started | - |
+| 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
+| 17. Landing Page Repositioning | 0/3 | Not started | - |
+| 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |

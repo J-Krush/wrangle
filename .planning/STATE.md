@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
 status: planning
-last_updated: "2026-05-19T12:38:34.038Z"
+last_updated: "2026-05-19T12:40:00.000Z"
 last_activity: 2026-05-19
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 13
   completed_plans: 0
   percent: 0
 ---
@@ -17,26 +17,28 @@ progress:
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-04-19)
+See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 11 — Hide-When-Empty + Bookmarks Nested Under Browsers
+**Current focus:** v1.3 roadmap defined — Phase 13 (App De-Commercialization) is next.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (Phase 13 queued — App De-Commercialization)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-19 — Milestone v1.3 started
+Status: Roadmap defined; ready for `/gsd:plan-phase 13`
+Last activity: 2026-05-19 — v1.3 roadmap written (Phases 13–18); 53/53 REQ-IDs mapped
+
+**Progress:** `[          ] 0/6 phases (0%)`
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.2):**
 
-- Total plans completed: 9 (one plan per phase, executed as a single session)
-- Build verification: passes after every phase
+- Total plans completed: 13 across 12 phases (one phase ran two plans on the polish pass)
+- Build verification: passed after every phase
 
-**By Phase:**
+**By Phase (v1.2 history retained for context):**
 
 | Phase | Core artifacts |
 |-------|----------------|
@@ -53,37 +55,56 @@ Last activity: 2026-05-19 — Milestone v1.3 started
 | 10-02. Per-Section Chrome Removal (2/2) | 4 files edited (SidebarView, ProjectOverviewView, BookmarkSidebarSection, SidebarSectionHeader) — 4 task commits, build green; ~3min |
 | 11-01. Sidebar Hide-When-Empty + Nested Bookmarks (1/2) | 2 files (BookmarkSidebarSection renamed → NestedBookmarkSubSection + SidebarView edited) — 2 task commits, build green; ~4min |
 | 11-02. Overview Hide-When-Empty + Empty-Hero + Nested Bookmarks Card (2/2) | 1 file (ProjectOverviewView edited) — 2 task commits, build green; ~3m34s |
+| 12-01. Section Parity & Polish | static-sidebar pivot mid-phase; SidebarStorageKeys.swift created then reverted; build green |
+
+**v1.3 plans (TBD):**
+
+| Phase | Expected Plans |
+|-------|----------------|
+| 13. App De-Commercialization | 2 (file/plumbing strip; "free + OSS" note) |
+| 14. App Repo OSS Surface | 3 (LICENSE+templates; README+media; secrets/`.gitignore`/docs audit) |
+| 15. Landing Repo OSS Surface | 2 (LICENSE+README; secrets sweep+`.gitignore`) |
+| 16. Signed-DMG Release Pipeline | 2 (build/sign/notarize/staple; DMG+Release draft) |
+| 17. Landing Page Repositioning | 3 (hero+nav+pricing; story+SEO; download wiring+deploy) |
+| 18. Public Flip + v1.3.0 Release | 1 (final sweep + flip + publish) |
+| **Total** | **13** |
 
 ## Accumulated Context
 
-### Decisions (shipped this milestone)
+### Decisions (v1.3, locked at planning)
+
+- **MIT license** picked deliberately (not BSL / AGPL / non-commercial). Recognizable, zero friction; niche audience makes the "fork-and-commercialize" risk negligible. Goal is signal, not protection.
+- **Strip the commercial surface wholesale** — no conditional/feature-flag retention of `LicenseManager` etc. Carrying dead code through a portfolio-piece release is worse than the (tiny) loss of "ability to re-monetize." (See PROJECT.md Key Decisions.)
+- **Both repos flip public at milestone end, not earlier.** Lower stakes if something needs to be yanked; cleaner narrative; lets README + LICENSE + CONTRIBUTING land before the world sees the repo.
+- **Local-build signed DMG, no GitHub Actions automation this milestone.** GH Actions notarization is ~1 day of work and not on the critical path. Deferred to v1.4.
+- **"Star on GitHub" replaces the paywall CTA** — no GitHub Sponsors / Buy Me a Coffee in v1.3. Honest signal for a portfolio piece, less to maintain.
+- **No migration path for paid v1.2 users.** License-key flow is being torn out wholesale; any v1.2 license-holder simply opens v1.3 to the editor.
+- **One-time "free + open source" note** uses the existing `WhatsNewView` mechanism if compatible; otherwise a one-off sheet keyed off the v1.3 version bump (APP-11). Dismissable, does not re-appear, does not block the editor.
+- **Critical-path ordering: 13 → 16 → 17 → 18**, with 14 and 15 parallel-eligible. Phase 17's "Download for macOS" CTA literally needs the URL produced in Phase 16.
+
+### Decisions (shipped, v1.2 — retained for context)
 
 - Browser was reactivated via uncommenting + additive edits; no core Browser/ files needed rewriting.
 - Bookmark import is one-way + re-runnable; Safari requires Full Disk Access (user-chosen direct plist path).
-- SwiftData schema bumped 2→3 with four new @Models (BrowserBookmark, BrowserBookmarkFolder, BrowsingHistoryEntry, BrowserDownloadRecord). Migration is additive/lightweight.
-- Keyboard shortcuts installed via NSEvent local monitor inside BrowserTabContentView, gated by `isActive`. Private mode plumbed via `isPrivate` on BrowserSession, used for WKWebsiteDataStore.nonPersistent() + history suppression.
-- Find-in-page uses WKWebView.find(_:configuration:) (no native macOS find bar API — built in `BrowserFindBar.swift`).
-- Dev tools shortcuts (Cmd+Opt+I/J/C) toggle the in-app DevToolsPanel; right-click Inspect Element uses WebKit's default menu which routes to Safari Web Inspector (`isInspectable=true` already on).
-- **Plan 10-01 (UnifiedAddMenu):** single shared SwiftUI view renders the 11-item `+` menu across sidebar / tab strip / Project Overview; per-instance @State chosen over AppState centralization to avoid cross-presenter collisions. `addLocation()` inlined verbatim (not `appState.pendingLocationAdd` — that shortcut silently no-ops at top level). `NewBookmarkSheet` extended with optional URL/Title prefill so Bookmark… pre-fills from the focused browser tab.
-- **Plan 10-02 (per-section chrome removal):** stripped per-section add controls — Locations sidebar `...`, Bookmarks sidebar `...`, Project Overview Bookmarks `Import…` and Locations `+`. `SidebarSectionHeader` simplified (preferred path): generic `Accessory: View` parameter + `@ViewBuilder accessory` closure dropped entirely. All four call sites (Scratch Pads, Locations, Browsers, Other Sessions) compile against the simplified signature. `BookmarkSidebarSection` keeps its bespoke header (count badge is bookmark-specific); Phase 12 may unify. `addLocation()` helpers in both `SidebarView` and `ProjectOverviewView` retained — the former has a surviving empty-state caller, the latter is kept for Phase 11's empty-state hero. `New Folder…` path has no UI affordance post-Phase-10 — accepted gap; users can assign existing folder via `BookmarkEditSheet`.
-- **Plan 11-01 (sidebar hide-when-empty + nested bookmarks):** Renamed `BookmarkSidebarSection.swift` → `NestedBookmarkSubSection.swift` via `git mv` (89% similarity; blame preserved for the four helper structs). Dropped the top-level `Section { } header: { }` wrapper — the new struct is a sibling inside `BrowserSessionsSection`'s existing Section. New `@AppStorage("sidebar.browsers.bookmarks.expanded")` key (default true), independent from `sidebar.browsers.expanded` (D-05). Outer `BrowserSessionsSection` guard widened to `!browsers.isEmpty || !visibleBookmarks.isEmpty` via a duplicated `@Query<BrowserBookmark>` at that scope — accepted trade-off (T-11-03) vs. prop-drilling or AppState hoisting. `SidebarView` gains `private var projectLocations` computed property mirroring `ProjectOverviewView.projectBookmarks`; Locations Section wrapped in `if !projectLocations.isEmpty`. No `withAnimation` wraps section show/hide — instant swap per D-22 / user memory `feedback_no_slide_transitions`. Xcode 16 `fileSystemSynchronizedRootGroup` meant no `pbxproj` edits were required (plan's Task 1 action step 3 skipped as non-applicable — documented as Rule 3 deviation). Build green; UIX-10/11/12/13 satisfied.
-- **Plan 11-02 (overview hide-when-empty + empty-hero + nested bookmarks card):** Deleted standalone `bookmarksSection` + `bookmarksContent` from `ProjectOverviewView`; migrated the populated bookmarks `LazyVGrid` verbatim into `browsersSection` as a nested `CollapsibleVStackSection("Bookmarks", …)` — one card, two chevrons (UIX-15). New inner `@AppStorage("overview.browsers.bookmarks.expanded.\(projectID)")` key (D-21), independent from the outer `overview.browsers.expanded.\(projectID)`. Broadened body guard for browsers to `if !browserTabs.isEmpty || !projectBrowserBookmarks.isEmpty { browsersSection }` (D-20). Added `isProjectContentEmpty` computed property (D-12 compound boolean, Todos excluded) and a centered `emptyHero` view — `square.grid.2x2` at 48pt + headline "Nothing here yet" + verbatim D-14 subheadline — rendered below `todosSection` when the compound boolean fires. No `+` button in hero (Phase 10 invariant). `locationsSection` collapsed to grid-only; body wraps it in `if !projectBookmarks.isEmpty { locationsSection }`. Inline "No bookmarks yet…" and "No locations added yet…" rows deleted entirely (D-15). Zero `withAnimation`/`.transition` on show/hide (D-22). One cosmetic deviation (Rule 3 — explanatory comment rewritten to avoid the forbidden literal "No locations added yet" string). Orphan `@AppStorage` key `overview.bookmarks.expanded.{projectID}` left for Phase 12 UIX-22 audit. Build green; UIX-14/15 satisfied. **Phase 11 complete.**
+- SwiftData schema bumped 2→3 with four new @Models. Migration is additive/lightweight.
+- Phase 12 sidebar pivot to static headers (no chevron / no expansion state) superseded the originally-specified collapsible UIX-20 contract. `SidebarStorageKeys.swift` constants got created then removed because there was no expansion state left to centralize.
 
 ### Pending Todos
 
-- Manual UAT per requirement checklist in REQUIREMENTS.md / ROADMAP.md.
-- Optional: add download location picker in Preferences → Browser (currently hardcoded to ~/Downloads with override via `browser.defaultDownloadsDirectory` UserDefault).
-- Optional: convert Safari import to also accept HTML exports (user chose direct-read-only, so skipped).
-- Optional: wire right-click "Inspect Element" directly to our in-app element picker (currently routes to Safari Web Inspector via WebKit's default context menu).
+- Manual UAT per Phase 13 success criteria (smoke-test editor opens with no gate, grep for forbidden strings, verify "free + OSS" note appears once and dismisses).
+- Capture the 3+ README screenshots + animated demo GIF in Phase 14 (editor with rendered markdown, browser tab, project overview).
+- Confirm the local Developer ID Application certificate is in Keychain and the app-specific password for `notarytool` is ready before kicking off Phase 16.
+- Decide between deleting `/pricing` outright vs. rewriting it during Phase 17 — affects whether SITE-10's `404.astro` fallback is needed.
 
 ### Blockers/Concerns
 
-- **Keyboard shortcut scoping (BH-04)** — Cmd+[/] still works globally for workspace tab nav; inside a focused browser tab the NSEvent monitor hijacks them for browser history navigation. Requires manual smoke test to confirm no cross-feature regression.
-- **Multi-window handling** — NSEvent local monitors are process-scoped. If two windows both have a browser tab active, both monitors fire. Filtered by session ID comparison, which is unique across windows, so behavior is correct but fires more monitors than necessary.
-- **SwiftData schema version** — bump 2→3 wipes the store on first launch of v1.2 (existing behavior of `wrangleSchemaVersion` check). Users will lose previously-stored data (bookmarks, recent files, projects, intents, todos). This is the project's established migration strategy — pre-existing and outside this milestone's scope.
+- **Apple notarization credentials** — Phase 16 requires a valid Developer ID Application certificate + an app-specific password tied to the Apple ID + the Team ID. If any of these are missing or expired, Phase 16 stalls on Apple-side bureaucracy, not code.
+- **Repo history secrets** — Phase 14 and Phase 15 audits may turn up committed secrets in old history (LemonSqueezy / wrangleapp.dev tokens, analytics keys). If found, the choice is `git filter-repo` history rewrite (clean, but rewrites tags) vs. rotate-and-document. Decision deferred to phase execution; see FLIP-01 / REPO-09 / LAND-05.
+- **Landing-page deploy reversibility (SITE-09)** — production target is whatever currently serves `wrangleapp.dev`. Need to confirm the host (Vercel / Netlify / static) supports instant rollback before pushing the OSS-positioned build.
+- **Multi-window NSEvent monitors** (v1.2 carry-over) — process-scoped, filtered by session ID. Not scoped into v1.3.
 
 ## Session Continuity
 
-Last session: 2026-04-20T13:53:49.985Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-section-parity-polish/12-CONTEXT.md
+Last session: 2026-05-19 — v1.3 roadmap defined (Phases 13–18; 53/53 REQ-IDs mapped)
+Stopped at: Roadmap written; awaiting `/gsd:plan-phase 13`
+Resume file: `.planning/ROADMAP.md`
