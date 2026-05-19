@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
 status: executing
-stopped_at: Phase 13 context gathered
-last_updated: "2026-05-19T14:02:05.940Z"
-last_activity: 2026-05-19 -- Phase 13 planning complete
+stopped_at: Phase 13 executed (awaiting manual smoke + verify-phase)
+last_updated: "2026-05-19T17:24:00Z"
+last_activity: 2026-05-19 -- Phase 13 Wave 1 + Wave 2 executed; 7 commits, build green
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 0
-  percent: 0
+  completed_plans: 2
+  percent: 17
 ---
 
 # Project State
@@ -25,12 +25,18 @@ See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 ## Current Position
 
-Phase: Not started (Phase 13 queued — App De-Commercialization)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-05-19 -- Phase 13 planning complete
+Phase: 13 executed (App De-Commercialization) — awaiting manual GUI smoke + `/gsd:verify-phase 13`
+Plan: 13-02 complete
+Status: Functionally complete; user verification + test-target gap pending
+Last activity: 2026-05-19 -- Phase 13 Wave 1 + Wave 2 executed; 7 commits, build green
 
-**Progress:** `[          ] 0/6 phases (0%)`
+**Progress:** `[==        ] 1/6 phases (17%)`
+
+### Phase 13 Outstanding
+
+- **Manual GUI smoke** (Plan 02 Task 4, steps 3–8) — autonomous environment cannot drive AppKit. Need user to: launch fresh build → confirm WhatsNew v1.3.0 modal appears with "Star on GitHub" CTA → click CTA opens GitHub in default browser → modal stays open until Continue → relaunch does NOT re-show modal → About panel renders both `wrangleapp.dev` and `github.com/J-Krush/wrangle` links → Scratch Pad + Browser tab still work.
+- **No Xcode test target** — Plan 02 shipped `WhatsNewManagerTests.swift` (4 tests) + `LicenseResidueCleanupTests.swift` (4 tests) but `Wrangle.xcodeproj` has only the `Wrangle` app target. `xcodebuild test` cannot run. Per user's `feedback_testing_priority` memory, recommend a follow-up plan (Phase 13.5 or carry-over) to wire up a unit-test target before v1.3 milestone closes.
+- **APP-13 exemption list** finalized in `13-02-SUMMARY.md` — `wrangleapp.dev` (2 hits = 1 logical About-panel surface per D-12), `trial`/`License`/`license` substrings inside `LicenseResidueCleanup.swift` (deletion-target constants, structurally exempt), `license` in `FileTreeNode.swift:49` (repo-metadata matcher, exempt).
 
 ## Performance Metrics
 
