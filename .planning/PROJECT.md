@@ -8,20 +8,17 @@ Wrangle is a native macOS markdown editor purpose-built for developers working w
 
 Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
 
-## Current Milestone: v1.2 Browser Support
+## Current Milestone: v1.3 Open Source Release
 
-**Goal:** Re-expose the embedded browser and make it a first-class, developer-friendly browser surface — bookmarks, cross-browser import, browsing history, downloads, private mode, security indicators, and standard dev-tools keyboard shortcuts.
+**Goal:** Convert Wrangle from a paid trial-gated macOS app into a free, MIT-licensed open-source project shipped as a portfolio piece — strip the commercial surface from the app, rewrite the landing page for OSS positioning, and stand up both the app repo (`J-Krush/wrangle`) and landing-page repo (`J-Krush/wrangle-landing`) as public GitHub repositories that tell the product's story (Product Hunt launch, Reddit ads, native-for-AI-devs thesis).
 
 **Target features:**
-- Restore "New Browser" entry points in every relevant `+` / "new" menu.
-- Harden the existing WKWebView wrapper: find-in-page, tab shortcuts, favicon cache, New Tab page, HTTPS padlock, user-agent setting.
-- Bookmark storage + sidebar UI (SwiftData) with star-button toggle in the browser toolbar.
-- One-way, re-runnable bookmark import from Safari, Brave, Chrome, Firefox.
-- Browsing history with grouped view, clear actions, and URL-bar suggestions.
-- Downloads with `WKDownloadDelegate`, progress popover, and persistence.
-- Private / incognito tabs using `WKWebsiteDataStore.nonPersistent()`.
-- Dev-tools keyboard shortcuts (Cmd+Option+I/J/C) targeting the in-app panel.
-- **Pre-release UX polish pass (Phases 10–12):** collapse scattered creation affordances into two unified `+` menus (sidebar + overview); hide empty sections; nest browser bookmarks under Browsers; normalize section-header chrome.
+- **App de-commercialization:** delete `LicenseManager`, `LicenseGateView`, `TrialBannerView`, `LicenseSettingsView`, `scripts/reset-license.sh`, the `wrangleapp.dev/api/trial/*` endpoints, and all license/trial plumbing in `AppCoordinator` / `ContentView` / `wrangleApp`. Replace the `LicenseGateView` + `TrialBannerView` surfaces with a one-time "Wrangle is now free and open source — star us on GitHub" What's-New-style note (dismissable, removable in a later release).
+- **Signed-DMG release pipeline:** local build + sign + notarize workflow producing a DMG that gets manually attached to a tagged GitHub Release. No GitHub Actions automation this milestone (deferred to v1.4).
+- **App repo OSS surface (`J-Krush/wrangle`):** `LICENSE` (MIT), `README.md` telling the product story (Wrangle's positioning as native macOS markdown for AI developers, the PH launch, the Reddit-ads channel experiment, why it's now free and open source), `CONTRIBUTING.md`, GitHub issue + PR templates, screenshots / GIF, link to landing page.
+- **Landing-page repo OSS surface (`J-Krush/wrangle-landing`):** strip any private analytics keys or internal notes, add `LICENSE` (MIT), update `README.md` to be public-facing.
+- **Landing page repositioning:** existing Astro site at `Landing Page/` reframes from "Buy Wrangle for $24" → "Free + open source macOS markdown editor for AI devs." New CTA, story section, GitHub link, DMG download link to the GitHub Release. Pricing page either removed or rewritten.
+- **Public flip:** both GitHub repos go from private to public as the final milestone step, only after all of the above has been built and reviewed in private.
 
 ## Requirements
 
@@ -44,21 +41,28 @@ Inferred from shipped v1.0 → v1.1 code; these are the capabilities the app alr
 - ✓ **TODO-01** — Per-project todos (`TodoItem` @Model) surfaced in sidebar. — v1.1
 - ✓ **UPD-01** — "What's New" modal on version bumps with changelog. — v1.1
 - ✓ **DENSE-01** — File tree sidebar uses `.sidebarRowSize(.small)` for Xcode/VS Code density. — v1.1
+- ✓ **BR-01…04** — Browser entry points restored (sidebar `+`, tab-strip `+`, File menu shortcut, BookmarkListView). — v1.2 Phase 1
+- ✓ **BH-01…06** — Core hardening: find-in-page (`BrowserFindBar`), tab shortcuts, favicon cache, New Tab page, HTTPS padlock, user-agent setting. — v1.2 Phase 2
+- ✓ **DT-01…04** — Dev-tools keyboard shortcuts (Cmd+Opt+I/J/C) and right-click Inspect Element. — v1.2 Phase 3
+- ✓ **BX-01…04** — Browser chrome + security indicators (padlock, cert popover, user-agent settings). — v1.2 Phase 4
+- ✓ **BM-01…06** — Bookmark foundations (`BrowserBookmark`/`BrowserBookmarkFolder` @Models, `BookmarkStore`, star button, sidebar section, CRUD, project-scoped). — v1.2 Phase 5
+- ✓ **BI-01…07** — Bookmark import from Safari/Brave/Chrome/Firefox (one-way, re-runnable, TCC-aware). — v1.2 Phase 6
+- ✓ **BW-01…04** — Browsing history (auto-record, grouped view, clear actions, URL-bar suggestions). — v1.2 Phase 7
+- ✓ **BD-01…05** — Downloads (`WKDownloadDelegate`, progress popover, SwiftData persistence). — v1.2 Phase 8
+- ✓ **BP-01…04** — Private / incognito tabs (`WKWebsiteDataStore.nonPersistent()`, visual distinction, history suppression). — v1.2 Phase 9
+- ✓ **UIX-01…19** — Pre-release polish: unified `+` menus, hide-when-empty sections, bookmarks nested under Browsers. — v1.2 Phases 10–11
+- ✓ **UIX-20…23** — Section parity & polish: count badges on overview cards, Scratch Pad → Trash (`NSWorkspace.recycle`), keyboard Delete confirmation alert on Scratch Pads + Bookmarks, hide-when-empty regression guard documented in CLAUDE.md. Sidebar headers pivoted to **static (always-rendered, no chevron / no expansion state)** mid-phase — superseding the original UIX-20 collapsible-with-persisted-state spec; `SidebarStorageKeys.swift` constants were created then removed because there was no expansion state left to centralize. — v1.2 Phase 12
 
 ### Active
 
-v1.2 Browser Support — requirements detailed in `.planning/REQUIREMENTS.md`. Summary:
+v1.3 Open Source Release — requirements detailed in `.planning/REQUIREMENTS.md`. Summary:
 
-- [ ] **BR-01…04** — Browser restoration (uncomment entry points + File menu shortcut).
-- [ ] **BH-01…06** — Core hardening (find-in-page, tab shortcuts, favicon cache, New Tab page).
-- [ ] **DT-01…04** — Dev-tools keyboard shortcuts + right-click "Inspect Element".
-- [ ] **BX-01…04** — Browser chrome & security indicators (padlock, cert popover, user-agent).
-- [ ] **BM-01…06** — Bookmark foundations (star button, sidebar section, CRUD, project-scoped).
-- [ ] **BI-01…07** — Bookmark import (Safari/Brave/Chrome/Firefox, dedupe, re-runnable).
-- [ ] **BW-01…04** — Browsing history (auto-record, grouped view, clear actions, URL suggestions).
-- [ ] **BD-01…05** — Downloads (WKDownloadDelegate, progress popover, persistence).
-- [ ] **BP-01…04** — Private / incognito mode (non-persistent data store, visual distinction).
-- [ ] **UIX-01…23** — Interaction polish pass: unified `+` menus, hide-when-empty sections, bookmarks nested under Browsers, section-header parity. (Phases 10–12.)
+- [ ] **OSS-App** — Strip `LicenseManager`, `LicenseGateView`, `TrialBannerView`, `LicenseSettingsView`, `scripts/reset-license.sh`, plumbing in `AppCoordinator`/`ContentView`/`wrangleApp`; replace gated surface with "now free + open source" one-time note.
+- [ ] **OSS-Rel** — Local-build signed-DMG → tagged GitHub Release workflow (manual upload). GitHub Actions automation deferred to v1.4.
+- [ ] **OSS-Repo** — `J-Krush/wrangle` repo OSS surface: `LICENSE` (MIT), story-driven `README.md` (PH launch, Reddit ads, native-for-AI-devs thesis), `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF.
+- [ ] **OSS-Landing-Repo** — `J-Krush/wrangle-landing` repo OSS surface: secrets sweep, `LICENSE` (MIT), public-facing `README.md`.
+- [ ] **OSS-Site** — Astro landing page repositioned from "Buy $24" → "Free + open source"; new CTA, story section, GitHub link, DMG download link to GitHub Release; pricing page removed or rewritten.
+- [ ] **OSS-Flip** — Final step: flip both repos from private to public.
 
 ### Out of Scope
 
@@ -68,6 +72,11 @@ v1.2 Browser Support — requirements detailed in `.planning/REQUIREMENTS.md`. S
 - **Document-based app template** — we manage files ourselves; `NSDocument` not used.
 - **Browser extensions (WebExtension API)** — WKWebView doesn't support this; not a developer-workflow priority.
 - **Multi-account / cross-device sync for bookmarks** — local SwiftData only for v1.2.
+- **GitHub Actions release automation** — deferred to v1.4. v1.3 ships signed DMGs via local build + manual upload to GitHub Releases. Reason: keep v1.3 scope tight and prioritize the public flip over CI ceremony.
+- **Sponsorship / donation surface** — v1.3 replaces the "Buy $24" CTA with a plain "star us on GitHub" note; no GitHub Sponsors / Buy Me a Coffee in this milestone. Can be added later if there's signal it matters.
+- **Migrating existing paid customers** — license-key flow is being torn out wholesale. There is no migration path because there is no remaining licensing surface. If anyone holds a license, the v1.3 build simply opens to the editor.
+- **Renaming the project / repo / bundle ID** — "Wrangle" name stays. Bundle ID stays. Repo names (`wrangle`, `wrangle-landing`) stay.
+- **Source-available / dual-license schemes** — MIT picked deliberately; no BSL/AGPL/Elastic gating.
 
 ## Context
 
@@ -97,7 +106,12 @@ v1.2 Browser Support — requirements detailed in `.planning/REQUIREMENTS.md`. S
 | Bookmarks / history / downloads use SwiftData `@Model`, not UserDefaults | First-class user data with query, dedupe, project-scoping needs. `BrowserStateStore` UserDefaults pattern is for transient session state only. | — Pending |
 | Keyboard-shortcut collision on `Cmd+[/]`: scope to focus | BH-04 wants browser-history nav on `Cmd+[/]`; global tab-nav currently uses those. `.focused`-scoped binding routes correctly. | ⚠️ Revisit — SwiftUI focus scoping can be fragile |
 | Single SwiftData schema bump `2 → 3` for all new models | Four new `@Model` types (BrowserBookmark, BrowserBookmarkFolder, BrowsingHistoryEntry, BrowserDownloadRecord) land in one migration. Lightweight migration (additive only). | — Pending |
-| Private tabs use `WKWebsiteDataStore.nonPersistent()` per session | Canonical Apple pattern for incognito. Requires `isPrivate` flag threaded through `BrowserSession` → `BrowserWebView.Coordinator.getOrCreateWebView`. | — Pending |
+| Private tabs use `WKWebsiteDataStore.nonPersistent()` per session | Canonical Apple pattern for incognito. Requires `isPrivate` flag threaded through `BrowserSession` → `BrowserWebView.Coordinator.getOrCreateWebView`. | ✓ Validated (v1.2 Phase 9) |
+| Phase 12 sidebar pivot: static section headers (no chevron / no expansion state) supersede the planned collapsible-with-persisted-state UIX-20 contract | User preference for density and zero-friction surfaced mid-execution; collapsing a sidebar section that's always sparse was friction the spec didn't account for. `SidebarStorageKeys.swift` constants got reverted as a result (nothing left to centralize). | ✓ Validated (v1.2 Phase 12) |
+| Wrangle goes open source under MIT for v1.3 (portfolio piece, not revenue play) | Recognizable, professional, zero friction for contributors and recruiters. Niche macOS-AI-dev audience makes the "someone forks and commercializes" risk vanishingly small. Goal is signal, not protection. | — Pending |
+| Strip the commercial surface wholesale (no migration path for paid users) | Trial enforcement *was* live in v1.2 (`LicenseGateView` at `ContentView.swift:203`, `TrialBannerView` at `:43`); making it conditional would mean carrying dead code. Cleaner to delete and ship a free build. | — Pending |
+| Both `J-Krush/wrangle` + `J-Krush/wrangle-landing` flip public at milestone end, not earlier | Lower stakes if something needs to be yanked; cleaner narrative for the PH/Reddit retrospective; lets the README + LICENSE + CONTRIBUTING land before the world sees the repo. | — Pending |
+| Signed-DMG release pipeline: local build + manual upload (no GitHub Actions this milestone) | GH Actions signing/notarization is ~1 day of work and not on the critical path for a public launch. Manual local builds produce the same signed binary; defer automation to v1.4. | — Pending |
 
 ## Evolution
 
@@ -118,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-04-19 — UIX polish phases (10–12) appended to v1.2*
+*Last updated: 2026-05-19 — v1.2 closed (Browser Support shipped, Phase 12 pivoted to static sidebar); v1.3 Open Source Release kicked off.*

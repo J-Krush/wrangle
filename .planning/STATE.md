@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Browser Support
-status: Ready for Phase 12 (Section Parity & Polish)
-stopped_at: Phase 12 context gathered
-last_updated: "2026-04-20T13:53:49.989Z"
-last_activity: 2026-04-20 -- Phase 11 Plan 11-02 complete (overview hide-when-empty + empty-hero + nested Bookmarks card)
+milestone: v1.3
+milestone_name: Open Source Release
+status: planning
+last_updated: "2026-05-19T12:38:34.038Z"
+last_activity: 2026-05-19
 progress:
-  total_phases: 12
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: `.planning/PROJECT.md` (updated 2026-04-19)
 
 ## Current Position
 
-Phase: 11 (Hide-When-Empty + Bookmarks Nested Under Browsers) — COMPLETE
-Plan: 2 of 2 (11-01 complete; 11-02 complete)
-Status: Ready for Phase 12 (Section Parity & Polish)
-Last activity: 2026-04-20 -- Phase 11 Plan 11-02 complete (overview hide-when-empty + empty-hero + nested Bookmarks card)
-
-Progress: [██████████] 100% of Phase 11 plans shipped; build passing
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-19 — Milestone v1.3 started
 
 ## Performance Metrics
 
