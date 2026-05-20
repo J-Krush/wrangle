@@ -1,2 +1,37 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Xcode (per GitHub Swift.gitignore)
 build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+xcuserdata/
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# Swift Package Manager
+# Package.resolved is intentionally tracked — app, not library
+.build/
+.swiftpm/
+
+# Local-only docs (D-10 redaction list — git rm --cached happens in Task 3)
+docs/audit-report.md
+docs/launch-strategy.md
+docs/release-checklist.md
+docs/product-hunt/
+
+# Legacy / obsolete
 engine/target/
+
+# Environment / secrets (defensive, even though none are committed)
+.env
+.env.*
+*.pem
+*.p12
+
+# Release-artifact safety
+/*.dmg
