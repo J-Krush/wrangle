@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
 status: executing
-stopped_at: Phase 13 executed (awaiting manual smoke + verify-phase)
-last_updated: "2026-05-19T17:24:00Z"
-last_activity: 2026-05-19 -- Phase 13 Wave 1 + Wave 2 executed; 7 commits, build green
+stopped_at: Phase 13 Plan 03 complete — test infrastructure operational, awaiting verify-phase 13
+last_updated: "2026-05-20T18:55:00Z"
+last_activity: 2026-05-20 -- Plan 13-03 executed; WrangleTests target wired up, 106 tests green
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 3
-  completed_plans: 2
+  completed_plans: 3
   percent: 17
 ---
 
@@ -25,17 +25,17 @@ See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 13 executed (App De-Commercialization) — awaiting manual GUI smoke + `/gsd:verify-phase 13`
-Plan: 13-02 complete
-Status: Functionally complete; user verification + test-target gap pending
-Last activity: 2026-05-19 -- Phase 13 Wave 1 + Wave 2 executed; 7 commits, build green
+Phase: 13 executed (App De-Commercialization) — all 3 plans complete; awaiting manual GUI smoke + `/gsd:verify-phase 13`
+Plan: 13-03 complete (WrangleTests target wired up)
+Status: All plans complete; test infrastructure operational (106 tests green); user manual smoke + verify-phase pending
+Last activity: 2026-05-20 -- Plan 13-03 executed; WrangleTests target wired up, 106 tests green
 
 **Progress:** `[==        ] 1/6 phases (17%)`
 
 ### Phase 13 Outstanding
 
 - **Manual GUI smoke** (Plan 02 Task 4, steps 3–8) — autonomous environment cannot drive AppKit. Need user to: launch fresh build → confirm WhatsNew v1.3.0 modal appears with "Star on GitHub" CTA → click CTA opens GitHub in default browser → modal stays open until Continue → relaunch does NOT re-show modal → About panel renders both `wrangleapp.dev` and `github.com/J-Krush/wrangle` links → Scratch Pad + Browser tab still work.
-- **No Xcode test target** — Plan 02 shipped `WhatsNewManagerTests.swift` (4 tests) + `LicenseResidueCleanupTests.swift` (4 tests) but `Wrangle.xcodeproj` has only the `Wrangle` app target. **Plan 13-03 specced** (`13-03-test-target-wireup-PLAN.md`) — adds the `WrangleTests` target via Xcode GUI checkpoint, picks up all 7 existing test files (5 pre-existing March-April + 2 May), shares the scheme, runs the suite. Task 1 is user-interactive (Xcode GUI steps); Tasks 2-3 are executor-driven.
+- **Xcode test target wired up (Plan 13-03 complete, 2026-05-20)** — `WrangleTests` target added via Xcode 26 `PBXFileSystemSynchronizedRootGroup` (folder-synced membership, no per-file pbxproj entries). Shared scheme `Wrangle.xcscheme` committed. All 7 test files green: 106 test cases across `EditorDocumentTests` (14), `FileTypeTests` (37), `LicenseResidueCleanupTests` (4), `LinkRouterTests` (10), `MarkdownParserTests` (20), `TokenCounterTests` (17), `WhatsNewManagerTests` (4). Two trivial in-scope fixes: `import SwiftUI` in `TokenCounterTests`, off-by-one assertion (`33→34`) in `EditorDocumentTests.cachedStats`. No RED-defer remaining.
 - **APP-13 exemption list** finalized in `13-02-SUMMARY.md` — `wrangleapp.dev` (2 hits = 1 logical About-panel surface per D-12), `trial`/`License`/`license` substrings inside `LicenseResidueCleanup.swift` (deletion-target constants, structurally exempt), `license` in `FileTreeNode.swift:49` (repo-metadata matcher, exempt).
 
 ## Performance Metrics

@@ -41,7 +41,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
 **Plans**: 3 plans
 - [x] 13-01-strip-license-trial-paywall-PLAN.md — Wave 1: Delete the 5 license/trial files; strip plumbing from AppCoordinator, wrangleApp, ContentView, SettingsView, WhatsNewView, NotificationPermissionView; verify Info.plist clean; preliminary APP-13 grep audit. Covers APP-01..APP-09, APP-12, APP-14, APP-15.
 - [x] 13-02-oss-note-residue-cleanup-and-update-repoint-PLAN.md — Wave 2: Extend ChangelogEntry with CTA, add v1.3.0 entry + Star on GitHub link, add D-05 fresh-install filter; create LicenseResidueCleanup helper and wire into launch path; repoint UpdateChecker to GitHub Releases endpoint; rewrite About-panel credits with dual-link layout; ship 2 unit-test files; final APP-13 grep audit with exemption list. Covers APP-10, APP-11, APP-13.
-- [ ] 13-03-test-target-wireup-PLAN.md — Wave 3 (added 2026-05-19): Add the `WrangleTests` Swift Testing target to `Wrangle.xcodeproj`, include all 7 test files (5 pre-existing + 2 from Plan 13-02), share the Wrangle scheme, run the suite, triage any pre-existing test failures. Closes the test-execution gap surfaced by Plan 13-02 before v1.3 ships.
+- [x] 13-03-test-target-wireup-PLAN.md — Wave 3 (added 2026-05-19): Add the `WrangleTests` Swift Testing target to `Wrangle.xcodeproj`, include all 7 test files (5 pre-existing + 2 from Plan 13-02), share the Wrangle scheme, run the suite, triage any pre-existing test failures. Closes the test-execution gap surfaced by Plan 13-02 before v1.3 ships.
 
 ### Phase 14: App Repo OSS Surface
 **Goal**: A first-time visitor to `J-Krush/wrangle` lands on a README that tells the product's story (PH launch, Reddit ads, native-for-AI-devs thesis), can find the LICENSE, the contributing guide, the issue/PR templates, screenshots, and is confident no committed secrets exist in the repo's history.
@@ -111,7 +111,7 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 13. App De-Commercialization | 0/2 | Not started | - |
+| 13. App De-Commercialization | 3/3 | Plans complete (awaiting verify-phase) | 2026-05-20 |
 | 14. App Repo OSS Surface | 0/3 | Not started | - |
 | 15. Landing Repo OSS Surface | 0/2 | Not started | - |
 | 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
