@@ -21,7 +21,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
 
 - [ ] **Phase 13: App De-Commercialization** — Strip `LicenseManager` / `LicenseGateView` / `TrialBannerView` / `LicenseSettingsView` / trial endpoints; replace with one-time "free + open source" note.
 - [ ] **Phase 14: App Repo OSS Surface** — `J-Krush/wrangle`: MIT `LICENSE`, story-driven `README.md`, `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF, `SECURITY.md`, full repo secrets audit.
-- [ ] **Phase 15: Landing Repo OSS Surface** — `J-Krush/wrangle-landing`: secrets sweep, MIT `LICENSE`, public-facing `README.md`, `.gitignore` audit.
+- [x] **Phase 15: Landing Repo OSS Surface** — `J-Krush/wrangle-landing`: secrets sweep, MIT `LICENSE`, public-facing `README.md`, `.gitignore` audit. (completed 2026-05-20)
 - [ ] **Phase 16: Signed-DMG Release Pipeline** — Local build → sign (Developer ID) → notarize (`notarytool`) → staple → signed DMG; attach to `v1.3.0` GitHub Release tag.
 - [ ] **Phase 17: Landing Page Repositioning** — Astro site reframes from "Buy $24" to "Free + open source": new CTA, story section, GitHub link, real DMG download link, SEO/OG updates, deploy.
 - [ ] **Phase 18: Public Flip + v1.3.0 Release** — Final secrets sweep across both repos; flip both private → public; publish the `v1.3.0` Release.
@@ -67,7 +67,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   4. Running `pnpm install && pnpm dev` from a clean checkout (no `.env`) successfully boots the dev server, confirming the README's instructions are accurate and no required secret is missing from the public surface.
 **Plans**: 2 plans
 - [x] 15-01-PLAN.md — Deletions, `.gitignore` hardening, Layout.astro neutralization, D-11 audit (LAND-01, LAND-04, LAND-05; D-01..D-11)
-- [ ] 15-02-PLAN.md — LICENSE add, README rewrite (D-14/D-15/D-16), clean-checkout verification, phase SUMMARY (LAND-02, LAND-03; D-12..D-16)
+- [x] 15-02-PLAN.md — LICENSE add, README rewrite (D-14/D-15/D-16), clean-checkout verification, phase SUMMARY (LAND-02, LAND-03; D-12..D-16)
 
 ### Phase 16: Signed-DMG Release Pipeline
 **Goal**: A documented, repeatable local-build procedure produces a signed and notarized DMG that opens cleanly on a fresh-eyes Mac without Gatekeeper warnings, attached to a tagged `v1.3.0` GitHub Release on `J-Krush/wrangle` (still private at this point).
@@ -115,7 +115,7 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 |-------|----------------|--------|-----------|
 | 13. App De-Commercialization | 3/3 | Plans complete (awaiting verify-phase) | 2026-05-20 |
 | 14. App Repo OSS Surface | 1/3 | In Progress|  |
-| 15. Landing Repo OSS Surface | 1/2 | In Progress|  |
+| 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
 | 17. Landing Page Repositioning | 0/3 | Not started | - |
 | 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |
