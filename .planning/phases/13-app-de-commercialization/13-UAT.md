@@ -41,10 +41,10 @@ expected: Quit and relaunch the app. The WhatsNew modal does NOT appear again �
 result: pass
 
 ### 8. About panel — dual links
-expected: Open the About panel (Wrangle menu → About Wrangle). The credits show "Made by Krush" on one line, and on a second line both `wrangleapp.dev` and `github.com/J-Krush/wrangle` as clickable links separated by a bullet. Clicking each opens the respective URL in your browser.
-result: issue
-reported: "links work but I want them stacked vertically instead of horizontal with a bullet separator; also version shows v1.2.0 (5) instead of v1.3.0"
-severity: major
+expected: Open the About panel (Wrangle menu → About Wrangle). The credits show "Made by J-Krush" on one line, and on subsequent lines both `wrangleapp.dev` and `github.com/J-Krush/wrangle` as clickable links stacked vertically. Clicking each opens the respective URL in your browser. Version reflects current bundle MARKETING_VERSION.
+result: pass
+initial_report: "links work but I want them stacked vertically instead of horizontal with a bullet separator; also version shows v1.2.0 (5) instead of v1.3.0"
+fixed_in: "0f1d620 (vertical links), a2cfa2c (version bump), 35fe007 (drift invariant), 2810d67 (release checklist), 52b72c5 (Krush → J-Krush credit + copyright)"
 
 ### 9. Scratch Pad opens (regression check)
 expected: File → New Scratch Pad (or Cmd+Shift+N). A new Scratch Pad opens normally — Phase 13's strip did not regress this flow.
@@ -63,8 +63,8 @@ note: "Up-to-date alert displayed without crash and without wrangleapp.dev reque
 ## Summary
 
 total: 11
-passed: 10
-issues: 1
+passed: 11
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
