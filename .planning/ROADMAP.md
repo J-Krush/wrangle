@@ -114,7 +114,7 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. App De-Commercialization | 3/3 | Plans complete (awaiting verify-phase) | 2026-05-20 |
-| 14. App Repo OSS Surface | 1/3 | In Progress|  |
+| 14. App Repo OSS Surface | 2/3 | In Progress|  |
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
 | 17. Landing Page Repositioning | 0/3 | Not started | - |
