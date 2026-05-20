@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: completed
-stopped_at: Phase 16 context gathered
-last_updated: "2026-05-20T22:42:50.906Z"
+status: ready_to_plan
+stopped_at: Phase 14 complete (3/3) — ready to discuss Phase 15
+last_updated: 2026-05-20T22:48:28.829Z
 last_activity: "2026-05-20 -- Phase 14 plan 14-02 complete (3 commits: 71360df Task 1 / 72d7cb6 Task 2 user-captured GIFs / bfe4a15 Task 3 README rewrite)"
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 8
-  completed_plans: 9
+  completed_plans: 13
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 14 — app-repo-oss-surface (Plan 14-03 remaining); Phase 15 complete
+**Current focus:** Phase 15 — landing repo oss surface
 
 ## Current Position
 
-Phase: 14 — Plan 14-02 COMPLETE; Plan 14-03 remaining (repo hygiene + secrets sweep)
-Plan: 2 of 3 — complete (Plan 14-01 + 14-02 done; 14-03 is Wave 3)
-Status: Phase 14 Plan 14-02 closed — REPO-02 + REPO-07 satisfied (README rewritten per 8-section structure; 5 visuals embedded — 3 PNG + 2 user-captured GIF). Phase 15 also complete.
-Last activity: 2026-05-20 -- Phase 14 plan 14-02 complete (3 commits: 71360df Task 1 / 72d7cb6 Task 2 user-captured GIFs / bfe4a15 Task 3 README rewrite)
+Phase: 15
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-20
 
 **Progress:** [█████████░] 88%
 
@@ -42,7 +42,7 @@ Last activity: 2026-05-20 -- Phase 14 plan 14-02 complete (3 commits: 71360df Ta
 
 **Velocity (v1.2):**
 
-- Total plans completed: 13 across 12 phases (one phase ran two plans on the polish pass)
+- Total plans completed: 16 across 12 phases (one phase ran two plans on the polish pass)
 - Build verification: passed after every phase
 
 **By Phase (v1.2 history retained for context):**

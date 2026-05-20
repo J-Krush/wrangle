@@ -43,18 +43,18 @@ Document and verify the local-build path that produces a signed, notarized DMG r
 
 Stand up the public-facing surface of the app repository — the README is the portfolio piece.
 
-- [ ] **REPO-01**: `LICENSE` file at repo root contains the MIT License, attributed to `Copyright (c) 2026 J Krush`.
-- [ ] **REPO-02**: `README.md` at repo root tells the product story. Required sections (in order): (a) one-paragraph hero pitch with screenshot/GIF, (b) "What this is" — native macOS markdown editor for AI devs, the AI-file-awareness angle, (c) "Why it's free and open source now" — the story of the Product Hunt launch on 2026-04-22, the Reddit ads channel experiment, the decision to convert to OSS as a portfolio piece, (d) "Built with" — Swift / SwiftUI / SwiftData / SwiftTerm / WKWebView, macOS 15+ Apple Silicon, (e) "Install" — download DMG from latest Release, (f) "Build from source" — Xcode setup, (g) "Contributing" — link to `CONTRIBUTING.md`, (h) "License" — MIT.
-- [ ] **REPO-03**: `CONTRIBUTING.md` at repo root documents how to set up the dev environment, how to file issues, the PR process, and coding conventions (links into `CLAUDE.md` and `docs/coding-patterns.md`).
-- [ ] **REPO-04**: `.github/ISSUE_TEMPLATE/bug_report.md` exists with structured fields (steps to reproduce, expected vs actual, macOS version, Wrangle version, screenshot).
-- [ ] **REPO-05**: `.github/ISSUE_TEMPLATE/feature_request.md` exists with structured fields (problem, proposed solution, alternatives, AI-dev-workflow context).
-- [ ] **REPO-06**: `.github/PULL_REQUEST_TEMPLATE.md` exists with checklist (description, screenshots if UI, tests run, CLAUDE.md conventions followed).
-- [ ] **REPO-07**: At least 3 screenshots (editor with rendered markdown, browser tab, project overview) plus an animated demo GIF are committed to the repo and embedded in `README.md`.
-- [ ] **REPO-08**: `.gitignore` is reviewed and updated to ensure no committed secrets, dev-only files, `.DS_Store` litter, or build artifacts (`.build/`, `DerivedData/`, `*.xcuserstate`) are tracked. Existing committed offenders are removed.
-- [ ] **REPO-09**: A full repo audit (`git log -p`, `git rev-list --all | xargs git grep -i …`) confirms no committed secrets: no API keys for LemonSqueezy / wrangleapp.dev / analytics / TestFlight / private feedback endpoints. Any found are removed via history rewrite (`git filter-repo`) OR documented as known-rotated.
-- [ ] **REPO-10**: `SECURITY.md` at repo root documents responsible disclosure (private email or GitHub Security Advisories).
-- [ ] **REPO-11**: `CLAUDE.md` is updated with a header note that the project is open source and a "Contributors" section pointing new contributors at `CONTRIBUTING.md`.
-- [ ] **REPO-12**: `docs/` directory existing contents (`architecture.md`, `coding-patterns.md`, `audit-report.md`) are reviewed for any private content or references that don't belong in a public repo.
+- [x] **REPO-01**: `LICENSE` file at repo root contains the MIT License, attributed to `Copyright (c) 2026 J Krush`.
+- [x] **REPO-02**: `README.md` at repo root tells the product story. Required sections (in order): (a) one-paragraph hero pitch with screenshot/GIF, (b) "What this is" — native macOS markdown editor for AI devs, the AI-file-awareness angle, (c) "Why it's free and open source now" — the story of the Product Hunt launch on 2026-04-22, the Reddit ads channel experiment, the decision to convert to OSS as a portfolio piece, (d) "Built with" — Swift / SwiftUI / SwiftData / SwiftTerm / WKWebView, macOS 15+ Apple Silicon, (e) "Install" — download DMG from latest Release, (f) "Build from source" — Xcode setup, (g) "Contributing" — link to `CONTRIBUTING.md`, (h) "License" — MIT.
+- [x] **REPO-03**: `CONTRIBUTING.md` at repo root documents how to set up the dev environment, how to file issues, the PR process, and coding conventions (links into `CLAUDE.md` and `docs/coding-patterns.md`).
+- [x] **REPO-04**: `.github/ISSUE_TEMPLATE/bug_report.md` exists with structured fields (steps to reproduce, expected vs actual, macOS version, Wrangle version, screenshot).
+- [x] **REPO-05**: `.github/ISSUE_TEMPLATE/feature_request.md` exists with structured fields (problem, proposed solution, alternatives, AI-dev-workflow context).
+- [x] **REPO-06**: `.github/PULL_REQUEST_TEMPLATE.md` exists with checklist (description, screenshots if UI, tests run, CLAUDE.md conventions followed).
+- [x] **REPO-07**: At least 3 screenshots (editor with rendered markdown, browser tab, project overview) plus an animated demo GIF are committed to the repo and embedded in `README.md`.
+- [x] **REPO-08**: `.gitignore` is reviewed and updated to ensure no committed secrets, dev-only files, `.DS_Store` litter, or build artifacts (`.build/`, `DerivedData/`, `*.xcuserstate`) are tracked. Existing committed offenders are removed.
+- [x] **REPO-09**: A full repo audit (`git log -p`, `git rev-list --all | xargs git grep -i …`) confirms no committed secrets: no API keys for LemonSqueezy / wrangleapp.dev / analytics / TestFlight / private feedback endpoints. Any found are removed via history rewrite (`git filter-repo`) OR documented as known-rotated.
+- [x] **REPO-10**: `SECURITY.md` at repo root documents responsible disclosure (private email or GitHub Security Advisories).
+- [x] **REPO-11**: `CLAUDE.md` is updated with a header note that the project is open source and a "Contributors" section pointing new contributors at `CONTRIBUTING.md`.
+- [x] **REPO-12**: `docs/` directory existing contents (`architecture.md`, `coding-patterns.md`, `audit-report.md`) are reviewed for any private content or references that don't belong in a public repo.
 
 ### LAND — Landing Repo OSS Surface (`J-Krush/wrangle-landing`)
 
@@ -132,18 +132,18 @@ The final milestone step — both repos go public and the DMG release ships.
 | APP-13 | Phase 13 — App De-Commercialization | Pending |
 | APP-14 | Phase 13 — App De-Commercialization | Pending |
 | APP-15 | Phase 13 — App De-Commercialization | Pending |
-| REPO-01 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-02 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-03 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-04 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-05 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-06 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-07 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-08 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-09 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-10 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-11 | Phase 14 — App Repo OSS Surface | Pending |
-| REPO-12 | Phase 14 — App Repo OSS Surface | Pending |
+| REPO-01 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-02 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-03 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-04 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-05 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-06 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-07 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-08 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-09 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-10 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-11 | Phase 14 — App Repo OSS Surface | Complete |
+| REPO-12 | Phase 14 — App Repo OSS Surface | Complete |
 | LAND-01 | Phase 15 — Landing Repo OSS Surface | Complete |
 | LAND-02 | Phase 15 — Landing Repo OSS Surface | Complete |
 | LAND-03 | Phase 15 — Landing Repo OSS Surface | Complete |
