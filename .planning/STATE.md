@@ -27,14 +27,14 @@ See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 Phase: 13 executed + shipped (App De-Commercialization) — pushed to origin/main (private), no PR
 Plan: 13-03 complete (WrangleTests target wired up)
-Status: All plans complete; test infrastructure operational (106 tests green); user manual smoke + verify-phase still pending before next phase
+Status: All plans complete; test infrastructure operational (106 tests green); manual GUI smoke confirmed by user 2026-05-20; verify-phase still optional before next phase
 Last activity: 2026-05-20 -- Phase 13 pushed to origin/main (28 commits, c1c4c95)
 
 **Progress:** `[==        ] 1/6 phases (17%)`
 
 ### Phase 13 Outstanding
 
-- **Manual GUI smoke** (Plan 02 Task 4, steps 3–8) — autonomous environment cannot drive AppKit. Need user to: launch fresh build → confirm WhatsNew v1.3.0 modal appears with "Star on GitHub" CTA → click CTA opens GitHub in default browser → modal stays open until Continue → relaunch does NOT re-show modal → About panel renders both `wrangleapp.dev` and `github.com/J-Krush/wrangle` links → Scratch Pad + Browser tab still work.
+- **Manual GUI smoke** (Plan 02 Task 4, steps 3–8) — ✓ confirmed by user 2026-05-20. WhatsNew v1.3.0 modal, Star on GitHub CTA, About panel dual links, dismiss + non-recurrence, Scratch Pad + Browser tab all verified.
 - **Xcode test target wired up (Plan 13-03 complete, 2026-05-20)** — `WrangleTests` target added via Xcode 26 `PBXFileSystemSynchronizedRootGroup` (folder-synced membership, no per-file pbxproj entries). Shared scheme `Wrangle.xcscheme` committed. All 7 test files green: 106 test cases across `EditorDocumentTests` (14), `FileTypeTests` (37), `LicenseResidueCleanupTests` (4), `LinkRouterTests` (10), `MarkdownParserTests` (20), `TokenCounterTests` (17), `WhatsNewManagerTests` (4). Two trivial in-scope fixes: `import SwiftUI` in `TokenCounterTests`, off-by-one assertion (`33→34`) in `EditorDocumentTests.cachedStats`. No RED-defer remaining.
 - **APP-13 exemption list** finalized in `13-02-SUMMARY.md` — `wrangleapp.dev` (2 hits = 1 logical About-panel surface per D-12), `trial`/`License`/`license` substrings inside `LicenseResidueCleanup.swift` (deletion-target constants, structurally exempt), `license` in `FileTreeNode.swift:49` (repo-metadata matcher, exempt).
 
