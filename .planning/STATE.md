@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
 status: executing
-stopped_at: Phase 15 context gathered
-last_updated: "2026-05-20T21:40:49.001Z"
-last_activity: 2026-05-20 -- Phase 15 execution started
+stopped_at: Phase 15 Plan 01 complete; Plan 02 (LICENSE + README + clean-checkout verify) ready to execute
+last_updated: "2026-05-20T21:51:36.018Z"
+last_activity: 2026-05-20
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 8
-  completed_plans: 4
+  completed_plans: 5
   percent: 17
 ---
 
@@ -26,11 +26,11 @@ See: `.planning/PROJECT.md` (updated 2026-05-19)
 ## Current Position
 
 Phase: 15 (landing-repo-oss-surface) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 15
-Last activity: 2026-05-20 -- Phase 15 execution started
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-05-20
 
-**Progress:** `[==        ] 1/6 phases (17%)`
+**Progress:** [██████░░░░] 63%
 
 ### Phase 13 Outstanding
 
@@ -76,6 +76,14 @@ Last activity: 2026-05-20 -- Phase 15 execution started
 | 18. Public Flip + v1.3.0 Release | 1 (final sweep + flip + publish) |
 | **Total** | **13** |
 
+**v1.3 actual execution:**
+
+| Phase / Plan | Duration | Tasks | Files / Commits | Notes |
+|--------------|----------|-------|-----------------|-------|
+| Phase 13 (App De-Commercialization) | — | — | — | Closed 2026-05-19 / 2026-05-20 |
+| Phase 14 (App Repo OSS Surface) | — | — | — | Planned 2026-05-20 (00-CONTEXT.md + 01..03-PLAN.md drafted) |
+| Phase 15 Plan 01 (Landing repo deletions + audit) | ~30min | 3 | 9 modified + 11 deleted + 6 untracked + audit (planning host) | 6 atomic Landing Page commits (e002769..f4a8402) + 1 planning-host SUMMARY commit (c2c867c). D-09 stands; zero category-(d) secret values. |
+
 ## Accumulated Context
 
 ### Decisions (v1.3, locked at planning)
@@ -88,6 +96,11 @@ Last activity: 2026-05-20 -- Phase 15 execution started
 - **No migration path for paid v1.2 users.** License-key flow is being torn out wholesale; any v1.2 license-holder simply opens v1.3 to the editor.
 - **One-time "free + open source" note** uses the existing `WhatsNewView` mechanism if compatible; otherwise a one-off sheet keyed off the v1.3 version bump (APP-11). Dismissable, does not re-appear, does not block the editor.
 - **Critical-path ordering: 13 → 16 → 17 → 18**, with 14 and 15 parallel-eligible. Phase 17's "Download for macOS" CTA literally needs the URL produced in Phase 16.
+
+### Decisions (v1.3, validated during execution)
+
+- **Phase 15 Plan 01 — D-09 stands** (2026-05-20). Full D-11 audit (working tree + 23-commit history) found zero category-(d) actual secret values. No `git filter-repo`, no `git push --force`. Phase 18 cleared to flip `wrangle-landing` public from a credential-exposure standpoint. Audit working artifact at `.planning/phases/15-landing-repo-oss-surface/15-01-AUDIT.md` (uncommitted in Plan 01 per D-10; Plan 02 commits it together with the phase SUMMARY).
+- **Phase 15 Plan 01 — Plan-internal acceptance conflict acknowledged** (2026-05-20). Task 3's `<acceptance_criteria>` zero-LemonSqueezy assertion contradicted the plan's own `astro.config.mjs` "do not touch" scope boundary. Invoked the audit's catalogue-every-hit escape valve: `astro.config.mjs:17` (public `/buy` checkout URL) catalogued as category-(b); Phase 17 SITE-05 owns the redirect rewrite.
 
 ### Decisions (shipped, v1.2 — retained for context)
 
@@ -106,12 +119,12 @@ Last activity: 2026-05-20 -- Phase 15 execution started
 ### Blockers/Concerns
 
 - **Apple notarization credentials** — Phase 16 requires a valid Developer ID Application certificate + an app-specific password tied to the Apple ID + the Team ID. If any of these are missing or expired, Phase 16 stalls on Apple-side bureaucracy, not code.
-- **Repo history secrets** — Phase 14 and Phase 15 audits may turn up committed secrets in old history (LemonSqueezy / wrangleapp.dev tokens, analytics keys). If found, the choice is `git filter-repo` history rewrite (clean, but rewrites tags) vs. rotate-and-document. Decision deferred to phase execution; see FLIP-01 / REPO-09 / LAND-05.
+- **Repo history secrets** — Phase 14 and Phase 15 audits may turn up committed secrets in old history (LemonSqueezy / wrangleapp.dev tokens, analytics keys). If found, the choice is `git filter-repo` history rewrite (clean, but rewrites tags) vs. rotate-and-document. Decision deferred to phase execution; see FLIP-01 / REPO-09 / LAND-05. **LAND-05 partial-resolution (2026-05-20):** Phase 15 Plan 01's D-11 audit found zero category-(d) actual secret values in `wrangle-landing`'s 23-commit history. D-09 stands; no rewrite needed for the landing repo. Phase 14 audit still pending for the app repo.
 - **Landing-page deploy reversibility (SITE-09)** — production target is whatever currently serves `wrangleapp.dev`. Need to confirm the host (Vercel / Netlify / static) supports instant rollback before pushing the OSS-positioned build.
 - **Multi-window NSEvent monitors** (v1.2 carry-over) — process-scoped, filtered by session ID. Not scoped into v1.3.
 
 ## Session Continuity
 
-Last session: 2026-05-20T21:01:38.312Z
-Stopped at: Phase 15 context gathered
-Resume file: .planning/phases/15-landing-repo-oss-surface/15-CONTEXT.md
+Last session: 2026-05-20T21:51:09.258Z
+Stopped at: Phase 15 Plan 01 complete; Plan 02 ready to execute
+Resume file: .planning/phases/15-landing-repo-oss-surface/15-02-PLAN.md

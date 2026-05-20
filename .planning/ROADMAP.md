@@ -66,7 +66,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   3. `.gitignore` excludes `node_modules/`, `dist/`, `.env*`, `.DS_Store`; any previously-committed offenders are removed from the working tree.
   4. Running `pnpm install && pnpm dev` from a clean checkout (no `.env`) successfully boots the dev server, confirming the README's instructions are accurate and no required secret is missing from the public surface.
 **Plans**: 2 plans
-- [ ] 15-01-PLAN.md — Deletions, `.gitignore` hardening, Layout.astro neutralization, D-11 audit (LAND-01, LAND-04, LAND-05; D-01..D-11)
+- [x] 15-01-PLAN.md — Deletions, `.gitignore` hardening, Layout.astro neutralization, D-11 audit (LAND-01, LAND-04, LAND-05; D-01..D-11)
 - [ ] 15-02-PLAN.md — LICENSE add, README rewrite (D-14/D-15/D-16), clean-checkout verification, phase SUMMARY (LAND-02, LAND-03; D-12..D-16)
 
 ### Phase 16: Signed-DMG Release Pipeline
@@ -115,7 +115,7 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 |-------|----------------|--------|-----------|
 | 13. App De-Commercialization | 3/3 | Plans complete (awaiting verify-phase) | 2026-05-20 |
 | 14. App Repo OSS Surface | 1/3 | In Progress|  |
-| 15. Landing Repo OSS Surface | 0/2 | Not started | - |
+| 15. Landing Repo OSS Surface | 1/2 | In Progress|  |
 | 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
 | 17. Landing Page Repositioning | 0/3 | Not started | - |
 | 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |

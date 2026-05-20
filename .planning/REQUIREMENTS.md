@@ -60,11 +60,11 @@ Stand up the public-facing surface of the app repository — the README is the p
 
 Stand up the public-facing surface of the landing-page repository.
 
-- [ ] **LAND-01**: A full audit of `Landing Page/` finds and removes any private analytics keys (e.g., Plausible / Fathom / GA / PostHog tokens), internal Slack URLs, private feedback emails, dev-only notes, hardcoded admin credentials.
+- [x] **LAND-01**: A full audit of `Landing Page/` finds and removes any private analytics keys (e.g., Plausible / Fathom / GA / PostHog tokens), internal Slack URLs, private feedback emails, dev-only notes, hardcoded admin credentials.
 - [ ] **LAND-02**: `LICENSE` file at the landing-page repo root contains the MIT License, attributed to `Copyright (c) 2026 J Krush`.
 - [ ] **LAND-03**: `README.md` in the landing-page repo is rewritten as public-facing: (a) what this repo is (the Astro source for `wrangleapp.dev`), (b) build/dev instructions (`pnpm install`, `pnpm dev`, `pnpm build`), (c) deploy target (Vercel / Netlify / static hosting — whatever it actually is), (d) link to the app repo.
-- [ ] **LAND-04**: `.gitignore` correctly excludes `node_modules/`, `dist/`, `.env*`, `.DS_Store`. Existing committed offenders are removed.
-- [ ] **LAND-05**: Full repo audit confirms no committed secrets in history.
+- [x] **LAND-04**: `.gitignore` correctly excludes `node_modules/`, `dist/`, `.env*`, `.DS_Store`. Existing committed offenders are removed.
+- [x] **LAND-05**: Full repo audit confirms no committed secrets in history.
 
 ### SITE — Landing Page Repositioning
 
@@ -144,11 +144,11 @@ The final milestone step — both repos go public and the DMG release ships.
 | REPO-10 | Phase 14 — App Repo OSS Surface | Pending |
 | REPO-11 | Phase 14 — App Repo OSS Surface | Pending |
 | REPO-12 | Phase 14 — App Repo OSS Surface | Pending |
-| LAND-01 | Phase 15 — Landing Repo OSS Surface | Pending |
+| LAND-01 | Phase 15 — Landing Repo OSS Surface | Complete |
 | LAND-02 | Phase 15 — Landing Repo OSS Surface | Pending |
 | LAND-03 | Phase 15 — Landing Repo OSS Surface | Pending |
-| LAND-04 | Phase 15 — Landing Repo OSS Surface | Pending |
-| LAND-05 | Phase 15 — Landing Repo OSS Surface | Pending |
+| LAND-04 | Phase 15 — Landing Repo OSS Surface | Complete |
+| LAND-05 | Phase 15 — Landing Repo OSS Surface | Complete |
 | REL-01 | Phase 16 — Signed-DMG Release Pipeline | Pending |
 | REL-02 | Phase 16 — Signed-DMG Release Pipeline | Pending |
 | REL-03 | Phase 16 — Signed-DMG Release Pipeline | Pending |
