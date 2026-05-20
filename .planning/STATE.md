@@ -4,13 +4,13 @@ milestone: v1.3
 milestone_name: Open Source Release
 status: executing
 stopped_at: Phase 15 context gathered
-last_updated: "2026-05-20T21:35:55.117Z"
-last_activity: 2026-05-20 -- Phase 15 planning complete
+last_updated: "2026-05-20T21:40:49.001Z"
+last_activity: 2026-05-20 -- Phase 15 execution started
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 8
-  completed_plans: 3
+  completed_plans: 4
   percent: 17
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 14 — app-repo-oss-surface
+**Current focus:** Phase 15 — landing-repo-oss-surface
 
 ## Current Position
 
-Phase: 14 (app-repo-oss-surface) — EXECUTING
-Plan: 1 of 3
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 15 planning complete
+Phase: 15 (landing-repo-oss-surface) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 15
+Last activity: 2026-05-20 -- Phase 15 execution started
 
 **Progress:** `[==        ] 1/6 phases (17%)`
 
