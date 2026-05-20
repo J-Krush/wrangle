@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: executing
-stopped_at: Phase 13 shipped to origin/main (private remote) — no PR per "flip public at milestone end" plan; manual GUI smoke + verify-phase still pending
-last_updated: "2026-05-20T18:58:00Z"
+status: verifying
+stopped_at: Phase 14 context gathered
+last_updated: "2026-05-20T19:36:57.277Z"
 last_activity: 2026-05-20 -- Phase 13 pushed to origin/main (28 commits, c1c4c95)
 progress:
   total_phases: 6
@@ -112,6 +112,6 @@ Last activity: 2026-05-20 -- Phase 13 pushed to origin/main (28 commits, c1c4c95
 
 ## Session Continuity
 
-Last session: 2026-05-19T13:31:09.775Z
-Stopped at: Phase 13 context gathered
-Resume file: .planning/phases/13-app-de-commercialization/13-CONTEXT.md
+Last session: 2026-05-20T19:36:57.270Z
+Stopped at: Phase 14 context gathered
+Resume file: .planning/phases/14-app-repo-oss-surface/14-CONTEXT.md
