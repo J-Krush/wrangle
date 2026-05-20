@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: completed
-stopped_at: Phase 15 Plan 01 complete; Plan 02 ready to execute
-last_updated: "2026-05-20T22:12:59.280Z"
-last_activity: 2026-05-20 -- Phase 15 marked complete
+status: executing
+stopped_at: Phase 14 Plan 14-02 complete (REPO-02 + REPO-07 satisfied); Plan 14-03 (repo hygiene + secrets sweep) is the remaining work to close Phase 14
+last_updated: "2026-05-20T22:30:00.000Z"
+last_activity: 2026-05-20 -- Phase 14 plan 14-02 complete (README rewrite + 5 visuals embedded)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 8
-  completed_plans: 7
-  percent: 33
+  completed_plans: 8
+  percent: 44
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 15 — landing-repo-oss-surface
+**Current focus:** Phase 14 — app-repo-oss-surface (Plan 14-03 remaining); Phase 15 complete
 
 ## Current Position
 
-Phase: 15 — COMPLETE
-Plan: 2 of 2 — complete
-Status: Phase 15 complete
-Last activity: 2026-05-20 -- Phase 15 marked complete
+Phase: 14 — Plan 14-02 COMPLETE; Plan 14-03 remaining (repo hygiene + secrets sweep)
+Plan: 2 of 3 — complete (Plan 14-01 + 14-02 done; 14-03 is Wave 3)
+Status: Phase 14 Plan 14-02 closed — REPO-02 + REPO-07 satisfied (README rewritten per 8-section structure; 5 visuals embedded — 3 PNG + 2 user-captured GIF). Phase 15 also complete.
+Last activity: 2026-05-20 -- Phase 14 plan 14-02 complete (3 commits: 71360df Task 1 / 72d7cb6 Task 2 user-captured GIFs / bfe4a15 Task 3 README rewrite)
 
 **Progress:** [█████████░] 88%
 
@@ -81,7 +81,8 @@ Last activity: 2026-05-20 -- Phase 15 marked complete
 | Phase / Plan | Duration | Tasks | Files / Commits | Notes |
 |--------------|----------|-------|-----------------|-------|
 | Phase 13 (App De-Commercialization) | — | — | — | Closed 2026-05-19 / 2026-05-20 |
-| Phase 14 (App Repo OSS Surface) | — | — | — | Planned 2026-05-20 (00-CONTEXT.md + 01..03-PLAN.md drafted) |
+| Phase 14 (App Repo OSS Surface) | in-progress | — | — | Planned 2026-05-20 (00-CONTEXT.md + 01..03-PLAN.md drafted); Plan 14-01 complete; Plan 14-02 complete 2026-05-20; Plan 14-03 (repo hygiene + secrets sweep) remaining |
+| Phase 14 Plan 02 (README + screenshots) | ~10min after Task-2 checkpoint | 3 | 6 files (5 visuals + README.md) / 3 commits | `71360df` Task 1 (3 landing-page PNG copies), `72d7cb6` Task 2 (user-captured browser-feature.gif + walkthrough-short-1.gif via D-17 interactive checkpoint), `bfe4a15` Task 3 (README rewrite per REPO-02 8-section structure, 151 lines, all 7 D-15 verbatim bullets preserved, story-section voice locked to D-01..D-05 with "distribution is harder than product" takeaway + 2026-04-22 PH date + Reddit ads beat). REPO-02 + REPO-07 satisfied. Deviation: user-chosen GIF filenames (browser-feature.gif, walkthrough-short-1.gif) substituted for planner's placeholders (browser-tab.png, demo.gif) per the plan's "different filename" resume-signal contract. walkthrough-short-2.gif kept untracked on disk per user direction. |
 | Phase 15 Plan 01 (Landing repo deletions + audit) | ~30min | 3 | 9 modified + 11 deleted + 6 untracked + audit (planning host) | 6 atomic Landing Page commits (e002769..f4a8402) + 1 planning-host SUMMARY commit (c2c867c). D-09 stands; zero category-(d) secret values. |
 | Phase 15 Plan 02 (LICENSE + README + clean-checkout verify) | ~2min | 3 | 1 created (LICENSE) + 1 modified (README) + 3 SUMMARY/audit files (planning host) | 2 atomic Landing Page commits (418bd25 LICENSE, a4c6506 README) + 1 planning-host commit (f7d17c6 SUMMARY+audit+per-plan-02). D-12 clean-checkout PASSED: /tmp clone booted pnpm dev on http://localhost:4321/ in 715ms. All 5 LAND-IDs closed; all 16 D-XX decisions implemented; D-09 stands. |
 
@@ -104,6 +105,7 @@ Last activity: 2026-05-20 -- Phase 15 marked complete
 - **Phase 15 Plan 01 — Plan-internal acceptance conflict acknowledged** (2026-05-20). Task 3's `<acceptance_criteria>` zero-LemonSqueezy assertion contradicted the plan's own `astro.config.mjs` "do not touch" scope boundary. Invoked the audit's catalogue-every-hit escape valve: `astro.config.mjs:17` (public `/buy` checkout URL) catalogued as category-(b); Phase 17 SITE-05 owns the redirect rewrite.
 - **Phase 15 Plan 02 complete — D-12 clean-checkout verified, D-09 stands** (2026-05-20). LICENSE added (canonical SPDX MIT, `Copyright (c) 2026 J Krush` exact) + README rewritten to D-14 4-section public-facing structure (pnpm command table preserved verbatim; 2x github.com/J-Krush/wrangle link-backs per D-15; RESEND_API_KEY dev-warning documented per D-12; @astrojs/vercel deploy adapter named; License footer per D-16). D-12 clean-checkout verification PASSED: /tmp clone with no .env booted `pnpm dev` on http://localhost:4321/ (Astro v5.18.0 ready in 715ms). Pre-flight audit gate passed; D-09 stands. All 5 LAND-IDs closed; all 16 D-XX decisions implemented. Landing Page commits: `418bd25` (LICENSE), `a4c6506` (README). Planning-host commit: `f7d17c6` (SUMMARY + audit + per-plan-02 SUMMARY).
 - **macOS `timeout`-substitute pattern documented** (2026-05-20, Phase 15 Plan 02). The orchestrator's `<clean_checkout_handling>` recipe assumes GNU coreutils `timeout`. On macOS the binary is not on PATH; substitute with `(pnpm dev > log 2>&1 & echo $! > pid) ; sleep 12 ; kill $(cat pid)`. Captured boot line via post-hoc log grep. Reusable for any future plan whose verification assumes coreutils.
+- **Phase 14 Plan 02 complete — REPO-02 + REPO-07 satisfied via D-17 user-captured-GIF substitution** (2026-05-20). README rewritten to 8-section structure per REPO-02 (151 lines, all 7 D-15 verbatim bullets preserved, story-section voice locked to D-01..D-05 with literal "distribution is harder than product" takeaway + 2026-04-22 PH date + Reddit ads beat + portfolio-piece framing — zero numeric leaks). 5 visual assets embedded — 3 PNGs copied from landing-page library per D-16 (editor-simple.png, project-overview.png, terminal.png) + 2 user-captured GIFs (browser-feature.gif replacing planner's static browser-tab.png, walkthrough-short-1.gif as demo.gif substitute) per D-17 interactive checkpoint. walkthrough-short-2.gif kept on disk untracked per user direction; .DS_Store deferred to Plan 14-03 gitignore. Commits: `71360df` Task 1, `72d7cb6` Task 2, `bfe4a15` Task 3.
 
 ### Decisions (shipped, v1.2 — retained for context)
 
@@ -115,7 +117,8 @@ Last activity: 2026-05-20 -- Phase 15 marked complete
 ### Pending Todos
 
 - Manual UAT per Phase 13 success criteria (smoke-test editor opens with no gate, grep for forbidden strings, verify "free + OSS" note appears once and dismisses).
-- Capture the 3+ README screenshots + animated demo GIF in Phase 14 (editor with rendered markdown, browser tab, project overview).
+- ~~Capture the 3+ README screenshots + animated demo GIF in Phase 14 (editor with rendered markdown, browser tab, project overview).~~ ✓ COMPLETE (2026-05-20, Phase 14 Plan 02) — 3 PNGs + 2 GIFs in `screenshots/raw/`, all embedded in README.
+- Plan 14-03 (repo hygiene + secrets sweep): gitignore `screenshots/raw/.DS_Store`; decide tracked-or-deleted for the untracked `screenshots/raw/walkthrough-short-2.gif` (kept on disk by user but not embedded in README).
 - Confirm the local Developer ID Application certificate is in Keychain and the app-specific password for `notarytool` is ready before kicking off Phase 16.
 - Decide between deleting `/pricing` outright vs. rewriting it during Phase 17 — affects whether SITE-10's `404.astro` fallback is needed.
 
@@ -128,6 +131,6 @@ Last activity: 2026-05-20 -- Phase 15 marked complete
 
 ## Session Continuity
 
-Last session: 2026-05-20T22:03:36.373Z
-Stopped at: Phase 15 Plan 01 complete; Plan 02 ready to execute
+Last session: 2026-05-20T22:30:00.000Z
+Stopped at: Phase 14 Plan 14-02 complete (REPO-02 + REPO-07 satisfied); Plan 14-03 (repo hygiene + secrets sweep) is the remaining work to close Phase 14
 Resume file: None
