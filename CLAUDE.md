@@ -1,6 +1,6 @@
 # CLAUDE.md — Wrangle
 
-> **Detailed docs:** [Architecture & Structure](docs/architecture.md) | [Coding Patterns](docs/coding-patterns.md) | [Audit Report](docs/audit-report.md) | [Release Checklist](docs/release-checklist.md)
+> **Detailed docs:** [Architecture & Structure](docs/architecture.md) | [Coding Patterns](docs/coding-patterns.md) | [Token Counting Research](docs/token-counting-research.md)
 
 > **Open source:** Wrangle is now free and open source under the [MIT License](LICENSE). New contributors — start at [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -111,7 +111,6 @@ Vertical feature slices. Each slice delivers a working increment touching both U
 - Multiple windows supported (each window = one workspace)
 - `NavigationSplitView` for sidebar/editor layout
 - Terminal via SwiftTerm's `LocalProcessTerminalView`, not custom PTY
-- Consult `docs/audit-report.md` for known issues before modifying affected files
 - Consult `docs/architecture.md` for project structure, theming, and editor design decisions
 
 ## Contributors
