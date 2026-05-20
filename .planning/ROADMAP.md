@@ -65,7 +65,9 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   2. A full working-tree and history audit (`git log -p`, `git rev-list --all | xargs git grep -i 'secret\|api[-_]key\|token\|plausible\|fathom\|posthog'`) finds zero committed analytics keys, Slack URLs, private feedback emails, dev-only notes, or hardcoded credentials.
   3. `.gitignore` excludes `node_modules/`, `dist/`, `.env*`, `.DS_Store`; any previously-committed offenders are removed from the working tree.
   4. Running `pnpm install && pnpm dev` from a clean checkout (no `.env`) successfully boots the dev server, confirming the README's instructions are accurate and no required secret is missing from the public surface.
-**Plans**: TBD (expected: 2 plans — LICENSE + public README; secrets sweep + `.gitignore` audit).
+**Plans**: 2 plans
+- [ ] 15-01-PLAN.md — Deletions, `.gitignore` hardening, Layout.astro neutralization, D-11 audit (LAND-01, LAND-04, LAND-05; D-01..D-11)
+- [ ] 15-02-PLAN.md — LICENSE add, README rewrite (D-14/D-15/D-16), clean-checkout verification, phase SUMMARY (LAND-02, LAND-03; D-12..D-16)
 
 ### Phase 16: Signed-DMG Release Pipeline
 **Goal**: A documented, repeatable local-build procedure produces a signed and notarized DMG that opens cleanly on a fresh-eyes Mac without Gatekeeper warnings, attached to a tagged `v1.3.0` GitHub Release on `J-Krush/wrangle` (still private at this point).

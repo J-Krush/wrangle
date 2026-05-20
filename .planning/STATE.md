@@ -4,8 +4,8 @@ milestone: v1.3
 milestone_name: Open Source Release
 status: executing
 stopped_at: Phase 15 context gathered
-last_updated: "2026-05-20T21:27:18.254Z"
-last_activity: 2026-05-20 -- Phase 14 planning complete
+last_updated: "2026-05-20T21:35:55.117Z"
+last_activity: 2026-05-20 -- Phase 15 planning complete
 progress:
   total_phases: 6
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** v1.3 roadmap defined — Phase 13 (App De-Commercialization) is next.
+**Current focus:** Phase 14 — app-repo-oss-surface
 
 ## Current Position
 
-Phase: 13 executed + shipped (App De-Commercialization) — pushed to origin/main (private), no PR
-Plan: 13-03 complete (WrangleTests target wired up)
+Phase: 14 (app-repo-oss-surface) — EXECUTING
+Plan: 1 of 3
 Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 14 planning complete
+Last activity: 2026-05-20 -- Phase 15 planning complete
 
 **Progress:** `[==        ] 1/6 phases (17%)`
 
