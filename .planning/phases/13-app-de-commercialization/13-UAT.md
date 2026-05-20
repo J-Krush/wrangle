@@ -72,21 +72,34 @@ blocked: 0
 ## Gaps
 
 - truth: "About panel credits display both wrangleapp.dev and github.com/J-Krush/wrangle as stacked vertical links (one per line)"
-  status: failed
+  status: fixed
   reason: "User reported: links work but appear inline on one line with a bullet separator; user wants them stacked vertically"
   severity: cosmetic
   test: 8
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Bullet separator '  •  ' between the two link NSAttributedString fragments in wrangleApp.swift About-panel block. Trivial layout choice."
+  artifacts:
+    - path: "wrangle/wrangleApp.swift"
+      issue: "About-panel credits used inline bullet separator"
+  missing:
+    - "Replace '  •  ' separator with trailing '\\n' on the first link"
   debug_session: ""
+  fixed_in: "0f1d620"
 
 - truth: "App version reflects the v1.3.0 release in About panel and CFBundleShortVersionString"
-  status: failed
+  status: fixed
   reason: "User reported: About panel shows 'Version 1.2.0 (5)' — MARKETING_VERSION in Wrangle.xcodeproj/project.pbxproj is still 1.2.0 and was never bumped for Phase 13. WhatsNewManager.dismiss() therefore writes '1.2.0' to lastSeenVersion, which means v1.2.0 upgraders will hit checkOnLaunch's lastSeen == currentVersion guard and never see the OSS announcement modal — only fresh-install paths with deleted defaults fire it. Tests 4–7 passed only because we manually deleted lastSeenVersion before launch."
   severity: major
   test: 8
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Phase 13 added a v1.3.0 ChangelogEntry but didn't bump MARKETING_VERSION (still 1.2.0 in both Debug and Release configs) or CURRENT_PROJECT_VERSION (still 5). The bundle version and changelog version drifted with no automated guard."
+  artifacts:
+    - path: "Wrangle.xcodeproj/project.pbxproj"
+      issue: "MARKETING_VERSION=1.2.0 and CURRENT_PROJECT_VERSION=5 in both Debug and Release configs"
+    - path: "wrangle/App/WhatsNewChangelog.swift"
+      issue: "Top entry version='1.3.0' but no invariant tying it to bundle version"
+  missing:
+    - "Bump MARKETING_VERSION 1.2.0 → 1.3.0 (Debug + Release)"
+    - "Bump CURRENT_PROJECT_VERSION 5 → 6 (Debug + Release)"
+    - "Add DEBUG runtime assert in WhatsNewChangelog comparing top entry to Bundle.main.CFBundleShortVersionString"
+    - "Document the release contract in docs/release-checklist.md and link from CLAUDE.md"
   debug_session: ""
+  fixed_in: "a2cfa2c, 35fe007, 2810d67"
