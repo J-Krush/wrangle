@@ -79,7 +79,9 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   3. A DMG is produced from the stapled `.app`, is itself signed with the same Developer ID, and `spctl -a -t open --context context:primary-signature <dmg>` reports the DMG as accepted.
   4. The DMG opens on a second Mac (or after `xattr -d com.apple.quarantine`) without prompting the user to right-click → Open — Gatekeeper passes silently.
   5. The DMG is attached to a `v1.3.0` tagged GitHub Release on `J-Krush/wrangle` (drafted; not yet published to anonymous viewers since the repo is still private — published in Phase 18), and the tag convention is documented in the release doc.
-**Plans**: TBD (expected: 2 plans — build/sign/notarize/staple script + doc; DMG packaging + GitHub Release draft).
+**Plans**: 2 plans
+- [ ] 16-01-PLAN.md — Wave 1: Pre-flight credential gate (`scripts/preflight-release.sh`), D-02 codesign patch on `scripts/create-dmg.sh` + REL-04 spctl verification, D-03 preflight invocation wire-up on `scripts/build-release.sh`, D-04 six-section expansion of `docs/release-checklist.md`, end-to-end build/sign/notarize/staple/DMG/spctl-PASS execution on the build host. Covers REL-01, REL-02, REL-03, REL-04.
+- [ ] 16-02-PLAN.md — Wave 2 (depends on 16-01): `release-notes-v1.3.0.md` authoring (4-6 bullets per CONTEXT.md discretion), D-05 second-Mac Gatekeeper verification with screenshot capture, Pattern 3a manual-tag-first `git tag v1.3.0` + `git push origin v1.3.0` + `gh release create v1.3.0 --draft --verify-tag` with DMG asset upload, draft confirmed NOT publicly visible (D-10 404 behavior). Covers REL-05, REL-06.
 
 ### Phase 17: Landing Page Repositioning
 **Goal**: The live `wrangleapp.dev` site presents Wrangle as a free, open-source macOS markdown editor for AI devs — with a working "Download for macOS" CTA pointing at the real v1.3.0 GitHub Release DMG, a "Star on GitHub" CTA, a story section, and zero remaining "Buy $24" / pricing surface.
