@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
 status: executing
-stopped_at: Phase 13 Plan 03 complete — test infrastructure operational, awaiting verify-phase 13
-last_updated: "2026-05-20T18:55:00Z"
-last_activity: 2026-05-20 -- Plan 13-03 executed; WrangleTests target wired up, 106 tests green
+stopped_at: Phase 13 shipped to origin/main (private remote) — no PR per "flip public at milestone end" plan; manual GUI smoke + verify-phase still pending
+last_updated: "2026-05-20T18:58:00Z"
+last_activity: 2026-05-20 -- Phase 13 pushed to origin/main (28 commits, c1c4c95)
 progress:
   total_phases: 6
   completed_phases: 1
@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 13 executed (App De-Commercialization) — all 3 plans complete; awaiting manual GUI smoke + `/gsd:verify-phase 13`
+Phase: 13 executed + shipped (App De-Commercialization) — pushed to origin/main (private), no PR
 Plan: 13-03 complete (WrangleTests target wired up)
-Status: All plans complete; test infrastructure operational (106 tests green); user manual smoke + verify-phase pending
-Last activity: 2026-05-20 -- Plan 13-03 executed; WrangleTests target wired up, 106 tests green
+Status: All plans complete; test infrastructure operational (106 tests green); user manual smoke + verify-phase still pending before next phase
+Last activity: 2026-05-20 -- Phase 13 pushed to origin/main (28 commits, c1c4c95)
 
 **Progress:** `[==        ] 1/6 phases (17%)`
 
