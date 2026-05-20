@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: verifying
-stopped_at: Phase 15 complete (all 5 LAND-IDs + 16 D-XX decisions closed); ready for /gsd:verify-phase 15 or hand-off to Phase 16/17
-last_updated: "2026-05-20T22:05:08.647Z"
-last_activity: 2026-05-20
+status: completed
+stopped_at: Phase 15 Plan 01 complete; Plan 02 ready to execute
+last_updated: "2026-05-20T22:12:59.280Z"
+last_activity: 2026-05-20 -- Phase 15 marked complete
 progress:
   total_phases: 6
   completed_phases: 2
@@ -25,10 +25,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 ## Current Position
 
-Phase: 15 (landing-repo-oss-surface) — COMPLETE (ready for verification)
+Phase: 15 — COMPLETE
 Plan: 2 of 2 — complete
-Status: All 5 LAND-IDs closed; all 16 D-XX decisions implemented; D-09 stands; clean-checkout verified
-Last activity: 2026-05-20
+Status: Phase 15 complete
+Last activity: 2026-05-20 -- Phase 15 marked complete
 
 **Progress:** [█████████░] 88%
 
