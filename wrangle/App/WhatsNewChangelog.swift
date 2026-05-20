@@ -24,7 +24,21 @@ enum ChangeCategory: String {
 }
 
 enum WhatsNewChangelog {
-    static let entries: [ChangelogEntry] = [
+    /// Top entry version MUST equal `Bundle.main.CFBundleShortVersionString`
+    /// (i.e. `MARKETING_VERSION` in `Wrangle.xcodeproj/project.pbxproj`).
+    /// When this drifts, dismiss() writes the wrong sentinel and v1.N → v1.N+1
+    /// upgraders silently never see the new modal. The DEBUG assertion below
+    /// fail-fasts on first access so release prep can't ship out of sync.
+    /// See docs/release-checklist.md.
+    static let entries: [ChangelogEntry] = {
+        let list: [ChangelogEntry] = changelog
+        #if DEBUG
+        assertTopEntryMatchesBundle(list)
+        #endif
+        return list
+    }()
+
+    private static let changelog: [ChangelogEntry] = [
         ChangelogEntry(
             version: "1.3.0",
             date: "May 19, 2026",
@@ -86,4 +100,19 @@ enum WhatsNewChangelog {
             cta: nil
         ),
     ]
+
+    #if DEBUG
+    private static func assertTopEntryMatchesBundle(_ list: [ChangelogEntry]) {
+        let topEntry = list.first?.version ?? "<empty>"
+        guard let bundleVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String else {
+            return
+        }
+        assert(
+            topEntry == bundleVersion,
+            "WhatsNewChangelog top entry version '\(topEntry)' must match bundle MARKETING_VERSION '\(bundleVersion)'. " +
+            "When adding a ChangelogEntry, bump MARKETING_VERSION (and CURRENT_PROJECT_VERSION) in Wrangle.xcodeproj/project.pbxproj for BOTH Debug and Release configs. " +
+            "Or when bumping the bundle version, add a matching top entry here. See docs/release-checklist.md."
+        )
+    }
+    #endif
 }
