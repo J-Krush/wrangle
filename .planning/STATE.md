@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: executing
-stopped_at: Phase 14 Plan 14-02 complete (REPO-02 + REPO-07 satisfied); Plan 14-03 (repo hygiene + secrets sweep) is the remaining work to close Phase 14
-last_updated: "2026-05-20T22:30:00.000Z"
-last_activity: 2026-05-20 -- Phase 14 plan 14-02 complete (README rewrite + 5 visuals embedded)
+status: completed
+stopped_at: Phase 16 context gathered
+last_updated: "2026-05-20T22:42:50.906Z"
+last_activity: "2026-05-20 -- Phase 14 plan 14-02 complete (3 commits: 71360df Task 1 / 72d7cb6 Task 2 user-captured GIFs / bfe4a15 Task 3 README rewrite)"
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 8
-  completed_plans: 8
-  percent: 44
+  completed_plans: 9
+  percent: 50
 ---
 
 # Project State
@@ -132,6 +132,6 @@ Last activity: 2026-05-20 -- Phase 14 plan 14-02 complete (3 commits: 71360df Ta
 
 ## Session Continuity
 
-Last session: 2026-05-20T22:30:00.000Z
-Stopped at: Phase 14 Plan 14-02 complete (REPO-02 + REPO-07 satisfied); Plan 14-03 (repo hygiene + secrets sweep) is the remaining work to close Phase 14
-Resume file: None
+Last session: 2026-05-20T22:42:50.900Z
+Stopped at: Phase 16 context gathered
+Resume file: .planning/phases/16-signed-dmg-release-pipeline/16-CONTEXT.md
