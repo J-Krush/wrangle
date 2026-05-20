@@ -170,16 +170,12 @@ struct WrangleApp: App {
                         attributes: [.font: NSFont.systemFont(ofSize: 11)]
                     ))
                     credits.append(NSAttributedString(
-                        string: "wrangleapp.dev",
+                        string: "wrangleapp.dev\n",
                         attributes: [
                             .font: NSFont.systemFont(ofSize: 11),
                             .link: URL(string: "https://wrangleapp.dev")! as Any,
                             .foregroundColor: NSColor.linkColor
                         ]
-                    ))
-                    credits.append(NSAttributedString(
-                        string: "  \u{2022}  ",
-                        attributes: [.font: NSFont.systemFont(ofSize: 11)]
                     ))
                     credits.append(NSAttributedString(
                         string: "github.com/J-Krush/wrangle",
