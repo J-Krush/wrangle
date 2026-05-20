@@ -59,7 +59,7 @@ v1.3 Open Source Release — requirements detailed in `.planning/REQUIREMENTS.md
 
 - [ ] **OSS-App** — Strip `LicenseManager`, `LicenseGateView`, `TrialBannerView`, `LicenseSettingsView`, `scripts/reset-license.sh`, plumbing in `AppCoordinator`/`ContentView`/`wrangleApp`; replace gated surface with "now free + open source" one-time note.
 - [ ] **OSS-Rel** — Local-build signed-DMG → tagged GitHub Release workflow (manual upload). GitHub Actions automation deferred to v1.4.
-- [ ] **OSS-Repo** — `J-Krush/wrangle` repo OSS surface: `LICENSE` (MIT), story-driven `README.md` (PH launch, Reddit ads, native-for-AI-devs thesis), `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF.
+- [x] **OSS-Repo** — `J-Krush/wrangle` repo OSS surface: `LICENSE` (MIT), story-driven `README.md` (PH launch, Reddit ads, native-for-AI-devs thesis), `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF. — Validated in Phase 14 (REPO-01..REPO-12 all complete; secrets sweep option-2 rotate-and-document; 12/12 must-haves verified).
 - [ ] **OSS-Landing-Repo** — `J-Krush/wrangle-landing` repo OSS surface: secrets sweep, `LICENSE` (MIT), public-facing `README.md`.
 - [ ] **OSS-Site** — Astro landing page repositioned from "Buy $24" → "Free + open source"; new CTA, story section, GitHub link, DMG download link to GitHub Release; pricing page removed or rewritten.
 - [ ] **OSS-Flip** — Final step: flip both repos from private to public.
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-19 — v1.2 closed (Browser Support shipped, Phase 12 pivoted to static sidebar); v1.3 Open Source Release kicked off.*
+*Last updated: 2026-05-20 — Phase 14 (App Repo OSS Surface) complete: LICENSE + README rewrite + CONTRIBUTING + SECURITY + .github/ templates + .gitignore + secrets-sweep documented. REPO-01..REPO-12 satisfied.*
