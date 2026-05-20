@@ -2,6 +2,8 @@
 
 > **Detailed docs:** [Architecture & Structure](docs/architecture.md) | [Coding Patterns](docs/coding-patterns.md) | [Audit Report](docs/audit-report.md) | [Release Checklist](docs/release-checklist.md)
 
+> **Open source:** Wrangle is now free and open source under the [MIT License](LICENSE). New contributors — start at [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Project Overview
 
 Wrangle is a native macOS (Apple Silicon) markdown editor purpose-built for developers working with AI agents, skills, system prompts, and configuration files. Built with Swift and SwiftUI.
@@ -111,3 +113,9 @@ Vertical feature slices. Each slice delivers a working increment touching both U
 - Terminal via SwiftTerm's `LocalProcessTerminalView`, not custom PTY
 - Consult `docs/audit-report.md` for known issues before modifying affected files
 - Consult `docs/architecture.md` for project structure, theming, and editor design decisions
+
+## Contributors
+
+Human contributors should start with [CONTRIBUTING.md](CONTRIBUTING.md) at the repo root — it covers the portfolio-piece maintenance posture, dev environment setup, and the issue / PR templates under `.github/`. Claude Code sessions continue to treat *this* file as the primary source of conventions; CONTRIBUTING.md is a public-facing distillation, not a replacement.
+
+The project's full planning history lives in [`.planning/`](.planning/) — phases, requirements, roadmap, per-phase CONTEXT / PLAN / SUMMARY artifacts — and is intentionally public as a transparency feature, not internal scaffolding.
