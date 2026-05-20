@@ -1,6 +1,6 @@
 # CLAUDE.md — Wrangle
 
-> **Detailed docs:** [Architecture & Structure](docs/architecture.md) | [Coding Patterns](docs/coding-patterns.md) | [Audit Report](docs/audit-report.md)
+> **Detailed docs:** [Architecture & Structure](docs/architecture.md) | [Coding Patterns](docs/coding-patterns.md) | [Audit Report](docs/audit-report.md) | [Release Checklist](docs/release-checklist.md)
 
 ## Project Overview
 
