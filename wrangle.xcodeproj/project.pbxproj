@@ -274,7 +274,7 @@
 				INFOPLIST_FILE = Wrangle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Wrangle;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Krush. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 J-Krush. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -313,7 +313,7 @@
 				INFOPLIST_FILE = Wrangle/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Wrangle;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
-				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Krush. All rights reserved.";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 J-Krush. All rights reserved.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

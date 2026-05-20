@@ -166,7 +166,7 @@ struct WrangleApp: App {
                 Button("About Wrangle") {
                     let credits = NSMutableAttributedString()
                     credits.append(NSAttributedString(
-                        string: "Made by Krush\n",
+                        string: "Made by J-Krush\n",
                         attributes: [.font: NSFont.systemFont(ofSize: 11)]
                     ))
                     credits.append(NSAttributedString(
