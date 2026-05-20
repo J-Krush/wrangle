@@ -32,7 +32,7 @@ drafts (does NOT publish — that's Phase 18) the GH Release.
 ## Implementation Decisions
 
 ### Distribution Model (carrying forward; reaffirmed)
-- **D-01:** Local-build signed + notarized DMG attached to a GitHub Release.
+- **D-01 [informational]:** Local-build signed + notarized DMG attached to a GitHub Release.
   GitHub Actions release automation explicitly stays deferred to **v1.4** and
   is now framed as v1.4's first standalone portfolio milestone ("automated
   the production release pipeline with secrets, signing, and notarization in
