@@ -35,3 +35,6 @@ engine/target/
 
 # Release-artifact safety
 /*.dmg
+
+# Phase 14 secrets-sweep intermediate files (do not commit)
+.planning/phases/14-app-repo-oss-surface/_sweep/
