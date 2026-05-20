@@ -10,11 +10,27 @@
 		01DE78332F4B63330046C9A7 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = 01DE77022F4B10000046C9A7 /* SwiftTerm */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		0198E9CD2FBE38DD00C224DF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 01DE76C62F4A086A0046C9A7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 01DE76CD2F4A086A0046C9A7;
+			remoteInfo = Wrangle;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		0198E9C92FBE38DD00C224DF /* WrangleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WrangleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		01DE76CE2F4A086A0046C9A7 /* Wrangle.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wrangle.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		0198E9CA2FBE38DD00C224DF /* WrangleTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WrangleTests;
+			sourceTree = "<group>";
+		};
 		01DE76D02F4A086A0046C9A7 /* Wrangle */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Wrangle;
@@ -23,6 +39,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0198E9C62FBE38DD00C224DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		01DE76CB2F4A086A0046C9A7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -38,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				01DE76D02F4A086A0046C9A7 /* Wrangle */,
+				0198E9CA2FBE38DD00C224DF /* WrangleTests */,
 				01DE76CF2F4A086A0046C9A7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				01DE76CE2F4A086A0046C9A7 /* Wrangle.app */,
+				0198E9C92FBE38DD00C224DF /* WrangleTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -53,6 +78,29 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		0198E9C82FBE38DD00C224DF /* WrangleTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0198E9D12FBE38DD00C224DF /* Build configuration list for PBXNativeTarget "WrangleTests" */;
+			buildPhases = (
+				0198E9C52FBE38DD00C224DF /* Sources */,
+				0198E9C62FBE38DD00C224DF /* Frameworks */,
+				0198E9C72FBE38DD00C224DF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0198E9CE2FBE38DD00C224DF /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				0198E9CA2FBE38DD00C224DF /* WrangleTests */,
+			);
+			name = WrangleTests;
+			packageProductDependencies = (
+			);
+			productName = WrangleTests;
+			productReference = 0198E9C92FBE38DD00C224DF /* WrangleTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		01DE76CD2F4A086A0046C9A7 /* Wrangle */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 01DE76DB2F4A086B0046C9A7 /* Build configuration list for PBXNativeTarget "Wrangle" */;
@@ -86,6 +134,10 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					0198E9C82FBE38DD00C224DF = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 01DE76CD2F4A086A0046C9A7;
+					};
 					01DE76CD2F4A086A0046C9A7 = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -109,11 +161,19 @@
 			projectRoot = "";
 			targets = (
 				01DE76CD2F4A086A0046C9A7 /* Wrangle */,
+				0198E9C82FBE38DD00C224DF /* WrangleTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0198E9C72FBE38DD00C224DF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		01DE76CC2F4A086A0046C9A7 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -124,6 +184,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0198E9C52FBE38DD00C224DF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		01DE76CA2F4A086A0046C9A7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -133,7 +200,57 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		0198E9CE2FBE38DD00C224DF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 01DE76CD2F4A086A0046C9A7 /* Wrangle */;
+			targetProxy = 0198E9CD2FBE38DD00C224DF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		0198E9CF2FBE38DD00C224DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3DEKQ7GUK6;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.krush.WrangleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wrangle.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Wrangle";
+			};
+			name = Debug;
+		};
+		0198E9D02FBE38DD00C224DF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3DEKQ7GUK6;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.krush.WrangleTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wrangle.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Wrangle";
+			};
+			name = Release;
+		};
 		01DE76D92F4A086B0046C9A7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -335,6 +452,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0198E9D12FBE38DD00C224DF /* Build configuration list for PBXNativeTarget "WrangleTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0198E9CF2FBE38DD00C224DF /* Debug */,
+				0198E9D02FBE38DD00C224DF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		01DE76C92F4A086A0046C9A7 /* Build configuration list for PBXProject "Wrangle" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

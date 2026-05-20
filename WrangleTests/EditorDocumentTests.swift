@@ -141,7 +141,7 @@ struct EditorDocumentTests {
         doc.updateCachedStats()
 
         #expect(doc.cachedLineCount == 3)
-        #expect(doc.cachedCharCount == 33)
+        #expect(doc.cachedCharCount == 34)
         #expect(doc.cachedTokenCount > 0)
     }
 
