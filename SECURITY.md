@@ -16,4 +16,22 @@ Please do not file security issues in the public issue tracker.
 - Persistent XSS or script injection in rendered markdown / HTML preview surfaces.
 - Privilege escalation via SwiftTerm-hosted child processes or shell integration.
 
-<!-- rotated-tokens-section -->
+## Known historical URLs in git history
+
+The pre-v1.3 commit history contains references to two URL families that no
+longer appear in the current source tree:
+
+- **`wrangleapp.dev/api/trial/activate` and `/validate`** — Endpoints used by
+  the v1.0.x trial flow. These were public URLs; the trial check used
+  machine-ID + server-side validation with no client-side credential. The
+  server-side flow was retired when v1.3 removed the trial gate.
+- **`api.lemonsqueezy.com/v1/licenses/activate` and `/validate`** — The
+  LemonSqueezy public license-validation API. The Wrangle binary never
+  embedded a bearer token; all auth was server-side and has been retired with
+  the v1.3 OSS pivot.
+
+Neither family contained client-side credentials. They are documented here
+for transparency: a reader running `git log -p` against pre-v1.3 commits will
+see these URLs, and this section explains why they are not a security
+concern. If you discover an actual credential leak in any commit, please
+report it via [GitHub Security Advisories](https://github.com/J-Krush/wrangle/security/advisories/new).
