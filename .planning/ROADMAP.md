@@ -20,7 +20,7 @@ v1.3 converts Wrangle from a paid trial-gated app into a free, MIT-licensed open
 Decimal phases appear between their surrounding integers in numeric order. v1.3 continues from v1.2's last phase (12), so v1.3 starts at Phase 13.
 
 - [ ] **Phase 13: App De-Commercialization** — Strip `LicenseManager` / `LicenseGateView` / `TrialBannerView` / `LicenseSettingsView` / trial endpoints; replace with one-time "free + open source" note.
-- [ ] **Phase 14: App Repo OSS Surface** — `J-Krush/wrangle`: MIT `LICENSE`, story-driven `README.md`, `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF, `SECURITY.md`, full repo secrets audit.
+- [x] **Phase 14: App Repo OSS Surface** — `J-Krush/wrangle`: MIT `LICENSE`, story-driven `README.md`, `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF, `SECURITY.md`, full repo secrets audit. (completed 2026-05-20)
 - [x] **Phase 15: Landing Repo OSS Surface** — `J-Krush/wrangle-landing`: secrets sweep, MIT `LICENSE`, public-facing `README.md`, `.gitignore` audit. (completed 2026-05-20)
 - [ ] **Phase 16: Signed-DMG Release Pipeline** — Local build → sign (Developer ID) → notarize (`notarytool`) → staple → signed DMG; attach to `v1.3.0` GitHub Release tag.
 - [ ] **Phase 17: Landing Page Repositioning** — Astro site reframes from "Buy $24" to "Free + open source": new CTA, story section, GitHub link, real DMG download link, SEO/OG updates, deploy.
@@ -114,7 +114,7 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 13. App De-Commercialization | 3/3 | Plans complete (awaiting verify-phase) | 2026-05-20 |
-| 14. App Repo OSS Surface | 2/3 | In Progress|  |
+| 14. App Repo OSS Surface | 3/3 | Complete   | 2026-05-20 |
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
 | 17. Landing Page Repositioning | 0/3 | Not started | - |
