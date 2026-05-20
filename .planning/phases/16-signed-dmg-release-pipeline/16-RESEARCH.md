@@ -669,32 +669,40 @@ Per CONTEXT.md (security_enforcement is implicitly enabled), the relevant securi
 
 If any of A2 / A3 / A5 fails at execution time, the appropriate task should halt and surface to the user — this is exactly the "Apple notarization credentials" STATE.md blocker becoming concrete. The pre-flight gate is the canonical place for this to surface.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All five questions below were resolved during Phase 16 planning (2026-05-20). Each carries an inline **RESOLVED** marker citing the plan/task that adopted the resolution. Section retained verbatim for audit trail; future readers should treat the **RESOLVED** lines as authoritative over the original Recommendation lines where they differ.
+
 
 1. **Should `--options runtime` be included in the D-02 DMG codesign call?**
    - What we know: it's safe to include (Pattern 1 references); multiple practitioner sources call it optional for DMGs; CONTEXT.md's D-02 quote doesn't include it.
    - What's unclear: whether the planner / user prefers parity with `.app` signing settings or strict adherence to CONTEXT.md's quoted minimal form.
    - Recommendation: include `--options runtime` for consistency. If the user prefers the exact CONTEXT.md-quoted minimal form, drop it; the build still works.
+   - **RESOLVED (2026-05-20):** Include `--options runtime` on the D-02 DMG codesign (for `.app`-parity; conventional safe form). Adopted in Plan 01 Task 2.
 
 2. **Should the pre-flight gate live in its own `scripts/preflight-release.sh` or be inlined at the top of `build-release.sh`?**
    - What we know: D-03 says "minimal-fix existing scripts" — a separate `preflight-release.sh` is a new file, which is on the edge of "minimal." Inlining keeps everything in `build-release.sh`.
    - What's unclear: whether the planner wants the pre-flight invocable independently (e.g., to run as a standalone sanity check before deciding to release).
    - Recommendation: inline at the top of `build-release.sh`. It's strictly inside D-03's "strengthen prereq checks" mandate. If a future phase wants it standalone, refactor then.
+   - **RESOLVED (2026-05-20):** Standalone `scripts/preflight-release.sh` (not inlined) — adopted as Plan 01 Task 1 output. Standalone form was preferred so the pre-flight gate is independently invokable as a sanity check.
 
 3. **Does the planner want a `release-notes-v1.3.0.md` task in Plan 1 or Plan 2?**
    - What we know: gh's `--notes-file` consumes a Markdown file; CONTEXT.md discretion section specifies 4–6 bullets + content guidance.
    - What's unclear: whether writing the notes belongs in Plan 1 (alongside the doc-expand) or Plan 2 (alongside the gh invocation).
    - Recommendation: Plan 2. Notes content depends on what was actually built — easier to author after Plan 1 confirms the build succeeded.
+   - **RESOLVED (2026-05-20):** Author `release-notes-v1.3.0.md` in Plan 02 (not Plan 01). Adopted as Plan 02 Task 1.
 
 4. **Should Plan 1 include a `git tag -a v1.3.0` (annotated) vs `git tag v1.3.0` (lightweight)?**
    - What we know: CONTEXT.md D-04 §5 says `git tag v1.3.0` (lightweight). Annotated tags carry their own commit message and author/date.
    - What's unclear: GitHub Releases handle both; the in-app UpdateChecker only reads `tag_name`. Functionally equivalent.
    - Recommendation: follow CONTEXT.md's verbatim form (lightweight). No reason to deviate.
+   - **RESOLVED (2026-05-20):** Lightweight tag (`git tag v1.3.0`, not `git tag -a`). Adopted in Plan 02 Task 3.
 
 5. **Should the Plan 2 acceptance criteria mandate the `gh release create --verify-tag` flag, or accept either invocation?**
    - What we know: `--verify-tag` aborts if the tag doesn't already exist remotely. Pairs perfectly with Pattern 3a (manual-tag-then-create).
    - What's unclear: defensive vs flexible.
    - Recommendation: include `--verify-tag` in the example, but don't make it a hard acceptance criterion. The manual-tag step makes the verify implicit.
+   - **RESOLVED (2026-05-20):** `--verify-tag` included in the `gh release create` command (belt-and-suspenders confirmation that the tag exists at the right ref). Adopted in Plan 02 Task 3.
 
 ## Environment Availability
 
