@@ -22,7 +22,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
 - [ ] **Phase 13: App De-Commercialization** — Strip `LicenseManager` / `LicenseGateView` / `TrialBannerView` / `LicenseSettingsView` / trial endpoints; replace with one-time "free + open source" note.
 - [x] **Phase 14: App Repo OSS Surface** — `J-Krush/wrangle`: MIT `LICENSE`, story-driven `README.md`, `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF, `SECURITY.md`, full repo secrets audit. (completed 2026-05-20)
 - [x] **Phase 15: Landing Repo OSS Surface** — `J-Krush/wrangle-landing`: secrets sweep, MIT `LICENSE`, public-facing `README.md`, `.gitignore` audit. (completed 2026-05-20)
-- [ ] **Phase 16: Signed-DMG Release Pipeline** — Local build → sign (Developer ID) → notarize (`notarytool`) → staple → signed DMG; attach to `v1.3.0` GitHub Release tag.
+- [x] **Phase 16: Signed-DMG Release Pipeline** — Local build → sign (Developer ID) → notarize (`notarytool`) → staple → signed DMG; attach to `v1.3.0` GitHub Release tag. (completed 2026-05-21)
 - [ ] **Phase 17: Landing Page Repositioning** — Astro site reframes from "Buy $24" to "Free + open source": new CTA, story section, GitHub link, real DMG download link, SEO/OG updates, deploy.
 - [ ] **Phase 18: Public Flip + v1.3.0 Release** — Final secrets sweep across both repos; flip both private → public; publish the `v1.3.0` Release.
 
@@ -80,8 +80,8 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   4. The DMG opens on a second Mac (or after `xattr -d com.apple.quarantine`) without prompting the user to right-click → Open — Gatekeeper passes silently.
   5. The DMG is attached to a `v1.3.0` tagged GitHub Release on `J-Krush/wrangle` (drafted; not yet published to anonymous viewers since the repo is still private — published in Phase 18), and the tag convention is documented in the release doc.
 **Plans**: 2 plans
-- [ ] 16-01-PLAN.md — Wave 1: Pre-flight credential gate (`scripts/preflight-release.sh`), D-02 codesign patch on `scripts/create-dmg.sh` + REL-04 spctl verification, D-03 preflight invocation wire-up on `scripts/build-release.sh`, D-04 six-section expansion of `docs/release-checklist.md`, end-to-end build/sign/notarize/staple/DMG/spctl-PASS execution on the build host. Covers REL-01, REL-02, REL-03, REL-04.
-- [ ] 16-02-PLAN.md — Wave 2 (depends on 16-01): `release-notes-v1.3.0.md` authoring (4-6 bullets per CONTEXT.md discretion), D-05 second-Mac Gatekeeper verification with screenshot capture, Pattern 3a manual-tag-first `git tag v1.3.0` + `git push origin v1.3.0` + `gh release create v1.3.0 --draft --verify-tag` with DMG asset upload, draft confirmed NOT publicly visible (D-10 404 behavior). Covers REL-05, REL-06.
+- [x] 16-01-PLAN.md — Wave 1: Pre-flight credential gate (`scripts/preflight-release.sh`), D-02 codesign patch on `scripts/create-dmg.sh` + REL-04 spctl verification, D-03 preflight invocation wire-up on `scripts/build-release.sh`, D-04 six-section expansion of `docs/release-checklist.md`, end-to-end build/sign/notarize/staple/DMG/spctl-PASS execution on the build host. Covers REL-01, REL-02, REL-03, REL-04.
+- [x] 16-02-PLAN.md — Wave 2 (depends on 16-01): `release-notes-v1.3.0.md` authoring (4-6 bullets per CONTEXT.md discretion), D-05 second-Mac Gatekeeper verification with screenshot capture, Pattern 3a manual-tag-first `git tag v1.3.0` + `git push origin v1.3.0` + `gh release create v1.3.0 --draft --verify-tag` with DMG asset upload, draft confirmed NOT publicly visible (D-10 404 behavior). Covers REL-05, REL-06.
 
 ### Phase 17: Landing Page Repositioning
 **Goal**: The live `wrangleapp.dev` site presents Wrangle as a free, open-source macOS markdown editor for AI devs — with a working "Download for macOS" CTA pointing at the real v1.3.0 GitHub Release DMG, a "Star on GitHub" CTA, a story section, and zero remaining "Buy $24" / pricing surface.
@@ -118,6 +118,6 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | 13. App De-Commercialization | 3/3 | Plans complete (awaiting verify-phase) | 2026-05-20 |
 | 14. App Repo OSS Surface | 3/3 | Complete    | 2026-05-20 |
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
-| 16. Signed-DMG Release Pipeline | 0/2 | Not started | - |
+| 16. Signed-DMG Release Pipeline | 2/2 | Complete   | 2026-05-21 |
 | 17. Landing Page Repositioning | 0/3 | Not started | - |
 | 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |
