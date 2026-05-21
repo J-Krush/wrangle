@@ -4,8 +4,8 @@ milestone: v1.3
 milestone_name: Open Source Release
 status: executing
 stopped_at: Phase 16 context gathered
-last_updated: "2026-05-20T23:41:32.156Z"
-last_activity: 2026-05-20 -- Phase 16 planning complete
+last_updated: "2026-05-20T23:54:33.678Z"
+last_activity: 2026-05-20 -- Phase 16 execution started
 progress:
   total_phases: 6
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 15 — landing repo oss surface
+**Current focus:** Phase 16 — signed-dmg-release-pipeline
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 16 planning complete
+Phase: 16 (signed-dmg-release-pipeline) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 16
+Last activity: 2026-05-20 -- Phase 16 execution started
 
 **Progress:** [█████████░] 88%
 
