@@ -19,9 +19,11 @@ xcuserdata/
 .swiftpm/
 
 # Local-only docs (D-10 redaction list — git rm --cached happens in Task 3)
+# Phase 16 override: docs/release-checklist.md is now tracked + public — the
+# README's "release pipeline is public" claim depends on this, and contributors
+# need the procedure to be reproducible.
 docs/audit-report.md
 docs/launch-strategy.md
-docs/release-checklist.md
 docs/product-hunt/
 
 # Legacy / obsolete
