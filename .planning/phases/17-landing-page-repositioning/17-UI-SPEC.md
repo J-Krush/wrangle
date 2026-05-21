@@ -76,6 +76,12 @@ Exceptions:
 - Header button padding: `px-6 py-2.5` (existing header button size — compact variant)
 - Hero button padding: `px-8 py-4` (existing hero button size — large variant)
 
+**Inherited exceptions — preserved from existing site, do not change:**
+- `py-2.5` (10px): compact header button vertical padding — pre-existing site convention, not a Phase 17 introduction. Matches `px-[200px]` treatment above.
+- `gap-1.5` (6px): icon-label gap inside header secondary button — pre-existing site convention, not a Phase 17 introduction.
+
+Both values are non-multiples of 4 carried over from the live site. Phase 17 must preserve them exactly.
+
 ---
 
 ## Typography
@@ -88,11 +94,12 @@ All text uses JetBrains Mono (`font-mono`). Existing sizes are:
 | Section H2 | `text-2xl` or `text-[32px] lg:text-[40px]` | 24–40px | `font-bold` (700) | default (`leading-tight`) |
 | Body | `text-base` or `text-base lg:text-lg` | 16–18px | default (400) | `leading-relaxed` (1.625) |
 | Label / small | `text-sm` | 14px | `font-medium` (500) or default (400) | default |
-| Fine print | `text-xs` or `text-[13px]` | 12–13px | default (400) | default |
 
 Phase 17 new surfaces must use only these sizes. No new font sizes introduced.
 
-**Two weights in use:** `font-bold` (700) for headings and CTAs; default (400) for body text. `font-semibold` (600) is used for primary CTA buttons and feature labels — treat as a third permitted weight for button labels only.
+Fine-print copy (hero tagline, footer attribution, 404 body annotation, compare-page footer tagline) uses `text-sm` (Label / small, 14px). The former `text-xs` / `text-[13px]` (12–13px) role is collapsed into Label / small — the 1px visual difference is marginal and the 4-role scale is sufficient.
+
+**Two weights in use:** `font-bold` (700) for headings and all CTA button labels; default (400) for body and label text. No third weight is declared. `font-semibold` (600) is not used in Phase 17 — all button labels use `font-bold` (700) instead.
 
 ---
 
@@ -127,12 +134,12 @@ The "text-only" style currently reads as a footnote ("try free — 3 day trial")
 
 **Outline button classes (hero size):**
 ```
-inline-flex items-center justify-center gap-2 rounded-lg border border-border px-8 py-4 text-base font-semibold text-primary hover:border-teal-dark hover:text-teal transition-all
+inline-flex items-center justify-center gap-2 rounded-lg border border-border px-8 py-4 text-base font-bold text-primary hover:border-teal-dark hover:text-teal transition-all
 ```
 
 **Outline button classes (header/compact size):**
 ```
-inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-primary hover:border-teal-dark hover:text-teal transition-all
+inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-bold text-primary hover:border-teal-dark hover:text-teal transition-all
 ```
 
 The hover state (`hover:border-teal-dark hover:text-teal`) uses existing palette tokens and makes the button feel interactive without stealing the primary accent.
@@ -159,14 +166,14 @@ The hover state (`hover:border-teal-dark hover:text-teal`) uses existing palette
 
 **Primary button (header size):**
 ```
-inline-flex items-center justify-center rounded-lg bg-linear-to-b from-teal to-teal-dark px-4 py-2 text-sm font-medium text-dark hover:brightness-110 transition-all
+inline-flex items-center justify-center rounded-lg bg-linear-to-b from-teal to-teal-dark px-4 py-2 text-sm font-bold text-dark hover:brightness-110 transition-all
 ```
 Label: `Download for macOS`
 href: `https://github.com/J-Krush/wrangle/releases/latest`
 
 **Secondary button (header size):**
 ```
-inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-primary hover:border-teal-dark hover:text-teal transition-all
+inline-flex items-center justify-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-bold text-primary hover:border-teal-dark hover:text-teal transition-all
 ```
 Label: GitHub mark SVG (16×16) + `Star on GitHub`
 href: `https://github.com/J-Krush/wrangle`
@@ -187,14 +194,14 @@ href: `https://github.com/J-Krush/wrangle`
 
 **Primary button (hero size):**
 ```
-inline-flex items-center justify-center rounded-lg bg-linear-to-b from-teal to-teal-dark px-8 py-4 text-base font-semibold text-dark hover:brightness-110 transition-all
+inline-flex items-center justify-center rounded-lg bg-linear-to-b from-teal to-teal-dark px-8 py-4 text-base font-bold text-dark hover:brightness-110 transition-all
 ```
 Label: `Download for macOS`
 href: `https://github.com/J-Krush/wrangle/releases/latest`
 
 **Secondary button (hero size):**
 ```
-inline-flex items-center justify-center gap-2 rounded-lg border border-border px-8 py-4 text-base font-semibold text-primary hover:border-teal-dark hover:text-teal transition-all
+inline-flex items-center justify-center gap-2 rounded-lg border border-border px-8 py-4 text-base font-bold text-primary hover:border-teal-dark hover:text-teal transition-all
 ```
 Label: GitHub mark SVG (20×20) + `Star on GitHub`
 href: `https://github.com/J-Krush/wrangle`
@@ -209,7 +216,7 @@ Desktop: side-by-side (`flex-row`). Mobile: stacked (`flex-col`), Download on to
 
 **H1 / subhead:** Exact wording deferred to executor (D-10). Constraints locked by CONTEXT.md D-10 — executor proposes 2–3 options at execution time; user picks before final commit. Classes unchanged: `text-[28px] sm:text-[36px] lg:text-[52px] font-bold text-center leading-[1.15] max-w-[1040px]` for H1; `text-secondary text-base lg:text-lg text-center leading-relaxed max-w-[800px]` for subhead.
 
-**Tagline section below CTA (REMOVE):** The `<section>` containing `"macOS 15+ · apple silicon · one-time purchase"` (`text-tertiary text-[13px]`) is replaced with: `macOS 15+ · apple silicon · free + open source` — same classes, updated copy.
+**Tagline section below CTA (REWRITE):** The `<section>` containing `"macOS 15+ · apple silicon · one-time purchase"` is replaced with: `macOS 15+ · apple silicon · free + open source` — same classes (`text-tertiary text-sm`), updated copy. Note: `text-sm` (14px) used here per the Label / small role; formerly `text-[13px]`.
 
 ---
 
@@ -273,17 +280,13 @@ Classes: `text-[28px] sm:text-[36px] lg:text-[48px] font-bold text-center leadin
 
 Classes: `text-secondary text-base leading-relaxed max-w-[600px] text-center`
 
-**CTA pair:** Use same structure as hero dual CTA. Hero size (`px-8 py-4 text-base font-semibold`). Primary → Download for macOS. Secondary → Star on GitHub.
+**CTA pair:** Use same structure as hero dual CTA. Hero size (`px-8 py-4 text-base font-bold`). Primary → Download for macOS. Secondary → Star on GitHub.
 
 Container: `flex flex-col sm:flex-row items-center gap-3`
 
 **Background treatment:** `bg-page` (no tint) — the page is already the right visual weight for a low-traffic error state. No special tint needed; the centered column provides sufficient visual focus.
 
-**No header or footer** on the 404 page — keeps the visual weight minimal and focused on recovery. User can navigate to `/` via the logo link in the hero or the Download CTA directly.
-
-Wait — on second consideration: the 404 page should include the standard header (logo + nav) and footer so users can navigate back to the homepage and the experience feels consistent. Include the full header and footer from the existing page pattern.
-
-**Revised:** The 404 page includes the same `<header>` (with dual CTA) and `<footer>` as `index.astro`. The `min-h-screen flex-col items-center justify-center` section sits between them.
+**Header and footer:** The 404 page includes the same `<header>` (with dual CTA) and `<footer>` as `index.astro`. The `min-h-screen flex-col items-center justify-center` section sits between them.
 
 ---
 
@@ -299,12 +302,12 @@ Rationale: Compare pages are long-form content. The header on a compare page ser
 
 **Header button (compare pages):**
 ```
-inline-flex items-center justify-center rounded-lg bg-linear-to-b from-teal to-teal-dark px-6 py-2.5 text-sm font-medium text-dark hover:brightness-110 transition-all
+inline-flex items-center justify-center rounded-lg bg-linear-to-b from-teal to-teal-dark px-6 py-2.5 text-sm font-bold text-dark hover:brightness-110 transition-all
 ```
 Label: `Download for macOS`
 href: `https://github.com/J-Krush/wrangle/releases/latest`
 
-**Page-level footer CTA section (bottom of each compare page — REWRITE):** Replace the existing `buy — $19` primary + `try free` ghost link pair with the full hero dual CTA (outline secondary included, hero size). Update the tagline below from `macOS 15+ · apple silicon · one-time purchase` to `macOS 15+ · apple silicon · free + open source`.
+**Page-level footer CTA section (bottom of each compare page — REWRITE):** Replace the existing `buy — $19` primary + `try free` ghost link pair with the full hero dual CTA (outline secondary included, hero size). Update the tagline below from `macOS 15+ · apple silicon · one-time purchase` to `macOS 15+ · apple silicon · free + open source` using `text-tertiary text-sm`.
 
 ---
 
@@ -328,7 +331,9 @@ href: `https://github.com/J-Krush/wrangle/releases/latest`
 <a href="./LICENSE" class="hover:text-secondary transition-colors">MIT</a>
 ```
 
-Classes on container: unchanged (`flex gap-3 text-tertiary text-xs`)
+Classes on container: unchanged (`flex gap-3 text-tertiary text-sm`)
+
+Note: footer text uses `text-sm` (14px, Label / small role). If the existing site uses `text-xs` on the footer container, update to `text-sm` as part of this phase — the Fine print role is collapsed.
 
 **Placement:** Left column of the existing footer — replaces the current `built by J-Krush` single link with the three-part attribution. The middle dot separators already exist as `<span>·</span>` elements; add one more.
 
