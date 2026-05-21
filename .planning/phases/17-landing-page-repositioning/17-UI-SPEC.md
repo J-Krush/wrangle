@@ -93,11 +93,13 @@ All text uses JetBrains Mono (`font-mono`). Existing sizes are:
 | Display / Hero H1 | `text-[28px] sm:text-[36px] lg:text-[52px]` | 28–52px | `font-bold` (700) | `leading-[1.15]` |
 | Section H2 | `text-2xl` or `text-[32px] lg:text-[40px]` | 24–40px | `font-bold` (700) | default (`leading-tight`) |
 | Body | `text-base` or `text-base lg:text-lg` | 16–18px | default (400) | `leading-relaxed` (1.625) |
-| Label / small | `text-sm` | 14px | `font-medium` (500) or default (400) | default |
+| Label / small | `text-sm` | 14px | default (400) | default |
 
 Phase 17 new surfaces must use only these sizes. No new font sizes introduced.
 
 Fine-print copy (hero tagline, footer attribution, 404 body annotation, compare-page footer tagline) uses `text-sm` (Label / small, 14px). The former `text-xs` / `text-[13px]` (12–13px) role is collapsed into Label / small — the 1px visual difference is marginal and the 4-role scale is sufficient.
+
+**Phase 17 normalizes any existing `font-medium` instances on these surfaces to the default weight.** The hero tagline, footer fine print, compare-page footer fine print, and 404 annotation copy must not carry a `font-medium` modifier — the default weight (400) applies without a class.
 
 **Two weights in use:** `font-bold` (700) for headings and all CTA button labels; default (400) for body and label text. No third weight is declared. `font-semibold` (600) is not used in Phase 17 — all button labels use `font-bold` (700) instead.
 
