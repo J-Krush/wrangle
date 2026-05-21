@@ -57,10 +57,23 @@ fi
 echo "==> Signing DMG..."
 # REL-04 / D-02: DMG must carry a primary signature for
 #   spctl -a -t open --context context:primary-signature to pass.
-codesign --sign "Developer ID Application" \
+# Long-form identity pins to Team 3DEKQ7GUK6 to avoid silent multi-cert
+# ambiguity. `codesign --sign "Developer ID Application"` does a substring
+# match against the Keychain — if a renewal-in-parallel or org-shared Mac
+# has two Developer ID Application certs, the wrong one could sign silently.
+codesign --sign "Developer ID Application: John Kreisher (3DEKQ7GUK6)" \
     --timestamp \
     --options runtime \
     "$DMG_FINAL"
+
+# Belt-and-suspenders: assert the signature carries the expected Team ID.
+# Fails the script before notarytool submission if codesign somehow picked
+# a different identity (e.g. expired long-form identity, Keychain glitch).
+if ! codesign -dv --verbose=4 "$DMG_FINAL" 2>&1 | grep -q "TeamIdentifier=3DEKQ7GUK6"; then
+    echo "FAIL: DMG signature does not carry the expected TeamIdentifier=3DEKQ7GUK6."
+    echo "      Inspect with: codesign -dv --verbose=4 $DMG_FINAL"
+    exit 1
+fi
 
 echo "==> Notarizing DMG..."
 xcrun notarytool submit "$DMG_FINAL" \

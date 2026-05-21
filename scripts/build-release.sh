@@ -44,6 +44,17 @@ xcodebuild -exportArchive \
     -exportPath "$EXPORT_PATH" \
     -exportOptionsPlist "$EXPORT_OPTIONS"
 
+# Belt-and-suspenders: confirm xcodebuild's automatic signing picked a cert
+# for the expected team. DEVELOPMENT_TEAM=3DEKQ7GUK6 above narrows by team
+# during xcodebuild, but a post-export assertion catches the multi-cert
+# edge case where two Developer ID Application certs for the same team
+# both exist (parallel renewal, etc.).
+if ! codesign -dv --verbose=4 "$APP_PATH" 2>&1 | grep -q "TeamIdentifier=3DEKQ7GUK6"; then
+    echo "FAIL: $APP_PATH signature does not carry the expected TeamIdentifier=3DEKQ7GUK6."
+    echo "      Inspect with: codesign -dv --verbose=4 $APP_PATH"
+    exit 1
+fi
+
 echo "==> Zipping .app for notarytool submission..."
 # notarytool only accepts .zip, .pkg, or .dmg — never a raw .app bundle.
 # ditto -c -k --sequesterRsrc --keepParent is Apple's documented pattern
