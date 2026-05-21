@@ -181,7 +181,9 @@ TAG="v1.3.0"
 DMG="build/Wrangle-1.3.0.dmg"
 
 [ -f "$DMG" ] || { echo "FAIL: $DMG missing"; exit 1; }
-codesign -dv "$DMG" 2>&1 | grep -q "Developer ID Application" \
+# --verbose=4 is required to expose the Authority chain; `codesign -dv` alone
+# omits it (only prints Identifier / Format / Timestamp / TeamIdentifier).
+codesign -dv --verbose=4 "$DMG" 2>&1 | grep -q "Developer ID Application" \
     || { echo "FAIL: $DMG not signed"; exit 1; }
 xcrun stapler validate "$DMG" \
     || { echo "FAIL: $DMG not stapled"; exit 1; }
