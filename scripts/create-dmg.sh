@@ -54,6 +54,14 @@ else
         "$DMG_FINAL"
 fi
 
+echo "==> Signing DMG..."
+# REL-04 / D-02: DMG must carry a primary signature for
+#   spctl -a -t open --context context:primary-signature to pass.
+codesign --sign "Developer ID Application" \
+    --timestamp \
+    --options runtime \
+    "$DMG_FINAL"
+
 echo "==> Notarizing DMG..."
 xcrun notarytool submit "$DMG_FINAL" \
     --keychain-profile "wrangle-notary" \
@@ -64,6 +72,10 @@ xcrun stapler staple "$DMG_FINAL"
 
 echo ""
 echo "DMG ready: $DMG_FINAL"
+
+echo "==> Verifying DMG (REL-04 canonical check)..."
+spctl -a -t open --context context:primary-signature -v "$DMG_FINAL"
+# Expected output: <dmg>: accepted  /  source=Notarized Developer ID
 
 # Clean up staging
 rm -rf "$DMG_DIR"
