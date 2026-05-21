@@ -44,13 +44,24 @@ xcodebuild -exportArchive \
     -exportPath "$EXPORT_PATH" \
     -exportOptionsPlist "$EXPORT_OPTIONS"
 
+echo "==> Zipping .app for notarytool submission..."
+# notarytool only accepts .zip, .pkg, or .dmg — never a raw .app bundle.
+# ditto -c -k --sequesterRsrc --keepParent is Apple's documented pattern
+# for producing a notarization-compatible zip that preserves bundle metadata.
+ZIP_FOR_NOTARY="$EXPORT_PATH/Wrangle.zip"
+rm -f "$ZIP_FOR_NOTARY"
+/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$ZIP_FOR_NOTARY"
+
 echo "==> Notarizing..."
-xcrun notarytool submit "$APP_PATH" \
+xcrun notarytool submit "$ZIP_FOR_NOTARY" \
     --keychain-profile "$NOTARY_PROFILE" \
     --wait
 
 echo "==> Stapling..."
+# Staple to the .app (not the zip — stapler cannot attach a ticket to a zip).
+# The zip was only the submission vehicle; the .app retains the stapled ticket.
 xcrun stapler staple "$APP_PATH"
+rm -f "$ZIP_FOR_NOTARY"
 
 echo "==> Verifying..."
 spctl --assess --type exec --verbose "$APP_PATH"
