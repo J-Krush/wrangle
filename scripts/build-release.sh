@@ -15,6 +15,9 @@ EXPORT_OPTIONS="$PROJECT_DIR/ExportOptions.plist"
 APP_PATH="$EXPORT_PATH/Wrangle.app"
 NOTARY_PROFILE="wrangle-notary"
 
+echo "==> Pre-flight: running preflight-release.sh..."
+"$SCRIPT_DIR/preflight-release.sh"
+
 echo "==> Cleaning build directory..."
 rm -rf "$PROJECT_DIR/build"
 mkdir -p "$PROJECT_DIR/build"
