@@ -7,15 +7,24 @@ for upgrading users.
 
 ## 1. Bump the bundle version
 
-Edit `Wrangle.xcodeproj/project.pbxproj`. Two settings live in **both**
-the Debug and Release config blocks (4 occurrences total):
+Edit `Wrangle.xcodeproj/project.pbxproj`. Two settings need to be bumped
+on the **main `Wrangle` target** (Debug + Release configs — 2 occurrences
+of each, 4 lines total to edit):
 
 | Setting | What it is | Bump rule |
 | ------- | ---------- | --------- |
 | `MARKETING_VERSION` | The semver shown in About / Check-for-Updates / WhatsNew dismiss sentinel | Every release |
 | `CURRENT_PROJECT_VERSION` | Monotonic build number | Every release |
 
-Example:
+The `WrangleTests` target (added in Plan 13-03) has its own
+`MARKETING_VERSION` + `CURRENT_PROJECT_VERSION` lines that do **NOT** need
+to track the release version — the test target ships as a separate
+testing-only product and is not part of the user-facing build. The
+`scripts/bump-version.sh` helper does a global `sed` replace, which only
+hits the main target's lines because the test target is at its own
+default version (currently `1.0` / build `1`).
+
+Example bump (main target only):
 
 ```diff
 -CURRENT_PROJECT_VERSION = 5;
@@ -24,14 +33,18 @@ Example:
 +MARKETING_VERSION = 1.3.0;
 ```
 
-Verify all four lines changed:
+Verify all 8 version lines (4 main + 4 test) and that the two main-target
+configs match each other:
 
 ```bash
 grep -nE 'MARKETING_VERSION|CURRENT_PROJECT_VERSION' Wrangle.xcodeproj/project.pbxproj
-```
+# Expect 8 lines: 4 with MAIN values (the new release), 4 with TEST defaults
+# (MARKETING_VERSION = 1.0 / CURRENT_PROJECT_VERSION = 1).
 
-Both `MARKETING_VERSION` lines must match. Both `CURRENT_PROJECT_VERSION`
-lines must match.
+# Strict main-target check (both Debug + Release should match the new version):
+grep -c "MARKETING_VERSION = $NEW_VERSION;" Wrangle.xcodeproj/project.pbxproj  # expect 2
+grep -c "CURRENT_PROJECT_VERSION = $NEW_BUILD;" Wrangle.xcodeproj/project.pbxproj  # expect 2
+```
 
 ## 2. Add a top entry to `WhatsNewChangelog.entries`
 
@@ -219,21 +232,29 @@ from Phase 13).
 
 This step closes REL-05.
 
-## 9. Tag the release on GitHub
+## 9. UpdateChecker / `releases/latest` behavior
 
-The in-app **Check for Updates...** command hits
-`api.github.com/repos/J-Krush/wrangle/releases/latest`. It expects a
-GitHub Release whose `tag_name` parses as the new semver:
+§8 above is the canonical procedure for creating the tag + draft Release.
+This section documents the runtime behavior of the in-app
+**Check for Updates...** command, which depends on what §8 left in place.
 
-```bash
-git tag v1.3.0
-git push origin v1.3.0
-# Then draft a GitHub Release pointing at the tag.
-```
+`Check for Updates...` calls
+`api.github.com/repos/J-Krush/wrangle/releases/latest` and expects a
+published (NOT draft) GitHub Release whose `tag_name` parses as a semver.
 
-Until the repo is public and a Release exists, the endpoint returns 404
-and the manual command flips to the "You're up to date" alert
-(this is the documented `D-10` behavior).
+| Repo + release state | `releases/latest` returns | UpdateChecker behavior |
+|-----------------------|---------------------------|------------------------|
+| Private + no Release | `404 Not Found` | "You're up to date" alert (D-10 fallback) |
+| Private + draft Release (Phase 16 end-state) | `404 Not Found` | "You're up to date" alert (D-10 fallback) |
+| Public + draft Release | `404 Not Found` | "You're up to date" alert (D-10 fallback) |
+| Public + published Release with later semver | `200 OK` with `tag_name` | "Update available" sheet with download link |
+
+Phase 16 ends in row 2 (private + draft). Phase 18 (FLIP-05) publishes
+the draft AND flips the repo public, moving to row 4 for the v1.3.0
+release.
+
+The 404-as-fallback behavior is the locked D-10 outcome from Phase 13 —
+not a bug. Tested live during Phase 16 Plan 02 Task 3.
 
 ## 10. Quick verification grep
 
@@ -244,11 +265,19 @@ agree:
 TOP_ENTRY=$(grep -E 'version: "[0-9]+\.[0-9]+\.[0-9]+"' \
   wrangle/App/WhatsNewChangelog.swift | head -1 | \
   sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
-MARKETING=$(grep -E 'MARKETING_VERSION = ' \
-  Wrangle.xcodeproj/project.pbxproj | head -1 | \
-  sed -E 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);/\1/')
-test "$TOP_ENTRY" = "$MARKETING" && echo "OK: $TOP_ENTRY" || \
-  echo "MISMATCH: changelog=$TOP_ENTRY marketing=$MARKETING"
+# `grep -c MARKETING_VERSION = <ver>;` counts matches across all targets.
+# The main Wrangle app has Debug + Release configs (2), WrangleTests has its
+# own MARKETING_VERSION (currently 1.0) that does NOT need to track the
+# release version. So MAIN_COUNT == 2 means both main-app configs agree on
+# TOP_ENTRY. `grep -m1 / head -1` cannot be used here: the test target
+# appears before the main target in project.pbxproj.
+MAIN_COUNT=$(grep -c "MARKETING_VERSION = $TOP_ENTRY;" \
+  Wrangle.xcodeproj/project.pbxproj)
+if [ "$MAIN_COUNT" -eq 2 ]; then
+  echo "OK: $TOP_ENTRY (2 matches on main Wrangle target)"
+else
+  echo "MISMATCH: changelog top entry = $TOP_ENTRY; main-target match count = $MAIN_COUNT (expected 2)"
+fi
 ```
 
 ## Why this checklist exists
