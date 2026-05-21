@@ -32,12 +32,12 @@ Strip every trial / paywall / license surface from the app so opening v1.3 lands
 
 Document and verify the local-build path that produces a signed, notarized DMG ready to attach to a tagged GitHub Release. No GitHub Actions automation this milestone.
 
-- [ ] **REL-01**: A `scripts/build-release.sh` (or equivalent documented procedure in `docs/release.md`) builds a Release-configuration `.app` bundle for Apple Silicon (arm64) macOS 15+.
-- [ ] **REL-02**: A valid `Developer ID Application` certificate is present in the local Keychain and is used by the build to sign the `.app` and all bundled binaries (SwiftTerm, any embedded frameworks).
-- [ ] **REL-03**: The build documents and executes the `xcrun notarytool submit … --wait` notarization flow (with the user's Apple ID / app-specific password / Team ID), and `xcrun stapler staple` is run against the notarized `.app`.
-- [ ] **REL-04**: A DMG is produced from the notarized `.app` (`create-dmg`, `hdiutil`, or equivalent), is itself signed with the same Developer ID, and is verifiable via `spctl -a -t open --context context:primary-signature <dmg>`.
-- [ ] **REL-05**: A GitHub Release-tag convention is documented (`v1.3.0` matching the app's marketing version), and the DMG is attached to a tagged Release on `J-Krush/wrangle`.
-- [ ] **REL-06**: The release DMG opens cleanly on a fresh-eyes Mac without Gatekeeper warnings (no right-click → Open required). Verified by either a second machine or by clearing the local quarantine attribute test.
+- [x] **REL-01**: A `scripts/build-release.sh` (or equivalent documented procedure in `docs/release.md`) builds a Release-configuration `.app` bundle for Apple Silicon (arm64) macOS 15+.
+- [x] **REL-02**: A valid `Developer ID Application` certificate is present in the local Keychain and is used by the build to sign the `.app` and all bundled binaries (SwiftTerm, any embedded frameworks).
+- [x] **REL-03**: The build documents and executes the `xcrun notarytool submit … --wait` notarization flow (with the user's Apple ID / app-specific password / Team ID), and `xcrun stapler staple` is run against the notarized `.app`.
+- [x] **REL-04**: A DMG is produced from the notarized `.app` (`create-dmg`, `hdiutil`, or equivalent), is itself signed with the same Developer ID, and is verifiable via `spctl -a -t open --context context:primary-signature <dmg>`.
+- [x] **REL-05**: A GitHub Release-tag convention is documented (`v1.3.0` matching the app's marketing version), and the DMG is attached to a tagged Release on `J-Krush/wrangle`.
+- [x] **REL-06**: The release DMG opens cleanly on a fresh-eyes Mac without Gatekeeper warnings (no right-click → Open required). Verified by either a second machine or by clearing the local quarantine attribute test.
 
 ### REPO — App Repo OSS Surface (`J-Krush/wrangle`)
 
@@ -149,12 +149,12 @@ The final milestone step — both repos go public and the DMG release ships.
 | LAND-03 | Phase 15 — Landing Repo OSS Surface | Complete |
 | LAND-04 | Phase 15 — Landing Repo OSS Surface | Complete |
 | LAND-05 | Phase 15 — Landing Repo OSS Surface | Complete |
-| REL-01 | Phase 16 — Signed-DMG Release Pipeline | Pending |
-| REL-02 | Phase 16 — Signed-DMG Release Pipeline | Pending |
-| REL-03 | Phase 16 — Signed-DMG Release Pipeline | Pending |
-| REL-04 | Phase 16 — Signed-DMG Release Pipeline | Pending |
-| REL-05 | Phase 16 — Signed-DMG Release Pipeline | Pending |
-| REL-06 | Phase 16 — Signed-DMG Release Pipeline | Pending |
+| REL-01 | Phase 16 — Signed-DMG Release Pipeline | Complete |
+| REL-02 | Phase 16 — Signed-DMG Release Pipeline | Complete |
+| REL-03 | Phase 16 — Signed-DMG Release Pipeline | Complete |
+| REL-04 | Phase 16 — Signed-DMG Release Pipeline | Complete |
+| REL-05 | Phase 16 — Signed-DMG Release Pipeline | Complete |
+| REL-06 | Phase 16 — Signed-DMG Release Pipeline | Complete |
 | SITE-01 | Phase 17 — Landing Page Repositioning | Pending |
 | SITE-02 | Phase 17 — Landing Page Repositioning | Pending |
 | SITE-03 | Phase 17 — Landing Page Repositioning | Pending |

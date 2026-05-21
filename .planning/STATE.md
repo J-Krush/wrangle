@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: verifying
-stopped_at: Phase 16 context gathered
-last_updated: "2026-05-21T02:22:20.971Z"
+status: ready_to_plan
+stopped_at: Phase 16 complete (2/2) — ready to discuss Phase 17
+last_updated: 2026-05-21T02:40:10.541Z
 last_activity: 2026-05-21
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 10
-  completed_plans: 11
+  completed_plans: 15
   percent: 67
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 16 — signed-dmg-release-pipeline
+**Current focus:** Phase 17 — landing page repositioning
 
 ## Current Position
 
-Phase: 16 (signed-dmg-release-pipeline) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 17
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-05-21
 
 **Progress:** [█████████░] 88%
@@ -42,7 +42,7 @@ Last activity: 2026-05-21
 
 **Velocity (v1.2):**
 
-- Total plans completed: 16 across 12 phases (one phase ran two plans on the polish pass)
+- Total plans completed: 18 across 12 phases (one phase ran two plans on the polish pass)
 - Build verification: passed after every phase
 
 **By Phase (v1.2 history retained for context):**
