@@ -4,8 +4,8 @@ milestone: v1.3
 milestone_name: Open Source Release
 status: executing
 stopped_at: Phase 17 UI-SPEC approved
-last_updated: "2026-05-21T17:08:49.647Z"
-last_activity: 2026-05-21 -- Phase 17 planning complete
+last_updated: "2026-05-21T21:26:13.633Z"
+last_activity: 2026-05-21 -- Phase 17 execution started
 progress:
   total_phases: 6
   completed_phases: 4
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 17 — landing page repositioning
+**Current focus:** Phase 17 — landing-page-repositioning
 
 ## Current Position
 
-Phase: 17
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-21 -- Phase 17 planning complete
+Phase: 17 (landing-page-repositioning) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 17
+Last activity: 2026-05-21 -- Phase 17 execution started
 
 **Progress:** [█████████░] 88%
 
