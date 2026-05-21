@@ -67,10 +67,13 @@ if [[ -n "$(git -C "$PROJECT_DIR" status --porcelain)" ]]; then
 fi
 
 echo "==> Checking MARKETING_VERSION matches expected ($EXPECTED_VERSION)..."
-MV=$(grep -m1 'MARKETING_VERSION = ' "$PROJECT_DIR/Wrangle.xcodeproj/project.pbxproj" | \
-    sed -E 's/.*= ([0-9.]+);.*/\1/')
-if [[ "$MV" != "$EXPECTED_VERSION" ]]; then
-    echo "FAIL: MARKETING_VERSION is '$MV', expected '$EXPECTED_VERSION'."
+# Main app target has Debug + Release build configs, so MARKETING_VERSION = $EXPECTED_VERSION;
+# must appear exactly 2 times. WrangleTests target has its own MARKETING_VERSION (currently 1.0)
+# so grep -m1 cannot be used to extract the shipping version reliably.
+EXPECTED_MV_COUNT=2
+ACTUAL_MV_COUNT=$(grep -c "MARKETING_VERSION = $EXPECTED_VERSION;" "$PROJECT_DIR/Wrangle.xcodeproj/project.pbxproj" || true)
+if [[ "$ACTUAL_MV_COUNT" -ne "$EXPECTED_MV_COUNT" ]]; then
+    echo "FAIL: MARKETING_VERSION = $EXPECTED_VERSION found $ACTUAL_MV_COUNT time(s), expected $EXPECTED_MV_COUNT (Debug + Release on the main Wrangle target)."
     echo "      Run: bash scripts/bump-version.sh $EXPECTED_VERSION"
     exit 1
 fi
