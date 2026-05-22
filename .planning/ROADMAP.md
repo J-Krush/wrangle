@@ -95,7 +95,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   5. The repositioned site is deployed to the same production host that serves `wrangleapp.dev` (deploy is reversible), and clicking "Download for macOS" successfully resolves to the actual DMG file from the GitHub Release.
 **Plans**: 3 plans
 - [x] 17-01-PLAN.md — Wave 1: Pricing teardown (delete `/buy` redirect in `astro.config.mjs`) + homepage header/hero/anti-pitch/guarantee-removal/final-CTA/footer rewrite + smart `404.astro` creation. Covers SITE-01, SITE-02, SITE-04, SITE-08, SITE-10. Implements D-01, D-02, D-09, D-10 (hero copy checkpoint), D-11, D-12, D-13, D-18, D-20.
-- [ ] 17-02-PLAN.md — Wave 2 (depends on 17-01): Story section insertion (4 paragraphs between Logo+Tagline and Features) + SEO/OG metadata rewrite in `Layout.astro` + homepage `<Layout title>` update + JSON-LD `offers`-block deletion + `creator` Person block add. Covers SITE-03, SITE-05, SITE-06. Implements D-04, D-06, D-07 (story copy checkpoint), D-08, D-09, D-17.
+- [x] 17-02-PLAN.md — Wave 2 (depends on 17-01): Story section insertion (4 paragraphs between Logo+Tagline and Features) + SEO/OG metadata rewrite in `Layout.astro` + homepage `<Layout title>` update + JSON-LD `offers`-block deletion + `creator` Person block add. Covers SITE-03, SITE-05, SITE-06. Implements D-04, D-06, D-07 (story copy checkpoint), D-08, D-09, D-17.
 - [ ] 17-03-PLAN.md — Wave 3 (depends on 17-01 + 17-02): Compare-page sweep (5 files) + use-cases.json 3-entry rewrite + use-cases [slug].astro template rewrite + feedback.astro footer + full D-03 forbidden-string audit + deploy-approval checkpoint + Vercel deploy + live wrangleapp.dev verification. Covers SITE-07, SITE-09. Implements D-03, D-14, D-15, D-16, D-19, D-20.
 **UI hint**: yes
 
@@ -122,5 +122,5 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | 14. App Repo OSS Surface | 3/3 | Complete    | 2026-05-20 |
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 2/2 | Complete    | 2026-05-21 |
-| 17. Landing Page Repositioning | 1/3 | In Progress|  |
+| 17. Landing Page Repositioning | 2/3 | In Progress|  |
 | 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |
