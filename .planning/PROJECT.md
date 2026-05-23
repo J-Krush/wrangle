@@ -61,7 +61,7 @@ v1.3 Open Source Release — requirements detailed in `.planning/REQUIREMENTS.md
 - [ ] **OSS-Rel** — Local-build signed-DMG → tagged GitHub Release workflow (manual upload). GitHub Actions automation deferred to v1.4.
 - [x] **OSS-Repo** — `J-Krush/wrangle` repo OSS surface: `LICENSE` (MIT), story-driven `README.md` (PH launch, Reddit ads, native-for-AI-devs thesis), `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF. — Validated in Phase 14 (REPO-01..REPO-12 all complete; secrets sweep option-2 rotate-and-document; 12/12 must-haves verified).
 - [ ] **OSS-Landing-Repo** — `J-Krush/wrangle-landing` repo OSS surface: secrets sweep, `LICENSE` (MIT), public-facing `README.md`.
-- [ ] **OSS-Site** — Astro landing page repositioned from "Buy $24" → "Free + open source"; new CTA, story section, GitHub link, DMG download link to GitHub Release; pricing page removed or rewritten.
+- [x] **OSS-Site** — Astro landing page repositioned from "Buy $24" → "Free + open source"; dual CTA (Download for macOS + Star on GitHub), inline story section, smart 404 catching retired /buy /pricing /refund /terms URLs, JSON-LD offers block deleted + creator block added, SEO/OG/Twitter metadata flipped to OSS positioning. — Validated in Phase 17 (SITE-01..SITE-10 all satisfied; deployed live to wrangleapp.dev; 5/5 ROADMAP Success Criteria observable on live HTML).
 - [ ] **OSS-Flip** — Final step: flip both repos from private to public.
 
 ### Out of Scope
@@ -132,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-20 — Phase 14 (App Repo OSS Surface) complete: LICENSE + README rewrite + CONTRIBUTING + SECURITY + .github/ templates + .gitignore + secrets-sweep documented. REPO-01..REPO-12 satisfied.*
+*Last updated: 2026-05-23 — Phase 17 (Landing Page Repositioning) complete: live wrangleapp.dev shows OSS positioning, dual CTA, story section, smart 404. SITE-01..SITE-10 satisfied. Remaining v1.3 work: OSS-App (Phase 13), OSS-Rel (Phase 16, complete), OSS-Landing-Repo (Phase 15, complete), OSS-Flip (Phase 18, next).*
