@@ -70,16 +70,16 @@ Stand up the public-facing surface of the landing-page repository.
 
 Rewrite the Astro landing page from "Buy Wrangle for $24" to "Free + open source macOS markdown editor for AI devs." Story-driven; portfolio-quality.
 
-- [ ] **SITE-01**: Hero section CTA changes from "Buy Wrangle ($24)" (or equivalent existing copy) to a dual CTA: "Download for macOS" (linking to the GitHub Release DMG) + "Star on GitHub" (linking to `https://github.com/J-Krush/wrangle`). Hero copy reframes the value proposition for the OSS positioning.
-- [ ] **SITE-02**: The pricing page / pricing section is either deleted entirely or rewritten to say "Free and open source — no pricing." Internal links from other pages to `/pricing` are updated or removed.
-- [ ] **SITE-03**: A new "Story" / "About" section is added (either as its own page or as a homepage section) covering: the Product Hunt launch on 2026-04-22, the Reddit ads channel experiment, the thesis (native macOS markdown for AI devs), and the decision to open-source it as a portfolio piece.
-- [ ] **SITE-04**: Top-nav links are updated: any "Buy" / "Pricing" entry is removed or relabeled, and a "GitHub" link is added (icon + label).
-- [ ] **SITE-05**: SEO metadata is updated: page title, meta description, and Open Graph tags reflect the OSS positioning. The existing OG image (or a new one generated via `scripts/og-image`) is OSS-appropriate.
-- [ ] **SITE-06**: Twitter / X social-card metadata is updated to match the new positioning.
-- [ ] **SITE-07**: Screenshots and copy on feature pages are reviewed; any "Pro feature" / "Trial limit" / "Premium" language is removed.
-- [ ] **SITE-08**: The "Download" CTA points at the actual GitHub Release URL for the v1.3.0 DMG (or a `https://github.com/J-Krush/wrangle/releases/latest` redirect target). Click works end-to-end against a real (private at the moment, public later) release.
-- [ ] **SITE-09**: The landing page is deployed to its production target (the same host that currently serves `wrangleapp.dev`), with the new copy live. Deploy is reversible.
-- [ ] **SITE-10**: A `404.astro` / fallback for the removed pricing page (if any) is in place so old inbound links don't dead-end.
+- [x] **SITE-01**: Hero section CTA changes from "Buy Wrangle ($24)" (or equivalent existing copy) to a dual CTA: "Download for macOS" (linking to the GitHub Release DMG) + "Star on GitHub" (linking to `https://github.com/J-Krush/wrangle`). Hero copy reframes the value proposition for the OSS positioning.
+- [x] **SITE-02**: The pricing page / pricing section is either deleted entirely or rewritten to say "Free and open source — no pricing." Internal links from other pages to `/pricing` are updated or removed.
+- [x] **SITE-03**: A new "Story" / "About" section is added (either as its own page or as a homepage section) covering: the Product Hunt launch on 2026-04-22, the Reddit ads channel experiment, the thesis (native macOS markdown for AI devs), and the decision to open-source it as a portfolio piece.
+- [x] **SITE-04**: Top-nav links are updated: any "Buy" / "Pricing" entry is removed or relabeled, and a "GitHub" link is added (icon + label).
+- [x] **SITE-05**: SEO metadata is updated: page title, meta description, and Open Graph tags reflect the OSS positioning. The existing OG image (or a new one generated via `scripts/og-image`) is OSS-appropriate.
+- [x] **SITE-06**: Twitter / X social-card metadata is updated to match the new positioning.
+- [x] **SITE-07**: Screenshots and copy on feature pages are reviewed; any "Pro feature" / "Trial limit" / "Premium" language is removed.
+- [x] **SITE-08**: The "Download" CTA points at the actual GitHub Release URL for the v1.3.0 DMG (or a `https://github.com/J-Krush/wrangle/releases/latest` redirect target). Click works end-to-end against a real (private at the moment, public later) release.
+- [x] **SITE-09**: The landing page is deployed to its production target (the same host that currently serves `wrangleapp.dev`), with the new copy live. Deploy is reversible.
+- [x] **SITE-10**: A `404.astro` / fallback for the removed pricing page (if any) is in place so old inbound links don't dead-end.
 
 ### FLIP — Public Flip + v1.3.0 Release
 
@@ -155,16 +155,16 @@ The final milestone step — both repos go public and the DMG release ships.
 | REL-04 | Phase 16 — Signed-DMG Release Pipeline | Complete |
 | REL-05 | Phase 16 — Signed-DMG Release Pipeline | Complete |
 | REL-06 | Phase 16 — Signed-DMG Release Pipeline | Complete |
-| SITE-01 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-02 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-03 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-04 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-05 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-06 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-07 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-08 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-09 | Phase 17 — Landing Page Repositioning | Pending |
-| SITE-10 | Phase 17 — Landing Page Repositioning | Pending |
+| SITE-01 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-02 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-03 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-04 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-05 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-06 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-07 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-08 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-09 | Phase 17 — Landing Page Repositioning | Complete |
+| SITE-10 | Phase 17 — Landing Page Repositioning | Complete |
 | FLIP-01 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
 | FLIP-02 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
 | FLIP-03 | Phase 18 — Public Flip + v1.3.0 Release | Pending |

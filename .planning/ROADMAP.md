@@ -122,5 +122,5 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | 14. App Repo OSS Surface | 3/3 | Complete    | 2026-05-20 |
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 2/2 | Complete    | 2026-05-21 |
-| 17. Landing Page Repositioning | 3/3 | Complete   | 2026-05-23 |
+| 17. Landing Page Repositioning | 3/3 | Complete    | 2026-05-23 |
 | 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |
