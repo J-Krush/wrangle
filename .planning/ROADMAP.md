@@ -109,7 +109,9 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   3. `J-Krush/wrangle-landing` is flipped from private to public on GitHub and renders cleanly for an anonymous viewer.
   4. The `v1.3.0` GitHub Release is published (drafted → published), with the signed/notarized DMG attached and release notes summarizing the OSS flip plus the headline browser-support features shipped in v1.2.
   5. An anonymous viewer can download the DMG from the public Release page and the landing page's "Download for macOS" CTA (now hitting the public Release URL) works end-to-end.
-**Plans**: TBD (expected: 1 plan — secrets sweep + flip sequence + Release publish).
+**Plans**: 2 plans
+- [ ] 18-01-PLAN.md — Final secrets sweep (full history on app repo, working tree on landing repo) + flip J-Krush/wrangle PRIVATE→PUBLIC + confirm wrangle-landing PUBLIC (D-06 already-flipped) + publish v1.3.0 Release (draft→published) + four-check anonymous-viewer verification (repo render, releases/latest DMG, in-app UpdateChecker, wrangleapp.dev CTA round-trip)
+- [ ] 18-02-PLAN.md — Post-verify vendor cleanup (Wave 2; depends_on 18-01): LemonSqueezy Wrangle product deactivation (D-12) + dl.wrangleapp.dev DNS record deletion (D-13); apex wrangleapp.dev invariant preserved
 
 ## Progress
 
