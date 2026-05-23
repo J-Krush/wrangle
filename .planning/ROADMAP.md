@@ -23,7 +23,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
 - [x] **Phase 14: App Repo OSS Surface** — `J-Krush/wrangle`: MIT `LICENSE`, story-driven `README.md`, `CONTRIBUTING.md`, issue + PR templates, screenshots/GIF, `SECURITY.md`, full repo secrets audit. (completed 2026-05-20)
 - [x] **Phase 15: Landing Repo OSS Surface** — `J-Krush/wrangle-landing`: secrets sweep, MIT `LICENSE`, public-facing `README.md`, `.gitignore` audit. (completed 2026-05-20)
 - [x] **Phase 16: Signed-DMG Release Pipeline** — Local build → sign (Developer ID) → notarize (`notarytool`) → staple → signed DMG; attach to `v1.3.0` GitHub Release tag. (completed 2026-05-21)
-- [ ] **Phase 17: Landing Page Repositioning** — Astro site reframes from "Buy $24" to "Free + open source": new CTA, story section, GitHub link, real DMG download link, SEO/OG updates, deploy.
+- [x] **Phase 17: Landing Page Repositioning** — Astro site reframes from "Buy $24" to "Free + open source": new CTA, story section, GitHub link, real DMG download link, SEO/OG updates, deploy. (completed 2026-05-23)
 - [ ] **Phase 18: Public Flip + v1.3.0 Release** — Final secrets sweep across both repos; flip both private → public; publish the `v1.3.0` Release.
 
 ## Phase Details
@@ -96,7 +96,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
 **Plans**: 3 plans
 - [x] 17-01-PLAN.md — Wave 1: Pricing teardown (delete `/buy` redirect in `astro.config.mjs`) + homepage header/hero/anti-pitch/guarantee-removal/final-CTA/footer rewrite + smart `404.astro` creation. Covers SITE-01, SITE-02, SITE-04, SITE-08, SITE-10. Implements D-01, D-02, D-09, D-10 (hero copy checkpoint), D-11, D-12, D-13, D-18, D-20.
 - [x] 17-02-PLAN.md — Wave 2 (depends on 17-01): Story section insertion (4 paragraphs between Logo+Tagline and Features) + SEO/OG metadata rewrite in `Layout.astro` + homepage `<Layout title>` update + JSON-LD `offers`-block deletion + `creator` Person block add. Covers SITE-03, SITE-05, SITE-06. Implements D-04, D-06, D-07 (story copy checkpoint), D-08, D-09, D-17.
-- [ ] 17-03-PLAN.md — Wave 3 (depends on 17-01 + 17-02): Compare-page sweep (5 files) + use-cases.json 3-entry rewrite + use-cases [slug].astro template rewrite + feedback.astro footer + full D-03 forbidden-string audit + deploy-approval checkpoint + Vercel deploy + live wrangleapp.dev verification. Covers SITE-07, SITE-09. Implements D-03, D-14, D-15, D-16, D-19, D-20.
+- [x] 17-03-PLAN.md — Wave 3 (depends on 17-01 + 17-02): Compare-page sweep (5 files) + use-cases.json 3-entry rewrite + use-cases [slug].astro template rewrite + feedback.astro footer + full D-03 forbidden-string audit + deploy-approval checkpoint + Vercel deploy + live wrangleapp.dev verification. Covers SITE-07, SITE-09. Implements D-03, D-14, D-15, D-16, D-19, D-20.
 **UI hint**: yes
 
 ### Phase 18: Public Flip + v1.3.0 Release
@@ -122,5 +122,5 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | 14. App Repo OSS Surface | 3/3 | Complete    | 2026-05-20 |
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 2/2 | Complete    | 2026-05-21 |
-| 17. Landing Page Repositioning | 2/3 | In Progress|  |
+| 17. Landing Page Repositioning | 3/3 | Complete   | 2026-05-23 |
 | 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |
