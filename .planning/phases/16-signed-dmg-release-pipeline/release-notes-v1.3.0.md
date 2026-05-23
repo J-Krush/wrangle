@@ -7,10 +7,11 @@ this DMG are all public at <https://github.com/J-Krush/wrangle>.
 ## What's new in v1.3.0
 
 - Wrangle is now MIT-licensed and free for everyone — no license key required.
-- Embedded browser tabs alongside the editor and terminal, with find-in-page, HTTPS padlock, and dev tools (console, network, elements, cookies).
-- Per-project bookmark library with one-click import from Safari, Brave, Chrome, and Firefox, plus nested folders and drag-and-drop.
-- Browsing history auto-recorded with grouped view and URL suggestions in the address bar, plus a built-in downloads manager.
-- Private / incognito mode for ephemeral browsing sessions with an isolated data store.
+- Reworked keyboard shortcuts: find-in-page (⌘F) in browser tabs, additional
+  browser navigation shortcuts, and ⌘1..⌘4 for fast project switching.
+- Refined project drag-and-drop in the workspace.
+- Bug fixes: About-panel credit-link layout, internal version-assertion
+  consistency, and miscellaneous polish.
 
 ## Download
 
