@@ -165,11 +165,11 @@ The final milestone step — both repos go public and the DMG release ships.
 | SITE-08 | Phase 17 — Landing Page Repositioning | Complete |
 | SITE-09 | Phase 17 — Landing Page Repositioning | Complete |
 | SITE-10 | Phase 17 — Landing Page Repositioning | Complete |
-| FLIP-01 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
-| FLIP-02 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
-| FLIP-03 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
-| FLIP-04 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
-| FLIP-05 | Phase 18 — Public Flip + v1.3.0 Release | Pending |
+| FLIP-01 | Phase 18 — Public Flip + v1.3.0 Release | Complete |
+| FLIP-02 | Phase 18 — Public Flip + v1.3.0 Release | Complete |
+| FLIP-03 | Phase 18 — Public Flip + v1.3.0 Release | Complete |
+| FLIP-04 | Phase 18 — Public Flip + v1.3.0 Release | Complete |
+| FLIP-05 | Phase 18 — Public Flip + v1.3.0 Release | Complete |
 
 **By phase totals:**
 

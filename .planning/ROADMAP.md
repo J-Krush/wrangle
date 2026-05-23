@@ -110,7 +110,7 @@ Decimal phases appear between their surrounding integers in numeric order. v1.3 
   4. The `v1.3.0` GitHub Release is published (drafted → published), with the signed/notarized DMG attached and release notes summarizing the OSS flip plus the headline browser-support features shipped in v1.2.
   5. An anonymous viewer can download the DMG from the public Release page and the landing page's "Download for macOS" CTA (now hitting the public Release URL) works end-to-end.
 **Plans**: 2 plans
-- [ ] 18-01-PLAN.md — Final secrets sweep (full history on app repo, working tree on landing repo) + flip J-Krush/wrangle PRIVATE→PUBLIC + confirm wrangle-landing PUBLIC (D-06 already-flipped) + publish v1.3.0 Release (draft→published) + four-check anonymous-viewer verification (repo render, releases/latest DMG, in-app UpdateChecker, wrangleapp.dev CTA round-trip)
+- [x] 18-01-PLAN.md — Final secrets sweep (full history on app repo, working tree on landing repo) + flip J-Krush/wrangle PRIVATE→PUBLIC + confirm wrangle-landing PUBLIC (D-06 already-flipped) + publish v1.3.0 Release (draft→published) + four-check anonymous-viewer verification (repo render, releases/latest DMG, in-app UpdateChecker, wrangleapp.dev CTA round-trip)
 - [ ] 18-02-PLAN.md — Post-verify vendor cleanup (Wave 2; depends_on 18-01): LemonSqueezy Wrangle product deactivation (D-12) + dl.wrangleapp.dev DNS record deletion (D-13); apex wrangleapp.dev invariant preserved
 
 ## Progress
@@ -125,4 +125,4 @@ Phase 13 must precede Phases 14 and 16 (REPO audit and signed-binary work both d
 | 15. Landing Repo OSS Surface | 3/2 | Complete   | 2026-05-20 |
 | 16. Signed-DMG Release Pipeline | 2/2 | Complete    | 2026-05-21 |
 | 17. Landing Page Repositioning | 3/3 | Complete    | 2026-05-23 |
-| 18. Public Flip + v1.3.0 Release | 0/1 | Not started | - |
+| 18. Public Flip + v1.3.0 Release | 1/2 | In Progress|  |

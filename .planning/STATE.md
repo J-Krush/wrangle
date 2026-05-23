@@ -4,13 +4,13 @@ milestone: v1.3
 milestone_name: Open Source Release
 status: executing
 stopped_at: Phase 18 context gathered
-last_updated: "2026-05-23T15:03:10.192Z"
-last_activity: 2026-05-23 -- Phase 18 planning complete
+last_updated: "2026-05-23T18:10:43.747Z"
+last_activity: 2026-05-23
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 15
-  completed_plans: 14
+  completed_plans: 15
   percent: 83
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 18 — public flip + v1.3.0 release
+**Current focus:** Phase 18 — public-flip-v1-3-0-release
 
 ## Current Position
 
-Phase: 18
-Plan: Not started
+Phase: 18 (public-flip-v1-3-0-release) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-05-23 -- Phase 18 planning complete
+Last activity: 2026-05-23
 
 **Progress:** [█████████░] 88%
 
