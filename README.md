@@ -1,12 +1,16 @@
-<p align="center">
-  <img src="images/wrangle-logo.png" alt="Wrangle logo" width="160" />
-</p>
+
 
 # Wrangle
 
 A native macOS markdown editor purpose-built for developers working with AI agents — inline rendering as you type, XML-tag awareness, an embedded terminal, and first-class treatment of the file patterns that show up in AI workflows (`CLAUDE.md`, `SKILL.md`, system prompts, MCP configs).
 
+<p align="center">
+  <img src="images/wrangle-logo.png" alt="Wrangle logo" width="160" />
+</p>
+
 ![Wrangle editor with rendered markdown](screenshots/raw/editor-simple.png)
+
+
 
 ## What this is
 
