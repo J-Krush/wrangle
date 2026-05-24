@@ -85,11 +85,11 @@ Rewrite the Astro landing page from "Buy Wrangle for $24" to "Free + open source
 
 The final milestone step — both repos go public and the DMG release ships.
 
-- [ ] **FLIP-01**: A final secrets sweep is run across both repos: `git log -p` + `git rev-list --all | xargs git grep -i 'secret\|api[-_]key\|token\|password\|wrangleapp.dev\|lemonsqueezy'` returns clean. Anything found is rotated and history-rewritten as needed.
-- [ ] **FLIP-02**: `J-Krush/wrangle` is flipped from private to public on GitHub.
-- [ ] **FLIP-03**: `J-Krush/wrangle-landing` is flipped from private to public on GitHub.
-- [ ] **FLIP-04**: The `J-Krush/wrangle` repo page renders correctly to an anonymous viewer: README displays with screenshots, LICENSE renders as "MIT," and the latest Release with the DMG is downloadable.
-- [ ] **FLIP-05**: The `v1.3.0` GitHub Release is published (drafted → published), with the signed/notarized DMG attached, and release notes summarizing the OSS flip + headline browser-support features that shipped in v1.2.
+- [x] **FLIP-01**: A final secrets sweep is run across both repos: `git log -p` + `git rev-list --all | xargs git grep -i 'secret\|api[-_]key\|token\|password\|wrangleapp.dev\|lemonsqueezy'` returns clean. Anything found is rotated and history-rewritten as needed.
+- [x] **FLIP-02**: `J-Krush/wrangle` is flipped from private to public on GitHub.
+- [x] **FLIP-03**: `J-Krush/wrangle-landing` is flipped from private to public on GitHub.
+- [x] **FLIP-04**: The `J-Krush/wrangle` repo page renders correctly to an anonymous viewer: README displays with screenshots, LICENSE renders as "MIT," and the latest Release with the DMG is downloadable.
+- [x] **FLIP-05**: The `v1.3.0` GitHub Release is published (drafted → published), with the signed/notarized DMG attached, and release notes summarizing the OSS flip + headline browser-support features that shipped in v1.2.
 
 ## Future Requirements (deferred)
 

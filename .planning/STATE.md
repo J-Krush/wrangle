@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: complete
-stopped_at: "v1.3 milestone complete — Phase 18 closed; both repos PUBLIC; v1.3.0 Release published; vendor surfaces deferred (D-12 paid-user risk; D-13 user-deferred); bonus v1.2 update channel restored"
-last_updated: "2026-05-24T00:40:00.000Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 18 was final phase)
+last_updated: 2026-05-24T00:29:18.876Z
 last_activity: 2026-05-24
 progress:
   total_phases: 6
   completed_phases: 6
   total_plans: 15
-  completed_plans: 15
+  completed_plans: 20
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Milestone v1.3 complete; ready to plan v1.4
+**Current focus:** Milestone complete
 
 ## Current Position
 
 Milestone: v1.3 Open Source Release — COMPLETE (all 6 phases shipped; both repos PUBLIC; v1.3.0 GitHub Release LIVE)
-Phase: 18 (public-flip-v1-3-0-release) — CLOSED 2026-05-24
-Plan: 2 of 2 done
-Status: Milestone complete; ready to plan v1.4
+Phase: 18
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-05-24
 
 **Progress:** [██████████] 100%
@@ -43,7 +43,7 @@ Last activity: 2026-05-24
 
 **Velocity (v1.2):**
 
-- Total plans completed: 21 across 12 phases (one phase ran two plans on the polish pass)
+- Total plans completed: 23 across 12 phases (one phase ran two plans on the polish pass)
 - Build verification: passed after every phase
 
 **By Phase (v1.2 history retained for context):**
