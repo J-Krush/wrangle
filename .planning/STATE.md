@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Open Source Release
-status: executing
-stopped_at: Phase 18 context gathered
-last_updated: "2026-05-23T18:10:43.747Z"
-last_activity: 2026-05-23
+status: complete
+stopped_at: "v1.3 milestone complete — Phase 18 closed; both repos PUBLIC; v1.3.0 Release published; vendor surfaces deferred (D-12 paid-user risk; D-13 user-deferred); bonus v1.2 update channel restored"
+last_updated: "2026-05-24T00:40:00.000Z"
+last_activity: 2026-05-24
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 15
   completed_plans: 15
-  percent: 83
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,17 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-05-19)
 
 **Core value:** Every surface — editor, terminal, file tree, browser — serves a developer driving AI agents. Speed, density, and AI-file awareness win over breadth of consumer features.
-**Current focus:** Phase 18 — public-flip-v1-3-0-release
+**Current focus:** Milestone v1.3 complete; ready to plan v1.4
 
 ## Current Position
 
-Phase: 18 (public-flip-v1-3-0-release) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-05-23
+Milestone: v1.3 Open Source Release — COMPLETE (all 6 phases shipped; both repos PUBLIC; v1.3.0 GitHub Release LIVE)
+Phase: 18 (public-flip-v1-3-0-release) — CLOSED 2026-05-24
+Plan: 2 of 2 done
+Status: Milestone complete; ready to plan v1.4
+Last activity: 2026-05-24
 
-**Progress:** [█████████░] 88%
+**Progress:** [██████████] 100%
 
 ### Phase 13 Outstanding
 
