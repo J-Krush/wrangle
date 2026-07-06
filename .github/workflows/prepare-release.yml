@@ -1,0 +1,77 @@
+name: Prepare Release
+
+# One-click, UI-only way to start a release. From the Actions tab, run this
+# with a new version + a few "what's new" bullets; it bumps the version,
+# inserts the changelog entry, and opens a PR. Merging that PR triggers
+# Release (release.yml), which builds + notarizes and drafts the GitHub
+# Release with the DMG. Runs on Linux (cheap) — no macOS minutes used here.
+#
+# Requires the repo setting: Settings → Actions → General → Workflow
+# permissions → "Allow GitHub Actions to create and approve pull requests".
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version, e.g. 1.3.2"
+        required: true
+      category:
+        description: "Changelog section for these notes"
+        type: choice
+        options: [Fixed, Improved, New]
+        default: Fixed
+      notes:
+        description: "What's new — separate bullets with ' | ' (or leave blank and write them in the PR)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bump version + insert changelog entry
+        env:
+          # Passed via env (not string-interpolated into the script) to avoid
+          # shell injection from the free-text inputs.
+          VERSION: ${{ inputs.version }}
+          CATEGORY: ${{ inputs.category }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must look like X.Y.Z (got '$VERSION')"; exit 1
+          fi
+          DATE="$(date +'%B %-d, %Y')"
+          CAT="$(printf '%s' "$CATEGORY" | tr '[:upper:]' '[:lower:]')"
+          NOTES_FILE="$(mktemp)"
+          if [[ -n "${NOTES//[[:space:]]/}" ]]; then
+            printf '%s' "$NOTES" | tr '|' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' > "$NOTES_FILE"
+          else
+            echo "TODO: describe the changes in this release" > "$NOTES_FILE"
+          fi
+          bash scripts/bump-version.sh "$VERSION"
+          bash scripts/add-changelog-entry.sh \
+            --version "$VERSION" --date "$DATE" --category "$CAT" --notes-file "$NOTES_FILE"
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          base: main
+          branch: release/v${{ inputs.version }}
+          title: "release(v${{ inputs.version }}): version bump + changelog"
+          commit-message: "release(v${{ inputs.version }}): bump version and add changelog entry"
+          body: |
+            Automated release prep for **v${{ inputs.version }}** (Prepare Release workflow).
+
+            - Bumped `MARKETING_VERSION` + build number, and `preflight-release.sh` `EXPECTED_VERSION`.
+            - Inserted a **${{ inputs.category }}** What's New entry.
+
+            Review the changelog bullets (edit `wrangle/App/WhatsNewChangelog.swift` on this branch if needed), then merge. Merging triggers **Release**, which builds + notarizes and creates the draft GitHub Release with the DMG.

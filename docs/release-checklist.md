@@ -291,3 +291,56 @@ the `lastSeen == currentVersion` guard and the OSS announcement never
 fired for v1.2 → v1.3 upgraders. The DEBUG assert in
 `WhatsNewChangelog` exists to catch this class of drift before it
 ships; this checklist documents the corresponding manual steps.
+
+## CI: Automated release (GitHub Actions)
+
+`.github/workflows/release.yml` runs the same three scripts on a
+GitHub-hosted `macos-26` runner and creates a **draft** release with
+the DMG attached. It triggers on every push to `main` but only builds
+when the app's `MARKETING_VERSION` has no release yet — so merging a
+version-bump PR cuts a draft release, while other merges are skipped.
+There is also a manual **Run workflow** button (`workflow_dispatch`).
+
+Publishing the draft stays a manual click (it flips
+`releases/latest`, which the in-app *Check for Updates* reads).
+
+### Required repository secrets
+
+Set these under **Settings → Secrets and variables → Actions** (or with
+`gh secret set NAME`). `scripts/ci-setup-signing.sh` consumes them to
+rebuild the local Keychain + notary state on the runner.
+
+| Secret | What it is |
+| ------ | ---------- |
+| `BUILD_CERTIFICATE_BASE64` | base64 of the exported Developer ID Application `.p12` (certificate **and** private key) |
+| `P12_PASSWORD` | the password you set when exporting the `.p12` |
+| `KEYCHAIN_PASSWORD` | any string; names the ephemeral CI keychain |
+| `NOTARY_APPLE_ID` | Apple ID email used for notarization |
+| `NOTARY_PASSWORD` | app-specific password for that Apple ID (appleid.apple.com → Sign-In and Security → App-Specific Passwords) |
+| `NOTARY_TEAM_ID` | `3DEKQ7GUK6` |
+
+### Exporting the certificate for `BUILD_CERTIFICATE_BASE64`
+
+1. Keychain Access → **login** keychain → **My Certificates**.
+2. Right-click *Developer ID Application: John Kreisher (3DEKQ7GUK6)* →
+   **Export…** → `.p12`, set a password (this becomes `P12_PASSWORD`).
+   The export must include the private key (expand the disclosure
+   triangle to confirm the key is nested under the certificate).
+3. `base64 -i Certificates.p12 | pbcopy`, then paste as
+   `BUILD_CERTIFICATE_BASE64`.
+
+Rotate these whenever the Developer ID certificate is renewed.
+
+### One-click releases (Prepare Release button)
+
+`.github/workflows/prepare-release.yml` is a `workflow_dispatch` job (runs
+on Linux — no macOS minutes). From **Actions → Prepare Release → Run
+workflow**, enter the new version, pick a changelog section, and
+optionally type the bullets (separate with ` | `, or leave blank and
+write them in the PR). It runs `bump-version.sh` + `add-changelog-entry.sh`
+and opens a `release/vX.Y.Z` PR. Review the changelog, then merge — the
+merge triggers `release.yml`, which builds and drafts the release.
+
+Requires **Settings → Actions → General → Workflow permissions → "Allow
+GitHub Actions to create and approve pull requests"** to be enabled, so
+the workflow can open the PR.
