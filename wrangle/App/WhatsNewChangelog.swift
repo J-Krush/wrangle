@@ -40,6 +40,19 @@ enum WhatsNewChangelog {
 
     private static let changelog: [ChangelogEntry] = [
         ChangelogEntry(
+            version: "1.3.1",
+            date: "July 6, 2026",
+            sections: [
+                ChangelogSection(category: .fixed, items: [
+                    "Terminal scrolling restored in Claude Code and other full-screen TUI sessions - wheel and trackpad events are now forwarded to apps that request mouse input, like iTerm does",
+                    "Fixed garbled, overlapping terminal text during heavy Claude Code redraws",
+                    "TUI buttons such as Claude Code's \"Jump to bottom\" are now clickable (and no longer trigger on hover)",
+                    "Terminal scrolling now works alongside scroll-smoothing utilities like Logi Options+",
+                ]),
+            ],
+            cta: nil
+        ),
+        ChangelogEntry(
             version: "1.3.0",
             date: "May 19, 2026",
             sections: [
