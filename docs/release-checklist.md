@@ -330,3 +330,17 @@ rebuild the local Keychain + notary state on the runner.
    `BUILD_CERTIFICATE_BASE64`.
 
 Rotate these whenever the Developer ID certificate is renewed.
+
+### One-click releases (Prepare Release button)
+
+`.github/workflows/prepare-release.yml` is a `workflow_dispatch` job (runs
+on Linux — no macOS minutes). From **Actions → Prepare Release → Run
+workflow**, enter the new version, pick a changelog section, and
+optionally type the bullets (separate with ` | `, or leave blank and
+write them in the PR). It runs `bump-version.sh` + `add-changelog-entry.sh`
+and opens a `release/vX.Y.Z` PR. Review the changelog, then merge — the
+merge triggers `release.yml`, which builds and drafts the release.
+
+Requires **Settings → Actions → General → Workflow permissions → "Allow
+GitHub Actions to create and approve pull requests"** to be enabled, so
+the workflow can open the PR.

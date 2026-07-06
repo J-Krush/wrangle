@@ -11,6 +11,16 @@ if [[ -z "$NEW_VERSION" ]]; then
     exit 1
 fi
 
+# Portable in-place sed: GNU (Linux/CI) uses `-i`, BSD (macOS) uses `-i ''`.
+# Lets this script run on both a dev Mac and the Linux "Prepare Release" runner.
+sedi() {
+    if sed --version >/dev/null 2>&1; then
+        sed -i "$@"
+    else
+        sed -i '' "$@"
+    fi
+}
+
 # Resolve paths relative to repo root (one level up from scripts/)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -53,8 +63,8 @@ echo "Bumping build:   $OLD_BUILD → $NEW_BUILD"
 echo ""
 
 # 1. Update project.pbxproj
-sed -i '' "s/MARKETING_VERSION = $OLD_VERSION;/MARKETING_VERSION = $NEW_VERSION;/g" "$PBXPROJ"
-sed -i '' "s/CURRENT_PROJECT_VERSION = $OLD_BUILD;/CURRENT_PROJECT_VERSION = $NEW_BUILD;/g" "$PBXPROJ"
+sedi "s/MARKETING_VERSION = $OLD_VERSION;/MARKETING_VERSION = $NEW_VERSION;/g" "$PBXPROJ"
+sedi "s/CURRENT_PROJECT_VERSION = $OLD_BUILD;/CURRENT_PROJECT_VERSION = $NEW_BUILD;/g" "$PBXPROJ"
 echo "✓ project.pbxproj — MARKETING_VERSION and CURRENT_PROJECT_VERSION updated"
 
 # Sanity-check: the app target has exactly 2 configs (Debug + Release), so the
@@ -73,14 +83,14 @@ fi
 
 # 2. Update Landing Page .env (skip if the sibling checkout isn't present, e.g. CI)
 if [[ -f "$ENV_FILE" ]]; then
-    sed -i '' "s/APP_VERSION=.*/APP_VERSION=$NEW_VERSION/" "$ENV_FILE"
+    sedi "s/APP_VERSION=.*/APP_VERSION=$NEW_VERSION/" "$ENV_FILE"
     echo "✓ .env — APP_VERSION updated to $NEW_VERSION"
 else
     echo "• .env not found (${ENV_FILE}) — skipping landing-page version update"
 fi
 
 # 3. Update preflight-release.sh EXPECTED_VERSION so the release gate matches
-sed -i '' "s/^EXPECTED_VERSION=\".*\"/EXPECTED_VERSION=\"$NEW_VERSION\"/" "$PREFLIGHT"
+sedi "s/^EXPECTED_VERSION=\".*\"/EXPECTED_VERSION=\"$NEW_VERSION\"/" "$PREFLIGHT"
 echo "✓ preflight-release.sh — EXPECTED_VERSION updated to $NEW_VERSION"
 
 echo ""
