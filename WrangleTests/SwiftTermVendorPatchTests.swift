@@ -2,10 +2,11 @@ import Foundation
 import Testing
 @preconcurrency import SwiftTerm
 
-/// Regression tests for the patches carried in `vendor/SwiftTerm` (see the
-/// vendor README section in the PR that introduced them). If these fail after
-/// bumping the vendored copy, the upstream fixes have regressed or the local
-/// patches were lost in the update.
+/// Regression tests for the two patches carried on the SwiftTerm fork the
+/// project pins (J-Krush/SwiftTerm, branch `wrangle-patches`). If these fail
+/// after moving the pin, the fixes regressed or were lost in the update; both
+/// are candidates for upstreaming to migueldeicaza/SwiftTerm, after which the
+/// pin can return to a stock release.
 struct SwiftTermVendorPatchTests {
 
     private final class CapturingDelegate: TerminalDelegate {

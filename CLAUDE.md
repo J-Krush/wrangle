@@ -17,7 +17,7 @@ Think "Typora meets AI development" — rich rendered editing by default, with d
 - **Language:** Swift 5.9+
 - **UI Framework:** SwiftUI (macOS 15+ / Sequoia minimum)
 - **Editor Core:** Custom `NSTextView`-based editor via `NSViewRepresentable` + `NSAttributedString`
-- **Terminal:** Embedded via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) (`LocalProcessTerminalView`)
+- **Terminal:** Embedded via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) (`LocalProcessTerminalView`), consumed from the [J-Krush/SwiftTerm](https://github.com/J-Krush/SwiftTerm) fork's `wrangle-patches` branch pinned to an exact revision — it carries two bug fixes (OSC chunk-boundary parsing, SGR motion encoding) covered by `WrangleTests/SwiftTermVendorPatchTests.swift`
 - **File System:** Native Foundation `FileManager` + `NSOpenPanel` / `NSSavePanel`
 - **Persistence:** SwiftData for bookmarks, preferences, recent files
 - **Architecture:** MVVM with `@Observable` + `@MainActor`
