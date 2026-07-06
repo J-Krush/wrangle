@@ -8,6 +8,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=release-lib.sh
+source "$SCRIPT_DIR/release-lib.sh"
+TEAM_ID="3DEKQ7GUK6"
 SCHEME="Wrangle"
 ARCHIVE_PATH="$PROJECT_DIR/build/Wrangle.xcarchive"
 EXPORT_PATH="$PROJECT_DIR/build/export"
@@ -48,12 +51,9 @@ xcodebuild -exportArchive \
 # for the expected team. DEVELOPMENT_TEAM=3DEKQ7GUK6 above narrows by team
 # during xcodebuild, but a post-export assertion catches the multi-cert
 # edge case where two Developer ID Application certs for the same team
-# both exist (parallel renewal, etc.).
-if ! codesign -dv --verbose=4 "$APP_PATH" 2>&1 | grep -q "TeamIdentifier=3DEKQ7GUK6"; then
-    echo "FAIL: $APP_PATH signature does not carry the expected TeamIdentifier=3DEKQ7GUK6."
-    echo "      Inspect with: codesign -dv --verbose=4 $APP_PATH"
-    exit 1
-fi
+# both exist (parallel renewal, etc.). Retries a transient read of the
+# just-exported bundle (see release-lib.sh).
+assert_team_identifier "$APP_PATH" "$TEAM_ID"
 
 echo "==> Zipping .app for notarytool submission..."
 # notarytool only accepts .zip, .pkg, or .dmg — never a raw .app bundle.
@@ -75,7 +75,8 @@ xcrun stapler staple "$APP_PATH"
 rm -f "$ZIP_FOR_NOTARY"
 
 echo "==> Verifying..."
-spctl --assess --type exec --verbose "$APP_PATH"
+# Retry the Gatekeeper read in case the freshly stapled bundle hasn't settled.
+retry 5 1 "Gatekeeper assessment for $APP_PATH" -- spctl --assess --type exec --verbose "$APP_PATH"
 
 echo ""
 echo "Build complete: $APP_PATH"
