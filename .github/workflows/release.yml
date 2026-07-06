@@ -10,6 +10,9 @@ name: Release
 #     release; a merge that doesn't touch the version is skipped.
 #   - workflow_dispatch: manual "Run workflow" button for re-runs / on demand.
 #
+# The cheap gate runs on Linux; the expensive macOS runner (10x Actions
+# minutes) only starts when a release is actually needed.
+#
 # Requires these repository secrets (see docs/release-checklist.md → CI):
 #   BUILD_CERTIFICATE_BASE64, P12_PASSWORD, KEYCHAIN_PASSWORD,
 #   NOTARY_APPLE_ID, NOTARY_PASSWORD, NOTARY_TEAM_ID
@@ -27,15 +30,14 @@ concurrency:
   cancel-in-progress: false   # never cancel a build mid-notarization
 
 jobs:
-  release:
-    # GitHub-hosted macOS runner (macOS 26 image, Xcode 26.x). Note: macOS
-    # runners bill Actions minutes at 10x. Blacksmith requires an org account,
-    # so it is not usable on a personal repo; if you move the repo to an org
-    # later, swap this to `blacksmith-12vcpu-macos-26`.
-    runs-on: macos-26
+  check:
+    # Cheap gate on Linux: decide whether a release build is needed at all.
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.gate.outputs.version }}
+      proceed: ${{ steps.gate.outputs.proceed }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Determine version and whether a release is needed
         id: gate
@@ -54,21 +56,32 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
           if gh release view "v$VERSION" >/dev/null 2>&1; then
-            echo "Release v$VERSION already exists — skipping."
+            echo "Release v$VERSION already exists — skipping build."
             echo "proceed=false" >> "$GITHUB_OUTPUT"
           else
             echo "No release for v$VERSION yet — will build."
             echo "proceed=true" >> "$GITHUB_OUTPUT"
           fi
 
+  release:
+    needs: check
+    if: needs.check.outputs.proceed == 'true'
+    # GitHub-hosted macOS runner (macOS 26 image, Xcode 26.x). Note: macOS
+    # runners bill Actions minutes at 10x. Blacksmith requires an org account,
+    # so it is not usable on a personal repo; if you move the repo to an org
+    # later, swap this to `blacksmith-12vcpu-macos-26`.
+    runs-on: macos-26
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Select Xcode 26.2
-        if: steps.gate.outputs.proceed == 'true'
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '26.2'
 
       - name: Set up signing (keychain + notary profile)
-        if: steps.gate.outputs.proceed == 'true'
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
@@ -79,18 +92,14 @@ jobs:
         run: bash scripts/ci-setup-signing.sh
 
       - name: Build, sign, notarize, staple the app
-        if: steps.gate.outputs.proceed == 'true'
         run: bash scripts/build-release.sh
 
       - name: Package + notarize the DMG
-        if: steps.gate.outputs.proceed == 'true'
         run: bash scripts/create-dmg.sh
 
       - name: Create draft GitHub Release
-        if: steps.gate.outputs.proceed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.gate.outputs.version }}
         run: |
           set -euo pipefail
           DMG="build/Wrangle-${VERSION}.dmg"
