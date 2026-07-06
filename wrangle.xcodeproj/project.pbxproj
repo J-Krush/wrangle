@@ -153,7 +153,7 @@
 			mainGroup = 01DE76C52F4A086A0046C9A7;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				01DE77012F4B10000046C9A7 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+				01DE77012F4B10000046C9A7 /* XCLocalSwiftPackageReference "vendor/SwiftTerm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 01DE76CF2F4A086A0046C9A7 /* Products */;
@@ -481,21 +481,17 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		01DE77012F4B10000046C9A7 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.0;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		01DE77012F4B10000046C9A7 /* XCLocalSwiftPackageReference "vendor/SwiftTerm" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = vendor/SwiftTerm;
 		};
-/* End XCRemoteSwiftPackageReference section */
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		01DE77022F4B10000046C9A7 /* SwiftTerm */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 01DE77012F4B10000046C9A7 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			package = 01DE77012F4B10000046C9A7 /* XCLocalSwiftPackageReference "vendor/SwiftTerm" */;
 			productName = SwiftTerm;
 		};
 /* End XCSwiftPackageProductDependency section */
