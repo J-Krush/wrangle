@@ -44,6 +44,7 @@ enum WhatsNewChangelog {
             date: "July 6, 2026",
             sections: [
                 ChangelogSection(category: .fixed, items: [
+                    "Confirmation modal before quitting the app when terminals are active or files are unsaved",
                     "Terminal scrolling restored in Claude Code and other full-screen TUI sessions - wheel and trackpad events are now forwarded to apps that request mouse input, like iTerm does",
                     "Fixed garbled, overlapping terminal text during heavy Claude Code redraws",
                     "TUI buttons such as Claude Code's \"Jump to bottom\" are now clickable (and no longer trigger on hover)",
