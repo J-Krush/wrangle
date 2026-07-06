@@ -129,6 +129,151 @@ class TerminalContainerView: NSView {
         return super.hitTest(point)
     }
 
+    // MARK: - Scroll Routing (mouse-reporting TUIs + precise-delta fallback)
+
+    /// SwiftTerm's Mac `scrollWheel` only scrolls the local scrollback and
+    /// never forwards wheel events to the running program (and it's `public`,
+    /// not `open`, so it can't be overridden). TUIs that run in the alternate
+    /// screen with mouse reporting enabled — Claude Code v2.1+, htop, … —
+    /// expect wheel events as mouse escape sequences and have no local
+    /// scrollback at all, so scrolling appears completely dead. This monitor
+    /// forwards wheel events to the program whenever it has requested mouse
+    /// reporting (hold Option to bypass, matching the Option+click escape
+    /// hatch), and separately rescues events whose legacy `deltaY` is 0 —
+    /// scroll-smoothing utilities (Logi Options+, Mos, LinearMouse, …)
+    /// re-post events that only carry the pixel-precise `scrollingDeltaY`,
+    /// which SwiftTerm drops entirely.
+    private var scrollRoutingMonitor: Any?
+
+    /// Accumulates fractional lines from pixel-precise deltas so slow
+    /// scrolling still produces a step once a full line's worth builds up.
+    private var pendingScrollLines: CGFloat = 0
+
+    /// Window location of a left-mouse press that may become a clean click
+    /// (forwarded to a mouse-reporting TUI on release). Cleared when the
+    /// pointer drags, which means the gesture is a text selection instead.
+    private var pendingClickStart: NSPoint?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            removeScrollRoutingMonitor()
+        } else if scrollRoutingMonitor == nil {
+            installScrollRoutingMonitor()
+        }
+    }
+
+    private func installScrollRoutingMonitor() {
+        scrollRoutingMonitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel, .leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
+            guard let self,
+                  self.isActive,
+                  !self.isHiddenOrHasHiddenAncestor,
+                  let window = self.window,
+                  event.window === window
+            else { return event }
+
+            // Only handle events over this terminal; everything else (sidebar,
+            // editor, browser) keeps its normal dispatch.
+            let terminalView = self.terminalView
+            let point = terminalView.convert(event.locationInWindow, from: nil)
+            guard terminalView.bounds.contains(point),
+                  let terminal = terminalView.terminal else { return event }
+
+            // Click-vs-drag discrimination for mouse-reporting TUIs: every
+            // mouse event passes through to SwiftTerm so drag-selection keeps
+            // working, and only a clean click (press+release without
+            // movement) is additionally forwarded to the program as a mouse
+            // report (e.g. Claude Code's "Jump to bottom" button). Option
+            // bypasses forwarding, matching the wheel behavior.
+            if event.type == .leftMouseDown {
+                if terminal.mouseMode != .off, !event.modifierFlags.contains(.option) {
+                    self.pendingClickStart = event.locationInWindow
+                } else {
+                    self.pendingClickStart = nil
+                }
+                return event
+            }
+            if event.type == .leftMouseDragged {
+                if let start = self.pendingClickStart,
+                   hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) > 3 {
+                    self.pendingClickStart = nil
+                }
+                return event
+            }
+            if event.type == .leftMouseUp {
+                if let start = self.pendingClickStart {
+                    self.pendingClickStart = nil
+                    guard hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) <= 3,
+                          terminal.mouseMode != .off else { return event }
+                    let cellWidth = max(terminalView.bounds.width / CGFloat(max(terminal.cols, 1)), 1)
+                    let cellHeight = max(terminalView.bounds.height / CGFloat(max(terminal.rows, 1)), 1)
+                    let col = min(max(Int(point.x / cellWidth), 0), terminal.cols - 1)
+                    let row = min(max(Int((terminalView.bounds.height - point.y) / cellHeight), 0), max(terminal.rows, 1) - 1)
+                    terminal.sendEvent(buttonFlags: 0, x: col, y: row)
+                    terminal.sendEvent(buttonFlags: 3, x: col, y: row)
+                }
+                return event
+            }
+
+            // Only wheel events reach this point. Scroll-only NSEvent
+            // properties raise an exception on other event types.
+            let legacy = event.deltaY
+            let precise = event.scrollingDeltaY
+            let hasPreciseDeltas = event.hasPreciseScrollingDeltas
+            guard legacy != 0 || precise != 0 else { return event }
+
+            // Accumulate scroll distance in lines regardless of delta flavor.
+            let rows = max(terminal.rows, 1)
+            if hasPreciseDeltas {
+                let lineHeight = max(terminalView.bounds.height / CGFloat(rows), 1)
+                self.pendingScrollLines += precise / lineHeight
+            } else {
+                self.pendingScrollLines += legacy != 0 ? legacy : precise
+            }
+            let lines = Int(self.pendingScrollLines)
+
+            // Program requested mouse reporting: forward the wheel as mouse
+            // escape sequences (SGR button 64/65) so alt-screen TUIs can
+            // scroll their own content.
+            if terminal.mouseMode != .off, !event.modifierFlags.contains(.option) {
+                guard lines != 0 else { return nil }
+                self.pendingScrollLines -= CGFloat(lines)
+                let cellWidth = max(terminalView.bounds.width / CGFloat(max(terminal.cols, 1)), 1)
+                let cellHeight = max(terminalView.bounds.height / CGFloat(rows), 1)
+                let col = min(max(Int(point.x / cellWidth), 0), terminal.cols - 1)
+                // TerminalView is not flipped: row 0 is at the top.
+                let row = min(max(Int((terminalView.bounds.height - point.y) / cellHeight), 0), rows - 1)
+                for _ in 0..<min(abs(lines), 24) {
+                    terminal.sendEvent(buttonFlags: lines > 0 ? 64 : 65, x: col, y: row)
+                }
+                return nil
+            }
+
+            // Local scrollback path. When the legacy delta works, let
+            // SwiftTerm handle the event; otherwise translate the precise
+            // delta it would have dropped.
+            guard legacy == 0 else {
+                self.pendingScrollLines = 0
+                return event
+            }
+            guard lines != 0 else { return nil }
+            self.pendingScrollLines -= CGFloat(lines)
+            if lines > 0 {
+                terminalView.scrollUp(lines: lines)
+            } else {
+                terminalView.scrollDown(lines: -lines)
+            }
+            return nil
+        }
+    }
+
+    private func removeScrollRoutingMonitor() {
+        if let monitor = scrollRoutingMonitor {
+            NSEvent.removeMonitor(monitor)
+            scrollRoutingMonitor = nil
+        }
+    }
+
     // MARK: - Mouse Selection (Option-key toggle)
 
     /// Monitor that restores mouse reporting after an Option-drag selection.
@@ -590,9 +735,15 @@ struct SwiftTermView: NSViewRepresentable, Equatable {
             let rows = terminal.rows
             let halfWindow = max(rows / 2, 1)
             let target = max(0, match.row - halfWindow)
-            if terminal.buffer.yDisp != target {
-                terminal.buffer.yDisp = target
-                terminalView.needsDisplay = true
+            // Scroll via SwiftTerm's public API rather than writing buffer.yDisp
+            // directly — the direct write bypasses the synchronized-output
+            // snapshot (DEC 2026, used by Claude Code) and scroller bookkeeping,
+            // desyncing what's rendered from the real scroll position.
+            let delta = terminal.buffer.yDisp - target
+            if delta > 0 {
+                terminalView.scrollUp(lines: delta)
+            } else if delta < 0 {
+                terminalView.scrollDown(lines: -delta)
             }
         }
     }
