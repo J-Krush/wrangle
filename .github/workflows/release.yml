@@ -1,0 +1,106 @@
+name: Release
+
+# Builds, signs, notarizes, and packages Wrangle into a DMG, then creates a
+# DRAFT GitHub Release with the DMG attached. Publishing the draft stays a
+# deliberate manual click (it is what the in-app "Check for Updates" reads).
+#
+# Trigger model:
+#   - push to main: builds only when the app's MARKETING_VERSION does not yet
+#     have a release. So a normal merge that bumps the version cuts a draft
+#     release; a merge that doesn't touch the version is skipped.
+#   - workflow_dispatch: manual "Run workflow" button for re-runs / on demand.
+#
+# Requires these repository secrets (see docs/release-checklist.md → CI):
+#   BUILD_CERTIFICATE_BASE64, P12_PASSWORD, KEYCHAIN_PASSWORD,
+#   NOTARY_APPLE_ID, NOTARY_PASSWORD, NOTARY_TEAM_ID
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # create tags + releases, upload the DMG asset
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false   # never cancel a build mid-notarization
+
+jobs:
+  release:
+    # GitHub-hosted macOS runner (macOS 26 image, Xcode 26.x). Note: macOS
+    # runners bill Actions minutes at 10x. Blacksmith requires an org account,
+    # so it is not usable on a personal repo; if you move the repo to an org
+    # later, swap this to `blacksmith-12vcpu-macos-26`.
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine version and whether a release is needed
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PBXPROJ="wrangle.xcodeproj/project.pbxproj"
+          # Read the APP target's MARKETING_VERSION (anchored on its bundle id,
+          # not the first match, which is the WrangleTests target).
+          VERSION=$(awk -v id="com.krush.wrangle" '
+            /MARKETING_VERSION = /{v=$3; gsub(/;/,"",v)}
+            $0 ~ ("PRODUCT_BUNDLE_IDENTIFIER = " id ";"){print v; exit}
+          ' "$PBXPROJ")
+          if [[ -z "$VERSION" ]]; then echo "could not read app version"; exit 1; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            echo "Release v$VERSION already exists — skipping."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No release for v$VERSION yet — will build."
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Xcode 26.2
+        if: steps.gate.outputs.proceed == 'true'
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '26.2'
+
+      - name: Set up signing (keychain + notary profile)
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+        run: bash scripts/ci-setup-signing.sh
+
+      - name: Build, sign, notarize, staple the app
+        if: steps.gate.outputs.proceed == 'true'
+        run: bash scripts/build-release.sh
+
+      - name: Package + notarize the DMG
+        if: steps.gate.outputs.proceed == 'true'
+        run: bash scripts/create-dmg.sh
+
+      - name: Create draft GitHub Release
+        if: steps.gate.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.gate.outputs.version }}
+        run: |
+          set -euo pipefail
+          DMG="build/Wrangle-${VERSION}.dmg"
+          [ -f "$DMG" ] || { echo "FAIL: $DMG not produced"; exit 1; }
+          # Creates the tag at this commit if it does not exist. Draft only —
+          # auto-generated notes are a starting point to edit before publishing.
+          gh release create "v${VERSION}" \
+            --draft \
+            --target "${GITHUB_SHA}" \
+            --title "v${VERSION}" \
+            --generate-notes \
+            "$DMG"
+          echo "Draft release v${VERSION} created with $DMG"

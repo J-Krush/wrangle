@@ -19,8 +19,9 @@ PBXPROJ="$REPO_ROOT/wrangle.xcodeproj/project.pbxproj"
 ENV_FILE="$REPO_ROOT/../Landing Page/.env"
 PREFLIGHT="$REPO_ROOT/scripts/preflight-release.sh"
 
-# Validate files exist
-for f in "$PBXPROJ" "$ENV_FILE" "$PREFLIGHT"; do
+# Validate required files exist. The landing-page .env lives outside this repo
+# (a sibling checkout) and is absent on CI runners, so it is optional.
+for f in "$PBXPROJ" "$PREFLIGHT"; do
     if [[ ! -f "$f" ]]; then
         echo "Error: File not found: $f"
         exit 1
@@ -70,9 +71,13 @@ if [[ "$MV_COUNT" -ne 2 || "$CV_COUNT" -ne 2 ]]; then
     exit 1
 fi
 
-# 2. Update Landing Page .env
-sed -i '' "s/APP_VERSION=.*/APP_VERSION=$NEW_VERSION/" "$ENV_FILE"
-echo "✓ .env — APP_VERSION updated to $NEW_VERSION"
+# 2. Update Landing Page .env (skip if the sibling checkout isn't present, e.g. CI)
+if [[ -f "$ENV_FILE" ]]; then
+    sed -i '' "s/APP_VERSION=.*/APP_VERSION=$NEW_VERSION/" "$ENV_FILE"
+    echo "✓ .env — APP_VERSION updated to $NEW_VERSION"
+else
+    echo "• .env not found (${ENV_FILE}) — skipping landing-page version update"
+fi
 
 # 3. Update preflight-release.sh EXPECTED_VERSION so the release gate matches
 sed -i '' "s/^EXPECTED_VERSION=\".*\"/EXPECTED_VERSION=\"$NEW_VERSION\"/" "$PREFLIGHT"
