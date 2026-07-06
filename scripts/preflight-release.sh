@@ -19,7 +19,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 NOTARY_PROFILE="wrangle-notary"
 TEAM_ID="3DEKQ7GUK6"
-EXPECTED_VERSION="1.3.0"
+EXPECTED_VERSION="1.3.1"
 
 echo "==> Checking Developer ID Application certificate in Keychain..."
 if ! security find-identity -v -p codesigning | grep -q "Developer ID Application"; then

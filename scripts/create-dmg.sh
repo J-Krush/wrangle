@@ -6,6 +6,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# shellcheck source=release-lib.sh
+source "$SCRIPT_DIR/release-lib.sh"
+TEAM_ID="3DEKQ7GUK6"
 EXPORT_PATH="$PROJECT_DIR/build/export"
 APP_PATH="$EXPORT_PATH/Wrangle.app"
 DMG_DIR="$PROJECT_DIR/build/dmg"
@@ -69,11 +72,8 @@ codesign --sign "Developer ID Application: John Kreisher (3DEKQ7GUK6)" \
 # Belt-and-suspenders: assert the signature carries the expected Team ID.
 # Fails the script before notarytool submission if codesign somehow picked
 # a different identity (e.g. expired long-form identity, Keychain glitch).
-if ! codesign -dv --verbose=4 "$DMG_FINAL" 2>&1 | grep -q "TeamIdentifier=3DEKQ7GUK6"; then
-    echo "FAIL: DMG signature does not carry the expected TeamIdentifier=3DEKQ7GUK6."
-    echo "      Inspect with: codesign -dv --verbose=4 $DMG_FINAL"
-    exit 1
-fi
+# Retries a transient read of the just-signed DMG (see release-lib.sh).
+assert_team_identifier "$DMG_FINAL" "$TEAM_ID"
 
 echo "==> Notarizing DMG..."
 xcrun notarytool submit "$DMG_FINAL" \
@@ -87,7 +87,9 @@ echo ""
 echo "DMG ready: $DMG_FINAL"
 
 echo "==> Verifying DMG (REL-04 canonical check)..."
-spctl -a -t open --context context:primary-signature -v "$DMG_FINAL"
+# Retry the Gatekeeper read in case the freshly stapled DMG hasn't settled.
+retry 5 1 "Gatekeeper assessment for $DMG_FINAL" -- \
+    spctl -a -t open --context context:primary-signature -v "$DMG_FINAL"
 # Expected output: <dmg>: accepted  /  source=Notarized Developer ID
 
 # Clean up staging
