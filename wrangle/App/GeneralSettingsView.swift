@@ -8,6 +8,7 @@ struct GeneralSettingsView: View {
     @AppStorage("autoSaveEnabled") private var autoSaveEnabled: Bool = false
     @AppStorage("showSystemMetrics") private var showSystemMetrics: Bool = false
     @AppStorage("showHiddenFiles") private var showHiddenFiles: Bool = false
+    @AppStorage(QuitConfirmation.confirmBeforeQuitDefaultsKey) private var confirmBeforeQuit: Bool = QuitConfirmation.confirmBeforeQuitDefault
     @AppStorage(BrowserUserAgent.modeDefaultsKey) private var userAgentModeRaw: String = BrowserUserAgentMode.safari.rawValue
     @AppStorage(BrowserUserAgent.customValueDefaultsKey) private var customUserAgent: String = ""
 
@@ -45,6 +46,13 @@ struct GeneralSettingsView: View {
 
             Section("Title Bar") {
                 Toggle("Show System Metrics", isOn: $showSystemMetrics)
+            }
+
+            Section("Quitting") {
+                Toggle("Confirm Before Quitting", isOn: $confirmBeforeQuit)
+                Text("Only warns when terminal sessions are running or documents have unsaved changes.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Browser") {

@@ -42,6 +42,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 
 @main
 struct WrangleApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var coordinator = AppCoordinator()
 @FocusedValue(\.appState) private var focusedAppState
     @State private var resolvedSystemScheme: ColorScheme = {
@@ -108,6 +109,9 @@ struct WrangleApp: App {
                 .environment(coordinator)
                 .preferredColorScheme(effectiveColorScheme)
                 .onAppear {
+                    // Give the AppKit delegate access to live window state so it
+                    // can check for running sessions / unsaved docs before quit.
+                    appDelegate.coordinator = coordinator
                     guard !coordinator.isSetupComplete else { return }
                     coordinator.isSetupComplete = true
                     registerWithLaunchServices()
